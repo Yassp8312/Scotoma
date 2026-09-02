@@ -16,7 +16,7 @@
 		-Server
 	}
 
-	@relay_routes path /health /v1/connect
+	@relay_routes path /health /v2/connect
 	handle @relay_routes {
 		reverse_proxy relay:8787 {
 			header_up -X-Forwarded-For

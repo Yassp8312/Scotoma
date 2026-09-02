@@ -2,7 +2,7 @@
 
 SCOTOMA is an experimental, accountless and ephemeral one-to-one messaging system.
 
-Two participants who possess the same room and high-entropy secret can rendezvous, establish an end-to-end encrypted session and exchange messages through a relay that must not have access to plaintext or end-to-end keys.
+Two participants who enter the same numeric room and numeric password can rendezvous, establish an end-to-end encrypted session and exchange messages through a relay that must not have access to either input, plaintext or end-to-end keys.
 
 > SCOTOMA is an early research prototype. It is not ready for sensitive or high-risk communications.
 
@@ -13,7 +13,8 @@ The repository is in **Milestone 2: Ephemeral relay**. It contains:
 - the product and security boundaries;
 - a Rust workspace for the protocol core, relay and simulator;
 - versioned frame and session-state primitives;
-- generated 256-bit invite secrets and versioned rendezvous tags;
+- bounded numeric credentials up to 128 digits, local Argon2id derivation and versioned rendezvous tags;
+- adaptive relay-issued client puzzles above the normal traffic threshold;
 - a bounded, in-memory two-party WebSocket relay with no persistent storage;
 - an authenticated Noise transport with strict counters, continuous rekeying and encrypted ACKs;
 - bounded pending-ciphertext retention with ACK purge, packet/room TTL and authenticated BURN;
@@ -32,21 +33,15 @@ The development relay listens only on loopback by default:
 cargo run -p scotoma-relay
 ```
 
-The public listener exposes `ws://127.0.0.1:8787/v1/connect` and `GET /health`. Aggregate `GET /metrics` is isolated on the administrative listener at `127.0.0.1:8788`. The prototype WSS boundary and its remaining release gates are documented in [deploy/README.md](deploy/README.md); it is not production approval.
-
-Generate the invite secret once with the operating-system CSPRNG:
-
-```text
-cargo run -p scotoma-sim -- generate
-```
+The public listener exposes `ws://127.0.0.1:8787/v2/connect` and `GET /health`. Aggregate `GET /metrics` is isolated on the administrative listener at `127.0.0.1:8788`. The prototype WSS boundary and its remaining release gates are documented in [deploy/README.md](deploy/README.md); it is not production approval.
 
 With the relay running, open two terminals and run the same command in each:
 
 ```text
-cargo run -p scotoma-sim -- connect ws://127.0.0.1:8787/v1/connect 123456
+cargo run -p scotoma-sim -- connect ws://127.0.0.1:8787/v2/connect 123456
 ```
 
-Enter the same 64-hex-digit generated invite secret in both terminals. The clients print matching short channel fingerprints only after mutual key confirmation. The initiator can then send one encrypted text message; the responder decrypts it and returns an authenticated ACK. The initiator finishes the demo with BURN, and both clients destroy the session. The development prompts currently echo their input, so this CLI is unsuitable for real secrets, sensitive messages or closed-alpha distribution.
+Enter the same numeric password in both terminals. Room and password accept 1 to 128 ASCII digits and are never sent to the relay. The clients print matching short channel fingerprints only after mutual key confirmation. The initiator can then send one encrypted text message; the responder decrypts it and returns an authenticated ACK. The initiator finishes the demo with BURN, and both clients destroy the session. Short passwords remain guessable despite Argon2id, and the development prompts currently echo their input, so this CLI is unsuitable for real secrets, sensitive messages or closed-alpha distribution.
 
 ## Workspace
 

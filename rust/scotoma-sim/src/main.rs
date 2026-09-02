@@ -3,8 +3,8 @@ use std::error::Error;
 use std::io::{self, Write};
 use std::time::Duration;
 
-use scotoma_protocol::{InviteSecret, PeerRole, RoomCode};
-use scotoma_sim::{ClientConfig, authenticate, decode_invite_secret, encode_hex};
+use scotoma_protocol::{NumericPassword, PeerRole, RoomCode};
+use scotoma_sim::{ClientConfig, authenticate, encode_hex};
 use zeroize::Zeroizing;
 
 #[tokio::main]
@@ -12,40 +12,35 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut arguments = env::args().skip(1);
     let command = arguments
         .next()
-        .ok_or("usage: scotoma-sim generate | connect <relay-websocket-url> <room>")?;
-    if command == "generate" {
-        if arguments.next().is_some() {
-            return Err("usage: scotoma-sim generate".into());
-        }
-        let secret = InviteSecret::generate()?;
-        println!("{}", encode_hex(secret.expose_bytes()));
-        return Ok(());
-    }
+        .ok_or("usage: scotoma-sim connect <relay-websocket-url> <room>")?;
     if command != "connect" {
-        return Err("usage: scotoma-sim generate | connect <relay-websocket-url> <room>".into());
+        return Err("usage: scotoma-sim connect <relay-websocket-url> <room>".into());
     }
     let relay_url = arguments
         .next()
         .ok_or("usage: scotoma-sim connect <relay-websocket-url> <room>")?;
-    let room_value: u64 = arguments
+    let room_input = arguments
         .next()
-        .ok_or("usage: scotoma-sim connect <relay-websocket-url> <room>")?
-        .parse()?;
+        .ok_or("usage: scotoma-sim connect <relay-websocket-url> <room>")?;
     if arguments.next().is_some() {
         return Err("usage: scotoma-sim connect <relay-websocket-url> <room>".into());
     }
-    let room = RoomCode::new(room_value)?;
+    let room = RoomCode::parse(&room_input)?;
 
-    print!("Generated invite secret (64 hex digits; visible input in this CLI prototype): ");
+    print!("Numeric password (1-128 digits; visible input in this CLI prototype): ");
     io::stdout().flush()?;
     let mut secret_input = Zeroizing::new(String::new());
     io::stdin().read_line(&mut secret_input)?;
-    let secret = decode_invite_secret(&secret_input)?;
+    while secret_input.ends_with(['\r', '\n']) {
+        secret_input.pop();
+    }
+    let password = NumericPassword::parse(&secret_input)?;
+    drop(secret_input);
 
     let mut client = authenticate(ClientConfig {
         relay_url,
         room,
-        secret,
+        password,
         operation_timeout: Duration::from_secs(30),
     })
     .await?;

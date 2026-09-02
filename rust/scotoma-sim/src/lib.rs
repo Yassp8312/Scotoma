@@ -6,8 +6,9 @@ use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
 use scotoma_protocol::{
-    Frame, FrameKind, HandshakeRole, HandshakeSession, InviteSecret, JoinRequest, PeerRole,
-    ProtocolLimits, RelayEvent, RoomCode, derive_rendezvous_tag,
+    Frame, FrameKind, HandshakeRole, HandshakeSession, JoinRequest, NumericPassword,
+    PasswordKdfParams, PeerRole, ProtocolLimits, PuzzleSolution, RelayEvent, RendezvousTag,
+    RoomCode, derive_rendezvous_tag, derive_session_secret, solve_admission_challenge,
 };
 use tokio::net::TcpStream;
 use tokio::time::timeout;
@@ -20,7 +21,7 @@ type ClientSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 pub struct ClientConfig {
     pub relay_url: String,
     pub room: RoomCode,
-    pub secret: InviteSecret,
+    pub password: NumericPassword,
     pub operation_timeout: Duration,
 }
 
@@ -29,8 +30,8 @@ impl Debug for ClientConfig {
         formatter
             .debug_struct("ClientConfig")
             .field("relay_url", &self.relay_url)
-            .field("room", &self.room)
-            .field("secret", &"[REDACTED]")
+            .field("room", &"[REDACTED]")
+            .field("password", &"[REDACTED]")
             .field("operation_timeout", &self.operation_timeout)
             .finish_non_exhaustive()
     }
@@ -190,7 +191,9 @@ impl Display for ClientError {
             Self::Connection => formatter.write_str("relay connection failed"),
             Self::RelayRejected => formatter.write_str("relay session failed"),
             Self::Authentication => formatter.write_str("peer authentication failed"),
-            Self::InvalidInviteInput => formatter.write_str("invite secret must be 64 hex digits"),
+            Self::InvalidInviteInput => {
+                formatter.write_str("room and password must be 1 to 128 ASCII digits")
+            }
         }
     }
 }
@@ -204,9 +207,17 @@ impl Error for ClientError {}
 /// Returns a non-secret-bearing [`ClientError`] for transport, relay or
 /// authentication failure.
 pub async fn authenticate(config: ClientConfig) -> Result<AuthenticatedClient, ClientError> {
-    let tag = derive_rendezvous_tag(config.room, &config.secret)
+    let ClientConfig {
+        relay_url,
+        room,
+        password,
+        operation_timeout,
+    } = config;
+    let secret = derive_session_secret(&room, &password, PasswordKdfParams::default())
         .map_err(|_| ClientError::Authentication)?;
-    let connect = timeout(config.operation_timeout, connect_async(&config.relay_url))
+    drop(password);
+    let tag = derive_rendezvous_tag(&room, &secret).map_err(|_| ClientError::Authentication)?;
+    let connect = timeout(operation_timeout, connect_async(&relay_url))
         .await
         .map_err(|_| ClientError::Connection)?
         .map_err(|_| ClientError::Connection)?;
@@ -215,15 +226,15 @@ pub async fn authenticate(config: ClientConfig) -> Result<AuthenticatedClient, C
     send_binary(
         &mut socket,
         JoinRequest { tag: tag.clone() }.encode(),
-        config.operation_timeout,
+        operation_timeout,
     )
     .await?;
-    let role = await_pairing(&mut socket, config.operation_timeout).await?;
+    let role = await_pairing(&mut socket, &tag, operation_timeout).await?;
     let handshake_role = match role {
         PeerRole::Initiator => HandshakeRole::Initiator,
         PeerRole::Responder => HandshakeRole::Responder,
     };
-    let mut handshake = HandshakeSession::new(handshake_role, config.room, &config.secret, &tag)
+    let mut handshake = HandshakeSession::new(handshake_role, &room, &secret, &tag)
         .map_err(|_| ClientError::Authentication)?;
 
     match role {
@@ -231,28 +242,28 @@ pub async fn authenticate(config: ClientConfig) -> Result<AuthenticatedClient, C
             let first = handshake
                 .initiator_start()
                 .map_err(|_| ClientError::Authentication)?;
-            send_frame(&mut socket, 0, first, config.operation_timeout).await?;
-            let second = receive_frame(&mut socket, 1, config.operation_timeout).await?;
+            send_frame(&mut socket, 0, first, operation_timeout).await?;
+            let second = receive_frame(&mut socket, 1, operation_timeout).await?;
             let third = handshake
                 .initiator_receive_response(second.payload())
                 .map_err(|_| ClientError::Authentication)?;
-            send_frame(&mut socket, 2, third, config.operation_timeout).await?;
-            let fourth = receive_frame(&mut socket, 3, config.operation_timeout).await?;
+            send_frame(&mut socket, 2, third, operation_timeout).await?;
+            let fourth = receive_frame(&mut socket, 3, operation_timeout).await?;
             handshake
                 .initiator_receive_confirmation(fourth.payload())
                 .map_err(|_| ClientError::Authentication)?;
         }
         PeerRole::Responder => {
-            let first = receive_frame(&mut socket, 0, config.operation_timeout).await?;
+            let first = receive_frame(&mut socket, 0, operation_timeout).await?;
             let second = handshake
                 .responder_receive_initial(first.payload())
                 .map_err(|_| ClientError::Authentication)?;
-            send_frame(&mut socket, 1, second, config.operation_timeout).await?;
-            let third = receive_frame(&mut socket, 2, config.operation_timeout).await?;
+            send_frame(&mut socket, 1, second, operation_timeout).await?;
+            let third = receive_frame(&mut socket, 2, operation_timeout).await?;
             let fourth = handshake
                 .responder_receive_confirmation(third.payload())
                 .map_err(|_| ClientError::Authentication)?;
-            send_frame(&mut socket, 3, fourth, config.operation_timeout).await?;
+            send_frame(&mut socket, 3, fourth, operation_timeout).await?;
         }
     }
 
@@ -264,31 +275,8 @@ pub async fn authenticate(config: ClientConfig) -> Result<AuthenticatedClient, C
         role,
         socket,
         handshake,
-        operation_timeout: config.operation_timeout,
+        operation_timeout,
     })
-}
-
-/// Decodes the temporary hexadecimal invite representation used by the CLI.
-///
-/// # Errors
-///
-/// Rejects values that are not exactly 32 hexadecimal bytes.
-pub fn decode_invite_secret(input: &str) -> Result<InviteSecret, ClientError> {
-    let input = input.trim().as_bytes();
-    if input.len() != 64 {
-        return Err(ClientError::InvalidInviteInput);
-    }
-
-    let mut bytes = [0_u8; 32];
-    for (index, pair) in input.chunks_exact(2).enumerate() {
-        let high = decode_nibble(*pair.first().ok_or(ClientError::InvalidInviteInput)?)?;
-        let low = decode_nibble(*pair.get(1).ok_or(ClientError::InvalidInviteInput)?)?;
-        let target = bytes
-            .get_mut(index)
-            .ok_or(ClientError::InvalidInviteInput)?;
-        *target = (high << 4) | low;
-    }
-    Ok(InviteSecret::from_bytes(bytes))
 }
 
 /// Encodes bytes using the temporary lowercase hexadecimal CLI representation.
@@ -305,9 +293,28 @@ pub fn encode_hex(input: &[u8]) -> String {
 
 async fn await_pairing(
     socket: &mut ClientSocket,
+    tag: &RendezvousTag,
     operation_timeout: Duration,
 ) -> Result<PeerRole, ClientError> {
-    let first = receive_binary(socket, operation_timeout).await?;
+    let mut first = receive_binary(socket, operation_timeout).await?;
+    if let RelayEvent::PuzzleChallenge(challenge) =
+        RelayEvent::decode(&first).map_err(|_| ClientError::RelayRejected)?
+    {
+        let challenge_tag = tag.clone();
+        let solution = tokio::task::spawn_blocking(move || {
+            solve_admission_challenge(challenge, &challenge_tag)
+        })
+        .await
+        .map_err(|_| ClientError::Connection)?
+        .ok_or(ClientError::RelayRejected)?;
+        send_binary(
+            socket,
+            PuzzleSolution { value: solution }.encode(),
+            operation_timeout,
+        )
+        .await?;
+        first = receive_binary(socket, operation_timeout).await?;
+    }
     match RelayEvent::decode(&first).map_err(|_| ClientError::RelayRejected)? {
         RelayEvent::Waiting(PeerRole::Initiator) => {
             let ready = receive_binary(socket, operation_timeout).await?;
@@ -405,38 +412,9 @@ async fn receive_binary(
     }
 }
 
-fn decode_nibble(value: u8) -> Result<u8, ClientError> {
-    match value {
-        b'0'..=b'9' => Ok(value - b'0'),
-        b'a'..=b'f' => Ok(value - b'a' + 10),
-        b'A'..=b'F' => Ok(value - b'A' + 10),
-        _ => Err(ClientError::InvalidInviteInput),
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{ClientError, decode_invite_secret, encode_hex};
-
-    #[test]
-    fn invite_hex_round_trips_expected_bytes() {
-        let encoded = "42".repeat(32);
-        let secret = decode_invite_secret(&encoded).expect("valid secret");
-
-        assert_eq!(secret.expose_bytes(), &[0x42; 32]);
-    }
-
-    #[test]
-    fn invalid_invite_input_is_rejected() {
-        assert!(matches!(
-            decode_invite_secret("not-a-secret"),
-            Err(ClientError::InvalidInviteInput)
-        ));
-        assert!(matches!(
-            decode_invite_secret(&"zz".repeat(32)),
-            Err(ClientError::InvalidInviteInput)
-        ));
-    }
+    use super::encode_hex;
 
     #[test]
     fn hex_encoder_is_canonical_lowercase() {

@@ -1,6 +1,6 @@
 # ADR 0007: Noise NNpsk0 for the authenticated session prototype
 
-- Status: Accepted for the CLI prototype; not approved for production
+- Status: Noise construction retained and re-versioned by ADR 0013; not approved for production
 - Date: 2026-09-01
 
 ## Context

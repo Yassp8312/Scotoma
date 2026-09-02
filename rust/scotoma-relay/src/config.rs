@@ -23,8 +23,13 @@ pub struct RelayConfig {
     pub max_rooms: usize,
     pub outbound_channel_capacity: usize,
     pub max_concurrent_connections: usize,
+    /// Traffic up to this soft rate enters without a client puzzle.
+    pub max_unchallenged_upgrades_per_second: u32,
+    pub unchallenged_upgrade_burst: u32,
+    /// Hard ceiling; traffic between the soft and hard limits must solve a puzzle.
     pub max_websocket_upgrades_per_second: u32,
     pub websocket_upgrade_burst: u32,
+    pub admission_puzzle_difficulty_bits: u8,
     pub max_connection_frames_per_second: u32,
     pub connection_frame_burst: u32,
     pub max_room_frames_per_second: u32,
@@ -73,8 +78,11 @@ impl Default for RelayConfig {
             max_rooms: 10_000,
             outbound_channel_capacity: 32,
             max_concurrent_connections: 20_000,
-            max_websocket_upgrades_per_second: 200,
-            websocket_upgrade_burst: 400,
+            max_unchallenged_upgrades_per_second: 200,
+            unchallenged_upgrade_burst: 400,
+            max_websocket_upgrades_per_second: 800,
+            websocket_upgrade_burst: 1_600,
+            admission_puzzle_difficulty_bits: 18,
             max_connection_frames_per_second: 50,
             connection_frame_burst: 100,
             max_room_frames_per_second: 80,
@@ -174,7 +182,9 @@ mod tests {
         assert_eq!(config.max_room_lifetime, Duration::from_secs(7_200));
         assert_eq!(config.listen_addr.to_string(), "127.0.0.1:8787");
         assert_eq!(config.max_concurrent_connections, 20_000);
-        assert_eq!(config.max_websocket_upgrades_per_second, 200);
+        assert_eq!(config.max_unchallenged_upgrades_per_second, 200);
+        assert_eq!(config.max_websocket_upgrades_per_second, 800);
+        assert_eq!(config.admission_puzzle_difficulty_bits, 18);
         assert_eq!(config.max_connection_frames_per_second, 50);
         assert_eq!(config.max_room_frames_per_second, 80);
         assert_eq!(config.event_channel_capacity, 256);

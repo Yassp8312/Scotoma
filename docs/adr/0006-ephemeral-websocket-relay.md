@@ -1,6 +1,6 @@
 # ADR 0006: Bounded in-memory WebSocket relay
 
-- Status: Accepted for the protocol prototype
+- Status: Relay design retained; v1 wire route superseded by ADR 0013
 - Date: 2026-09-01
 
 ## Context

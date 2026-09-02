@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
 use scotoma_protocol::{
-    FRAME_HEADER_LEN, Frame, FrameKind, PROTOCOL_VERSION, ProtocolLimits, RENDEZVOUS_TAG_BYTES,
-    RendezvousTag,
+    FRAME_HEADER_LEN, Frame, FrameKind, PROTOCOL_VERSION, ProtocolLimits, PuzzleSolution,
+    RENDEZVOUS_TAG_BYTES, RendezvousTag, solve_admission_challenge,
 };
 use scotoma_relay::{JoinRequest, PeerRole, RelayConfig, RelayEvent, serve, serve_with_admin};
 use tokio::net::{TcpListener, TcpStream};
@@ -27,7 +27,7 @@ async fn two_clients_pair_forward_a_frame_and_close_ephemerally() -> TestResult 
         ..RelayConfig::default()
     };
     let server = tokio::spawn(async move { serve(listener, config).await });
-    let url = format!("ws://{address}/v1/connect");
+    let url = format!("ws://{address}/v2/connect");
     let request = JoinRequest {
         tag: RendezvousTag::from_bytes([0x5a; RENDEZVOUS_TAG_BYTES]),
     };
@@ -78,6 +78,49 @@ async fn two_clients_pair_forward_a_frame_and_close_ephemerally() -> TestResult 
 }
 
 #[tokio::test]
+async fn pressure_mode_requires_client_work_before_room_allocation() -> TestResult {
+    let listener = TcpListener::bind("127.0.0.1:0").await?;
+    let address = listener.local_addr()?;
+    let config = RelayConfig {
+        listen_addr: address,
+        handshake_timeout: Duration::from_secs(2),
+        max_unchallenged_upgrades_per_second: 0,
+        unchallenged_upgrade_burst: 0,
+        admission_puzzle_difficulty_bits: 8,
+        ..RelayConfig::default()
+    };
+    let server = tokio::spawn(async move { serve(listener, config).await });
+    let url = format!("ws://{address}/v2/connect");
+    let request = JoinRequest {
+        tag: RendezvousTag::from_bytes([0x4a; RENDEZVOUS_TAG_BYTES]),
+    };
+    let mut socket = connect_and_join(&url, &request).await?;
+    let RelayEvent::PuzzleChallenge(challenge) =
+        RelayEvent::decode(&next_binary(&mut socket).await?)?
+    else {
+        return Err(io::Error::other("expected admission challenge").into());
+    };
+    let tag = request.tag.clone();
+    let solution = tokio::task::spawn_blocking(move || solve_admission_challenge(challenge, &tag))
+        .await?
+        .ok_or_else(|| io::Error::other("puzzle should be solvable"))?;
+    socket
+        .send(Message::Binary(
+            PuzzleSolution { value: solution }.encode().into(),
+        ))
+        .await?;
+
+    assert_eq!(
+        RelayEvent::decode(&next_binary(&mut socket).await?)?,
+        RelayEvent::Waiting(PeerRole::Initiator)
+    );
+
+    server.abort();
+    let _ = server.await;
+    Ok(())
+}
+
+#[tokio::test]
 async fn pending_frames_and_idle_rooms_expire_through_the_server() -> TestResult {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let address = listener.local_addr()?;
@@ -94,7 +137,7 @@ async fn pending_frames_and_idle_rooms_expire_through_the_server() -> TestResult
         ..RelayConfig::default()
     };
     let server = tokio::spawn(async move { serve(listener, config).await });
-    let url = format!("ws://{address}/v1/connect");
+    let url = format!("ws://{address}/v2/connect");
     let request = JoinRequest {
         tag: RendezvousTag::from_bytes([0x6b; RENDEZVOUS_TAG_BYTES]),
     };
@@ -143,7 +186,7 @@ async fn global_upgrade_burst_is_rejected_before_join() -> TestResult {
         ..RelayConfig::default()
     };
     let server = tokio::spawn(async move { serve(listener, config).await });
-    let url = format!("ws://{address}/v1/connect");
+    let url = format!("ws://{address}/v2/connect");
     let (_first, _) = connect_async(&url).await?;
 
     let error = connect_async(&url)
@@ -169,7 +212,7 @@ async fn concurrent_connection_capacity_is_fail_closed() -> TestResult {
         ..RelayConfig::default()
     };
     let server = tokio::spawn(async move { serve(listener, config).await });
-    let url = format!("ws://{address}/v1/connect");
+    let url = format!("ws://{address}/v2/connect");
     let (_first, _) = connect_async(&url).await?;
 
     let error = connect_async(&url)
@@ -194,7 +237,7 @@ async fn per_connection_frame_burst_closes_the_room() -> TestResult {
         ..RelayConfig::default()
     };
     let server = tokio::spawn(async move { serve(listener, config).await });
-    let url = format!("ws://{address}/v1/connect");
+    let url = format!("ws://{address}/v2/connect");
     let request = JoinRequest {
         tag: RendezvousTag::from_bytes([0x72; RENDEZVOUS_TAG_BYTES]),
     };
@@ -232,7 +275,7 @@ async fn missing_join_and_missing_peer_expire_independently() -> TestResult {
         ..RelayConfig::default()
     };
     let server = tokio::spawn(async move { serve(listener, config).await });
-    let url = format!("ws://{address}/v1/connect");
+    let url = format!("ws://{address}/v2/connect");
     let (mut no_join, _) = connect_async(&url).await?;
 
     assert_eq!(
@@ -271,7 +314,7 @@ async fn paired_but_incomplete_handshake_expires_through_the_server() -> TestRes
         ..RelayConfig::default()
     };
     let server = tokio::spawn(async move { serve(listener, config).await });
-    let url = format!("ws://{address}/v1/connect");
+    let url = format!("ws://{address}/v2/connect");
     let request = JoinRequest {
         tag: RendezvousTag::from_bytes([0x74; RENDEZVOUS_TAG_BYTES]),
     };
@@ -311,7 +354,7 @@ async fn metrics_endpoint_exposes_only_aggregate_process_state() -> TestResult {
         tokio::spawn(
             async move { serve_with_admin(public_listener, admin_listener, config).await },
         );
-    let url = format!("ws://{public_address}/v1/connect");
+    let url = format!("ws://{public_address}/v2/connect");
     let request = JoinRequest {
         tag: RendezvousTag::from_bytes([0x75; RENDEZVOUS_TAG_BYTES]),
     };
@@ -361,7 +404,7 @@ async fn malformed_protocol_frames_close_and_release_the_room() -> TestResult {
         ..RelayConfig::default()
     };
     let server = tokio::spawn(async move { serve(listener, config).await });
-    let url = format!("ws://{address}/v1/connect");
+    let url = format!("ws://{address}/v2/connect");
 
     for (tag_byte, hostile_packet) in [0x80, 0x81, 0x82, 0x83, 0x84, 0x85]
         .into_iter()
@@ -405,7 +448,7 @@ async fn text_and_oversized_messages_fail_closed() -> TestResult {
     };
     let maximum = config.max_websocket_message_bytes();
     let server = tokio::spawn(async move { serve(listener, config).await });
-    let url = format!("ws://{address}/v1/connect");
+    let url = format!("ws://{address}/v2/connect");
 
     let text_request = JoinRequest {
         tag: RendezvousTag::from_bytes([0x90; RENDEZVOUS_TAG_BYTES]),
@@ -448,7 +491,7 @@ async fn fresh_relay_process_has_no_inherited_room_state() -> TestResult {
         ..RelayConfig::default()
     };
     let first_server = tokio::spawn(async move { serve(first_listener, config).await });
-    let mut first = connect_and_join(&format!("ws://{first_address}/v1/connect"), &request).await?;
+    let mut first = connect_and_join(&format!("ws://{first_address}/v2/connect"), &request).await?;
     assert_eq!(
         RelayEvent::decode(&next_binary(&mut first).await?)?,
         RelayEvent::Waiting(PeerRole::Initiator)
@@ -467,7 +510,7 @@ async fn fresh_relay_process_has_no_inherited_room_state() -> TestResult {
     };
     let second_server = tokio::spawn(async move { serve(second_listener, second_config).await });
     let mut after_restart =
-        connect_and_join(&format!("ws://{second_address}/v1/connect"), &request).await?;
+        connect_and_join(&format!("ws://{second_address}/v2/connect"), &request).await?;
     assert_eq!(
         RelayEvent::decode(&next_binary(&mut after_restart).await?)?,
         RelayEvent::Waiting(PeerRole::Initiator)

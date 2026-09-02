@@ -11,11 +11,11 @@ Native TLS inside the relay would combine certificate lifecycle, ACME, HTTP edge
 
 ## Decision
 
-Use Caddy as the single-host TLS edge for the prototype. Caddy exposes ports 80 and 443, automates certificate renewal and proxies only exact `/health` and `/v1/connect` paths to the relay's public listener. WebSocket support is provided by the standard reverse proxy transport. Access logging is not enabled, forwarded client-address headers are removed and header/body/TLS-adjacent resource deadlines are bounded at the edge.
+Use Caddy as the single-host TLS edge for the prototype. Caddy exposes ports 80 and 443, automates certificate renewal and proxies only exact `/health` and `/v2/connect` paths to the relay's public listener. WebSocket support is provided by the standard reverse proxy transport. Access logging is not enabled, forwarded client-address headers are removed and header/body/TLS-adjacent resource deadlines are bounded at the edge.
 
 The Rust process serves two routers backed by one shared in-memory state:
 
-- the public listener exposes `/health` and `/v1/connect`;
+- the public listener exposes `/health` and `/v2/connect`;
 - the administrative listener exposes only `/metrics` and defaults to `127.0.0.1:8788`.
 
 The container deployment publishes neither relay listener. Caddy can reach only the public listener through a private container network; the administrative listener stays on relay-container loopback. The relay image runs unprivileged, read-only and without Linux capabilities or persistent volumes.

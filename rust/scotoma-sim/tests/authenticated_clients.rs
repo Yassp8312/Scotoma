@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::time::Duration;
 
-use scotoma_protocol::{InviteSecret, PeerRole, ProtocolLimits, RoomCode};
+use scotoma_protocol::{NumericPassword, PeerRole, ProtocolLimits, RoomCode};
 use scotoma_relay::{RelayConfig, serve};
 use scotoma_sim::{ClientConfig, authenticate};
 use tokio::net::TcpListener;
@@ -27,20 +27,19 @@ async fn two_clients_exchange_one_hundred_messages_then_burn() -> TestResult {
         ..RelayConfig::default()
     };
     let server = tokio::spawn(async move { serve(listener, relay_config).await });
-    let relay_url = format!("ws://{address}/v1/connect");
-    let room = RoomCode::new(314_159)?;
-    let secret_bytes = [0x5a; 32];
+    let relay_url = format!("ws://{address}/v2/connect");
+    let room = RoomCode::parse("314159")?;
 
     let first = authenticate(ClientConfig {
         relay_url: relay_url.clone(),
-        room,
-        secret: InviteSecret::from_bytes(secret_bytes),
+        room: room.clone(),
+        password: NumericPassword::parse("271828")?,
         operation_timeout: Duration::from_secs(2),
     });
     let second = authenticate(ClientConfig {
         relay_url,
         room,
-        secret: InviteSecret::from_bytes(secret_bytes),
+        password: NumericPassword::parse("271828")?,
         operation_timeout: Duration::from_secs(2),
     });
     let (first, second) = tokio::join!(first, second);

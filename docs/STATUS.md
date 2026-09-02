@@ -1,6 +1,6 @@
 # Development status
 
-Last updated: 2026-09-01
+Last updated: 2026-09-02
 
 ## Milestones
 
@@ -21,8 +21,8 @@ Last updated: 2026-09-01
 | SCT-001 — Git, Cargo workspace and CI | Complete | Workspace and Rust CI workflow |
 | SCT-002 — Threat model and lifecycle | Complete | `docs/THREAT_MODEL.md`, `docs/DATA_LIFECYCLE.md` |
 | SCT-003 — States, errors and limits | Complete | `scotoma-protocol` frame parser and state machine |
-| SCT-004 — High-entropy invite generator | Complete | `InviteSecret::generate` and tests |
-| SCT-005 — Versioned rendezvous tag | Complete | `derive_rendezvous_tag` and tests |
+| SCT-004 — High-entropy invite generator | Superseded in v2 | Replaced by user-entered numeric credentials in ADR 0013 |
+| SCT-005 — Versioned rendezvous tag | Complete in v2 | Argon2id-derived, room-bound `derive_rendezvous_tag` and tests |
 | SCT-006 — In-memory WebSocket relay | Complete | Bounded two-party hub, WebSocket server and end-to-end socket test |
 | SCT-007 — PAKE/AKE decision | Complete for prototype | ADR 0007 selects Noise NNpsk0 and records production blockers |
 | SCT-008 — Two authenticated CLI clients | Complete for prototype | Noise state machine, Cacophony/SCOTOMA vectors and relay + two-client integration test |
@@ -30,6 +30,16 @@ Last updated: 2026-09-01
 | SCT-010 — TTL, BURN and E2E test | Complete for prototype | Bounded zeroizing pending queue, ACK/TTL/BURN purge, idle-room expiry and authenticated two-client E2E test |
 
 The ten-ticket first sprint and five-ticket relay-hardening sprint are complete for the prototype. Android client work is next.
+
+## Protocol v2 security block
+
+| Ticket | Status | Evidence |
+|---|---|---|
+| SCT-016 — Bounded numeric credentials | Complete for prototype | 1–128 digit room/password types; explicit 39-digit and hostile-input tests |
+| SCT-017 — Password-derived session secret | Complete for prototype | Argon2id v1.3, domain-separated room salt, zeroization and v2 vectors |
+| SCT-018 — Version 2 migration | Complete for prototype | Version byte 2, `/v2/connect`, new derivation domains, CLI and deployment updates |
+| SCT-019 — Adaptive admission puzzle | Complete for prototype | Soft/hard upgrade buckets, relay-issued tag-bound puzzle and live pre-allocation proof test |
+| SCT-020 — Private-rendezvous and platform review | Blocked for production | Benchmark Argon2id on web/Android/iOS; resolve offline verifier/PAKE tradeoff; add edge DDoS controls |
 
 ## Relay hardening sprint
 
@@ -50,6 +60,7 @@ The ten-ticket first sprint and five-ticket relay-hardening sprint are complete 
 - Authenticated-client integration: two clients complete Noise through the real relay, exchange 100 encrypted messages through a one-frame pending queue with continuous rekeying, validate every ACK and complete authenticated BURN.
 - Cryptographic negative tests: wrong secret/room, handshake and ciphertext tampering, altered inner/outer headers, stage misuse, confirmation replay, application replay and skipped counters fail closed; authenticated BURN makes both transport states terminal.
 - Abuse-control integration: excess upgrades return HTTP 429, exhausted connection capacity returns HTTP 503, and excess frame bursts close and purge the room.
+- Adaptive-admission integration: ordinary traffic enters without a puzzle; pressure-mode traffic must return a valid relay-issued proof before room allocation.
 - Slow-client integration: missing join, missing peer and incomplete session handshake expire independently; activity cannot extend the absolute room lifetime.
 - Observability integration: live gauges return to zero after teardown and the metrics response contains no rendezvous tag, payload or client address.
 - Adversarial integration: noncanonical joins and malformed frames fail closed; text and oversized WebSocket messages close the room; teardown releases the rendezvous tag; a fresh relay process inherits no room state.

@@ -1,14 +1,20 @@
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 
-use crate::{PROTOCOL_VERSION, RENDEZVOUS_TAG_BYTES, RendezvousTag};
+use crate::{
+    AdmissionChallenge, PROTOCOL_VERSION, PUZZLE_NONCE_BYTES, RENDEZVOUS_TAG_BYTES, RendezvousTag,
+};
 
 const JOIN_KIND: u8 = 1;
+const PUZZLE_SOLUTION_KIND: u8 = 2;
 const WAITING_EVENT: u8 = 0x81;
 const PEER_READY_EVENT: u8 = 0x82;
 const ROOM_CLOSED_EVENT: u8 = 0x83;
+const PUZZLE_CHALLENGE_EVENT: u8 = 0x84;
 const ERROR_EVENT: u8 = 0xff;
 const JOIN_PACKET_BYTES: usize = 2 + RENDEZVOUS_TAG_BYTES;
+const PUZZLE_SOLUTION_BYTES: usize = 2 + size_of::<u64>();
+const PUZZLE_CHALLENGE_BYTES: usize = 3 + PUZZLE_NONCE_BYTES;
 
 /// Role assigned by the relay according to join order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -95,12 +101,56 @@ impl JoinRequest {
     }
 }
 
+/// Fixed-size response to a relay-issued admission challenge.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PuzzleSolution {
+    pub value: u64,
+}
+
+impl PuzzleSolution {
+    #[must_use]
+    pub fn encode(self) -> Vec<u8> {
+        let mut packet = Vec::with_capacity(PUZZLE_SOLUTION_BYTES);
+        packet.extend_from_slice(&[PROTOCOL_VERSION, PUZZLE_SOLUTION_KIND]);
+        packet.extend_from_slice(&self.value.to_be_bytes());
+        packet
+    }
+
+    /// Parses a complete puzzle solution packet.
+    ///
+    /// # Errors
+    ///
+    /// Rejects invalid lengths, versions and packet kinds.
+    pub fn decode(packet: &[u8]) -> Result<Self, RelayWireError> {
+        if packet.len() != PUZZLE_SOLUTION_BYTES {
+            return Err(RelayWireError::InvalidLength {
+                expected: PUZZLE_SOLUTION_BYTES,
+                actual: packet.len(),
+            });
+        }
+        if packet[0] != PROTOCOL_VERSION {
+            return Err(RelayWireError::UnsupportedVersion(packet[0]));
+        }
+        if packet[1] != PUZZLE_SOLUTION_KIND {
+            return Err(RelayWireError::UnknownPacketKind(packet[1]));
+        }
+        let value = u64::from_be_bytes(packet[2..].try_into().map_err(|_| {
+            RelayWireError::InvalidLength {
+                expected: PUZZLE_SOLUTION_BYTES,
+                actual: packet.len(),
+            }
+        })?);
+        Ok(Self { value })
+    }
+}
+
 /// Relay control message. Application frames use the protocol frame format.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RelayEvent {
     Waiting(PeerRole),
     PeerReady(PeerRole),
     RoomClosed,
+    PuzzleChallenge(AdmissionChallenge),
     Error,
 }
 
@@ -111,6 +161,16 @@ impl RelayEvent {
             Self::Waiting(role) => vec![PROTOCOL_VERSION, WAITING_EVENT, role as u8],
             Self::PeerReady(role) => vec![PROTOCOL_VERSION, PEER_READY_EVENT, role as u8],
             Self::RoomClosed => vec![PROTOCOL_VERSION, ROOM_CLOSED_EVENT],
+            Self::PuzzleChallenge(challenge) => {
+                let mut packet = Vec::with_capacity(PUZZLE_CHALLENGE_BYTES);
+                packet.extend_from_slice(&[
+                    PROTOCOL_VERSION,
+                    PUZZLE_CHALLENGE_EVENT,
+                    challenge.difficulty_bits,
+                ]);
+                packet.extend_from_slice(&challenge.nonce);
+                packet
+            }
             Self::Error => vec![PROTOCOL_VERSION, ERROR_EVENT],
         }
     }
@@ -174,6 +234,27 @@ impl RelayEvent {
                     Ok(Self::Error)
                 }
             }
+            PUZZLE_CHALLENGE_EVENT => {
+                if packet.len() != PUZZLE_CHALLENGE_BYTES {
+                    return Err(RelayWireError::InvalidLength {
+                        expected: PUZZLE_CHALLENGE_BYTES,
+                        actual: packet.len(),
+                    });
+                }
+                let challenge = AdmissionChallenge {
+                    difficulty_bits: packet[2],
+                    nonce: packet[3..]
+                        .try_into()
+                        .map_err(|_| RelayWireError::InvalidLength {
+                            expected: PUZZLE_CHALLENGE_BYTES,
+                            actual: packet.len(),
+                        })?,
+                };
+                if !challenge.is_valid() {
+                    return Err(RelayWireError::InvalidPuzzleDifficulty);
+                }
+                Ok(Self::PuzzleChallenge(challenge))
+            }
             other => Err(RelayWireError::UnknownPacketKind(other)),
         }
     }
@@ -186,6 +267,7 @@ pub enum RelayWireError {
     UnsupportedVersion(u8),
     UnknownPacketKind(u8),
     UnknownRole(u8),
+    InvalidPuzzleDifficulty,
 }
 
 impl Display for RelayWireError {
@@ -202,6 +284,7 @@ impl Display for RelayWireError {
             }
             Self::UnknownPacketKind(kind) => write!(formatter, "unknown packet kind: {kind}"),
             Self::UnknownRole(role) => write!(formatter, "unknown peer role: {role}"),
+            Self::InvalidPuzzleDifficulty => formatter.write_str("invalid puzzle difficulty"),
         }
     }
 }
@@ -210,9 +293,12 @@ impl Error for RelayWireError {}
 
 #[cfg(test)]
 mod tests {
-    use crate::{PROTOCOL_VERSION, RENDEZVOUS_TAG_BYTES, RendezvousTag};
+    use crate::{
+        AdmissionChallenge, PROTOCOL_VERSION, PUZZLE_NONCE_BYTES, RENDEZVOUS_TAG_BYTES,
+        RendezvousTag,
+    };
 
-    use super::{JoinRequest, PeerRole, RelayEvent, RelayWireError};
+    use super::{JoinRequest, PeerRole, PuzzleSolution, RelayEvent, RelayWireError};
 
     #[test]
     fn join_request_round_trips() {
@@ -268,11 +354,21 @@ mod tests {
             RelayEvent::Waiting(PeerRole::Initiator),
             RelayEvent::PeerReady(PeerRole::Responder),
             RelayEvent::RoomClosed,
+            RelayEvent::PuzzleChallenge(AdmissionChallenge {
+                nonce: [9; PUZZLE_NONCE_BYTES],
+                difficulty_bits: 18,
+            }),
             RelayEvent::Error,
         ];
 
         for event in events {
             assert_eq!(RelayEvent::decode(&event.encode()), Ok(event));
         }
+    }
+
+    #[test]
+    fn puzzle_solution_round_trips() {
+        let solution = PuzzleSolution { value: 42 };
+        assert_eq!(PuzzleSolution::decode(&solution.encode()), Ok(solution));
     }
 }

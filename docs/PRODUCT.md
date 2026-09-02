@@ -12,14 +12,13 @@ SCOTOMA does not claim to be untraceable, anonymous against a global observer or
 
 ## MVP user journey
 
-1. A participant creates an invite.
-2. SCOTOMA generates a room label and a secret with at least 128 bits of entropy.
-3. The invite is transferred through a separate channel or in person.
-4. Both clients connect to the relay using a derived opaque rendezvous tag.
-5. The clients perform an authenticated key exchange and explicit key confirmation.
-6. The relay forwards opaque encrypted frames.
-7. The conversation remains visible in client memory while the process lives.
-8. `BURN`, expiration or process termination destroys the local session state according to the documented lifecycle.
+1. A participant chooses a numeric room and numeric password.
+2. The two values are transferred through a separate channel or in person.
+3. Both clients connect to the relay using a derived opaque rendezvous tag.
+4. The clients perform an authenticated key exchange and explicit key confirmation.
+5. The relay forwards opaque encrypted frames.
+6. The conversation remains visible in client memory while the process lives.
+7. `BURN`, expiration or process termination destroys the local session state according to the documented lifecycle.
 
 ## MVP scope
 
@@ -47,9 +46,9 @@ SCOTOMA does not claim to be untraceable, anonymous against a global observer or
 
 | Term | Meaning |
 |---|---|
-| Room | Human-readable label included in an invite; not a security boundary |
-| Secret | Random, high-entropy value known by the two intended participants |
-| Invite | Room, secret and protocol-version information transferred out of band |
+| Room | User-selected numeric label of 1 to 128 digits; not a security boundary |
+| Password | User-selected numeric value of 1 to 128 digits; short values remain weak |
+| Invite | Room, password and protocol-version information transferred out of band |
 | Rendezvous tag | Deterministic opaque value used by the relay to pair matching clients |
 | Session | One authenticated, ephemeral relationship between two clients |
 | Relay | Server that pairs connections and transports opaque frames |
@@ -57,4 +56,3 @@ SCOTOMA does not claim to be untraceable, anonymous against a global observer or
 | Leave | A future recoverable disconnect within a short TTL |
 | Burn | Best-effort irreversible termination of the active session |
 | Expire | Automatic removal after a documented TTL |
-

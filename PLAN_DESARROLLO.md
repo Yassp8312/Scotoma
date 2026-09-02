@@ -1,8 +1,10 @@
 # SCOTOMA — Plan de desarrollo
 
+> Nota de versión (2026-09-02): las decisiones sobre secretos aleatorios y rooms enteras de este plan inicial fueron sustituidas por el bloque de protocolo v2 descrito en `docs/adr/0013-numeric-credentials-and-adaptive-admission-v2.md`. La implementación actual recibe room y contraseña numéricas de 1 a 128 dígitos, deriva localmente con Argon2id y utiliza admisión adaptativa. Las secciones antiguas se conservan como historial de diseño.
+
 ## 1. Resultado que buscamos
 
-SCOTOMA será una aplicación de mensajería efímera, uno a uno y sin cuentas. Dos personas que conocen el mismo `ROOM` y `SECRET` se encuentran, establecen una sesión cifrada extremo a extremo y conversan sin que el relay pueda leer el contenido.
+SCOTOMA será una aplicación de mensajería efímera, uno a uno y sin cuentas. Dos personas que conocen la misma room y contraseña numéricas se encuentran, establecen una sesión cifrada extremo a extremo y conversan sin que el relay pueda leer el contenido.
 
 La promesa de producto debe ser precisa:
 

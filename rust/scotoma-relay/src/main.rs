@@ -10,7 +10,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let admin_listener = TcpListener::bind(config.admin_listen_addr).await?;
 
     println!(
-        "scotoma-relay public listener: http://{} (WebSocket path /v1/connect)",
+        "scotoma-relay public listener: http://{} (WebSocket path /v2/connect)",
         config.relay.listen_addr
     );
     println!(

@@ -8,15 +8,15 @@ use snow::{Builder, HandshakeState, TransportState};
 use zeroize::Zeroizing;
 
 use crate::{
-    FRAME_HEADER_LEN, Frame, FrameKind, InviteSecret, PROTOCOL_VERSION, ProtocolLimits,
-    RendezvousTag, RoomCode,
+    FRAME_HEADER_LEN, Frame, FrameKind, PROTOCOL_VERSION, ProtocolLimits, RendezvousTag, RoomCode,
+    SessionSecret,
 };
 
 /// Fixed Noise suite for protocol version 1. Negotiation is not supported.
 pub const NOISE_PROTOCOL_NAME: &str = "Noise_NNpsk0_25519_ChaChaPoly_SHA256";
 
-const PSK_CONTEXT: &[u8] = b"scotoma-noise-psk-v1";
-const PROLOGUE_CONTEXT: &[u8] = b"scotoma-e2ee-handshake-v1";
+const PSK_CONTEXT: &[u8] = b"scotoma-noise-psk-v2";
+const PROLOGUE_CONTEXT: &[u8] = b"scotoma-e2ee-handshake-v2";
 const INITIATOR_HANDSHAKE_LABEL: &[u8] = b"scotoma-handshake-i-v1";
 const RESPONDER_HANDSHAKE_LABEL: &[u8] = b"scotoma-handshake-r-v1";
 const INITIATOR_CONFIRM_LABEL: &[u8] = b"scotoma-key-confirm-i-v1";
@@ -143,7 +143,7 @@ pub struct HandshakeSession {
 }
 
 impl HandshakeSession {
-    /// Initializes a role-bound Noise state from a generated invite.
+    /// Initializes a role-bound Noise state from the locally derived v2 secret.
     ///
     /// # Errors
     ///
@@ -151,8 +151,8 @@ impl HandshakeSession {
     /// initialized. No secret-bearing cause is exposed.
     pub fn new(
         role: HandshakeRole,
-        room: RoomCode,
-        secret: &InviteSecret,
+        room: &RoomCode,
+        secret: &SessionSecret,
         tag: &RendezvousTag,
     ) -> Result<Self, HandshakeError> {
         Self::new_internal(role, room, secret, tag, None)
@@ -160,8 +160,8 @@ impl HandshakeSession {
 
     fn new_internal(
         role: HandshakeRole,
-        room: RoomCode,
-        secret: &InviteSecret,
+        room: &RoomCode,
+        secret: &SessionSecret,
         tag: &RendezvousTag,
         fixed_ephemeral_for_test: Option<&[u8]>,
     ) -> Result<Self, HandshakeError> {
@@ -637,28 +637,32 @@ impl Debug for HandshakeSession {
 }
 
 fn derive_noise_psk(
-    room: RoomCode,
-    secret: &InviteSecret,
+    room: &RoomCode,
+    secret: &SessionSecret,
 ) -> Result<Zeroizing<[u8; 32]>, HandshakeError> {
     let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(secret.expose_bytes())
         .map_err(|_| HandshakeError)?;
     mac.update(PSK_CONTEXT);
     mac.update(&[0, PROTOCOL_VERSION]);
-    mac.update(&room.value().to_be_bytes());
+    let room_length = u16::try_from(room.as_str().len()).map_err(|_| HandshakeError)?;
+    mac.update(&room_length.to_be_bytes());
+    mac.update(room.as_str().as_bytes());
     let output = mac.finalize().into_bytes();
     let mut psk = Zeroizing::new([0_u8; 32]);
     psk.copy_from_slice(&output);
     Ok(psk)
 }
 
-fn build_prologue(room: RoomCode, tag: &RendezvousTag) -> Zeroizing<Vec<u8>> {
+fn build_prologue(room: &RoomCode, tag: &RendezvousTag) -> Zeroizing<Vec<u8>> {
+    let room_length = u16::try_from(room.as_str().len()).unwrap_or(0);
     let mut prologue = Zeroizing::new(Vec::with_capacity(
-        PROLOGUE_CONTEXT.len() + 1 + 1 + 8 + tag.as_bytes().len() + 2,
+        PROLOGUE_CONTEXT.len() + 1 + 1 + 2 + room.as_str().len() + tag.as_bytes().len() + 2,
     ));
     prologue.extend_from_slice(PROLOGUE_CONTEXT);
     prologue.push(0);
     prologue.push(PROTOCOL_VERSION);
-    prologue.extend_from_slice(&room.value().to_be_bytes());
+    prologue.extend_from_slice(&room_length.to_be_bytes());
+    prologue.extend_from_slice(room.as_str().as_bytes());
     prologue.extend_from_slice(tag.as_bytes());
     prologue.extend_from_slice(&[1, 2]);
     prologue
@@ -668,7 +672,7 @@ fn build_prologue(room: RoomCode, tag: &RendezvousTag) -> Zeroizing<Vec<u8>> {
 mod tests {
     use std::fmt::Write as _;
 
-    use crate::{Frame, FrameKind, InviteSecret, ProtocolLimits, RoomCode, derive_rendezvous_tag};
+    use crate::{Frame, FrameKind, ProtocolLimits, RoomCode, SessionSecret, derive_rendezvous_tag};
 
     use super::{
         HandshakeRole, HandshakeSession, HandshakeStage, INITIATOR_CONFIRM_LABEL, TransportError,
@@ -681,21 +685,21 @@ mod tests {
         initiator_room: u64,
         responder_room: u64,
     ) -> (HandshakeSession, HandshakeSession) {
-        let initiator_secret = InviteSecret::from_bytes(initiator_bytes);
-        let responder_secret = InviteSecret::from_bytes(responder_bytes);
-        let first_room = RoomCode::new(initiator_room).expect("valid room");
-        let second_room = RoomCode::new(responder_room).expect("valid room");
-        let tag = derive_rendezvous_tag(first_room, &initiator_secret).expect("valid tag");
+        let initiator_secret = SessionSecret::from_bytes_for_test(initiator_bytes);
+        let responder_secret = SessionSecret::from_bytes_for_test(responder_bytes);
+        let first_room = RoomCode::parse(&initiator_room.to_string()).expect("valid room");
+        let second_room = RoomCode::parse(&responder_room.to_string()).expect("valid room");
+        let tag = derive_rendezvous_tag(&first_room, &initiator_secret).expect("valid tag");
         let initiator = HandshakeSession::new(
             HandshakeRole::Initiator,
-            first_room,
+            &first_room,
             &initiator_secret,
             &tag,
         )
         .expect("valid initiator");
         let responder = HandshakeSession::new(
             HandshakeRole::Responder,
-            second_room,
+            &second_room,
             &responder_secret,
             &tag,
         )
@@ -972,28 +976,28 @@ mod tests {
 
     #[test]
     fn psk_derivation_is_deterministic_and_domain_separated() {
-        let secret = InviteSecret::from_bytes([0x42; 32]);
-        let room = RoomCode::new(7).expect("valid room");
-        let first = derive_noise_psk(room, &secret).expect("valid derivation");
-        let second = derive_noise_psk(room, &secret).expect("valid derivation");
+        let secret = SessionSecret::from_bytes_for_test([0x42; 32]);
+        let room = RoomCode::parse("7").expect("valid room");
+        let first = derive_noise_psk(&room, &secret).expect("valid derivation");
+        let second = derive_noise_psk(&room, &secret).expect("valid derivation");
 
         assert_eq!(&*first, &*second);
         assert_ne!(&*first, secret.expose_bytes());
         assert_eq!(
             encode_hex(&*first),
-            "2c611f269ad164121db13e988a48d32cddd9e888f788c9e34e614f3eacb8774a"
+            "b76966a77240c9baf53de26e7265566446977e3238c12abcf1e35991c3040346"
         );
     }
 
     #[test]
     fn scotoma_handshake_vector_is_reproducible() {
-        let initiator_secret = InviteSecret::from_bytes([0x42; 32]);
-        let responder_secret = InviteSecret::from_bytes([0x42; 32]);
-        let room = RoomCode::new(7).expect("valid room");
-        let tag = derive_rendezvous_tag(room, &initiator_secret).expect("valid tag");
+        let initiator_secret = SessionSecret::from_bytes_for_test([0x42; 32]);
+        let responder_secret = SessionSecret::from_bytes_for_test([0x42; 32]);
+        let room = RoomCode::parse("7").expect("valid room");
+        let tag = derive_rendezvous_tag(&room, &initiator_secret).expect("valid tag");
         let mut initiator = HandshakeSession::new_internal(
             HandshakeRole::Initiator,
-            room,
+            &room,
             &initiator_secret,
             &tag,
             Some(&[0x11; 32]),
@@ -1001,7 +1005,7 @@ mod tests {
         .expect("fixed initiator");
         let mut responder = HandshakeSession::new_internal(
             HandshakeRole::Responder,
-            room,
+            &room,
             &responder_secret,
             &tag,
             Some(&[0x22; 32]),
@@ -1022,23 +1026,23 @@ mod tests {
 
         assert_eq!(
             encode_hex(&first),
-            "7b4e909bbe7ffe44c465a220037d608ee35897d31ef972f07f74892cb0f73f1382332bb6da751111dcaaf31f1895834250987b66d13558150bc1f8f86971dfeace3446edf0c8"
+            "7b4e909bbe7ffe44c465a220037d608ee35897d31ef972f07f74892cb0f73f1387012226732515084b8fcfaa7ee8c99feb07dd96f39cabf2f7236d1744ae5be3d3c4f2ff58c2"
         );
         assert_eq!(
             encode_hex(&second),
-            "0faa684ed28867b97f4a6a2dee5df8ce974e76b7018e3f22a1c4cf2678570f20c077b8bb1021e7f145d98a61bcb7dbc7ee20b89c48edc2f6ebe5d8f7027e441e3c4df24cb5a2"
+            "0faa684ed28867b97f4a6a2dee5df8ce974e76b7018e3f22a1c4cf2678570f20e5808417f008a602dd736dc829fcbe7fafa5db9e122ad4de5f4dd15e743f4040528553317738"
         );
         assert_eq!(
             encode_hex(&third),
-            "4f315af8714432645cfd56fc1c7fcf6041e5203c966d6aefcac0e86dcfe41d4374327279334fa3291941ccf9880dc2a3ca560884423c60298b02c892150d8c1132ab1dca20add872"
+            "a1402f6210fb0ef7876c33900ea1198c7a61f2ba84d86e54787143cb9ff57c45753b40ebaed311e779f795fad3b8fa9665ce6798944f626099c8f8f0a505769e10175a756d9f5bb5"
         );
         assert_eq!(
             encode_hex(&fourth),
-            "236d48b799e7dbce5e226b503f3b53e7be5e62d54740292102864cdad7b0a710a2576cab5fac7a2766e3a7c9b8772aabd10437b312b8546924f3246ca7ed25484e9cfd826be97186"
+            "54d8cf6b161d1ffd26c12b4d8c3ecadb37e8e05d2e39593148938d278bb22b7c7b7bf7b54544d15c91b107fac898b3cf2f42eff32d44af44d30b6994515e19b7d11252ae71666774"
         );
         assert_eq!(
             encode_hex(initiator.handshake_hash().expect("confirmed hash")),
-            "61293d40e87c67a7d95155501dd7de35c6fe89edb5a0269c68b962a1df231d65"
+            "79f559b219922e0ce19bcd5176dfa7acc1394e3aed556daae19b5d666a13d4a2"
         );
     }
 

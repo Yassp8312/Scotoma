@@ -10,7 +10,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{any, get};
 use futures_util::stream::SplitSink;
 use futures_util::{SinkExt, StreamExt};
-use scotoma_protocol::Frame;
+use scotoma_protocol::{AdmissionChallenge, Frame, PuzzleSolution, verify_admission_solution};
 use tokio::net::TcpListener;
 use tokio::sync::{Mutex, Semaphore};
 use tokio::time::{Instant as TokioInstant, MissedTickBehavior, interval_at, timeout};
@@ -25,6 +25,7 @@ struct AppState {
     config: RelayConfig,
     hub: RelayHub,
     connection_slots: Arc<Semaphore>,
+    unchallenged_upgrade_limiter: Arc<Mutex<RateLimiter>>,
     upgrade_limiter: Arc<Mutex<RateLimiter>>,
     observability: Observability,
 }
@@ -41,6 +42,11 @@ fn app_state(config: RelayConfig) -> AppState {
         config,
         hub: RelayHub::with_observability(config, observability.clone()),
         connection_slots: Arc::new(Semaphore::new(config.max_concurrent_connections)),
+        unchallenged_upgrade_limiter: Arc::new(Mutex::new(RateLimiter::new(
+            config.max_unchallenged_upgrades_per_second,
+            config.unchallenged_upgrade_burst,
+            now,
+        ))),
         upgrade_limiter: Arc::new(Mutex::new(RateLimiter::new(
             config.max_websocket_upgrades_per_second,
             config.websocket_upgrade_burst,
@@ -53,7 +59,7 @@ fn app_state(config: RelayConfig) -> AppState {
 fn public_router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health))
-        .route("/v1/connect", any(connect))
+        .route("/v2/connect", any(connect))
         .with_state(state)
 }
 
@@ -113,6 +119,11 @@ async fn connect(State(state): State<AppState>, upgrade: WebSocketUpgrade) -> Re
             .record(OperationalEvent::UpgradeRateLimited);
         return StatusCode::TOO_MANY_REQUESTS.into_response();
     }
+    let requires_puzzle = !state
+        .unchallenged_upgrade_limiter
+        .lock()
+        .await
+        .allow(StandardInstant::now());
     let Ok(connection_permit) = Arc::clone(&state.connection_slots).try_acquire_owned() else {
         state
             .observability
@@ -130,15 +141,16 @@ async fn connect(State(state): State<AppState>, upgrade: WebSocketUpgrade) -> Re
         .on_upgrade(move |socket| async move {
             let observability = state.observability.clone();
             observability.connection_opened();
-            handle_socket(socket, state).await;
+            handle_socket(socket, state, requires_puzzle).await;
             observability.connection_closed();
             drop(connection_permit);
         })
         .into_response()
 }
 
-async fn handle_socket(mut socket: WebSocket, state: AppState) {
-    let Some((request, registration)) = accept_join(&mut socket, &state).await else {
+async fn handle_socket(mut socket: WebSocket, state: AppState, requires_puzzle: bool) {
+    let Some((request, registration)) = accept_join(&mut socket, &state, requires_puzzle).await
+    else {
         return;
     };
 
@@ -240,6 +252,7 @@ async fn handle_socket(mut socket: WebSocket, state: AppState) {
 async fn accept_join(
     socket: &mut WebSocket,
     state: &AppState,
+    requires_puzzle: bool,
 ) -> Option<(JoinRequest, Registration)> {
     let join_message = match timeout(state.config.handshake_timeout, socket.recv()).await {
         Ok(Some(Ok(Message::Binary(join_message)))) => join_message,
@@ -260,6 +273,11 @@ async fn accept_join(
         reject(socket, state).await;
         return None;
     };
+    if requires_puzzle && !complete_admission_puzzle(socket, state, &request).await {
+        state.observability.record(OperationalEvent::JoinRejected);
+        reject(socket, state).await;
+        return None;
+    }
     let Ok(registration) = state.hub.register(request.tag.clone()).await else {
         state.observability.record(OperationalEvent::JoinRejected);
         reject(socket, state).await;
@@ -282,6 +300,42 @@ async fn accept_join(
         return None;
     }
     Some((request, registration))
+}
+
+async fn complete_admission_puzzle(
+    socket: &mut WebSocket,
+    state: &AppState,
+    request: &JoinRequest,
+) -> bool {
+    let mut nonce = [0_u8; 16];
+    if getrandom::fill(&mut nonce).is_err() {
+        return false;
+    }
+    let challenge = AdmissionChallenge {
+        nonce,
+        difficulty_bits: state.config.admission_puzzle_difficulty_bits,
+    };
+    if !challenge.is_valid() {
+        return false;
+    }
+    let sent = timeout(
+        state.config.websocket_send_timeout,
+        socket.send(Message::Binary(
+            RelayEvent::PuzzleChallenge(challenge).encode().into(),
+        )),
+    )
+    .await;
+    if !matches!(sent, Ok(Ok(()))) {
+        return false;
+    }
+    let solution = timeout(state.config.handshake_timeout, socket.recv()).await;
+    let Ok(Some(Ok(Message::Binary(packet)))) = solution else {
+        return false;
+    };
+    let Ok(solution) = PuzzleSolution::decode(&packet) else {
+        return false;
+    };
+    verify_admission_solution(challenge, &request.tag, solution.value)
 }
 
 async fn close_sender(sender: &mut SplitSink<WebSocket, Message>, state: &AppState) {

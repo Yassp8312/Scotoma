@@ -1,6 +1,6 @@
 # ADR 0005: System RNG and HMAC-SHA-256 for rendezvous tags
 
-- Status: Accepted for the protocol prototype
+- Status: Superseded by ADR 0013 for protocol version 2
 - Date: 2026-08-31
 
 ## Context

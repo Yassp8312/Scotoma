@@ -9,7 +9,8 @@
 | Data | Created | Location | Removed |
 |---|---|---|---|
 | Room label | Invite creation or entry | Process memory | Burn, expiration or process death |
-| Invite secret | Secure random generation or entry | Process memory | Burn, expiration or process death |
+| Numeric password | Entry on every connection | Zeroizing process-memory buffer | Derivation completion, burn, expiration or process death |
+| Derived session secret | Local Argon2id derivation | Zeroizing process-memory buffer | Handshake completion/failure or process death |
 | Rendezvous tag | Local derivation | Process memory | Burn, expiration or process death |
 | Handshake state | Peer connection | Process memory | Handshake completion/failure or timeout |
 | Session keys | Successful handshake | Process memory | Ratchet advancement, burn, expiration or process death |
@@ -18,7 +19,7 @@
 
 Ghost Mode must not write these values to SQLite, files, preferences, backups, notification payloads, crash reports or production logs.
 
-The CLI reads the hexadecimal invite and the initiator's outgoing message into zeroizing process-memory buffers and never accepts the invite as a command-line argument. Frame payload buffers are also zeroized on drop. The temporary development prompts do not yet suppress terminal echo, and the responder prints decrypted text, so terminal scrollback remains an explicit prototype limitation and the CLI must not be distributed as a closed-alpha client.
+The CLI reads the numeric password and the initiator's outgoing message into zeroizing process-memory buffers and never accepts the password as a command-line argument. Frame payload buffers are also zeroized on drop. The temporary development prompts do not yet suppress terminal echo, and the responder prints decrypted text, so terminal scrollback remains an explicit prototype limitation and the CLI must not be distributed as a closed-alpha client.
 
 ## Relay data
 
@@ -30,7 +31,7 @@ The CLI reads the hexadecimal invite and the initiator's outgoing message into z
 | Aggregate counters | Capacity and health | Atomic process memory and private admin `/metrics` | Process death or monitoring scrape |
 | Operational event category | Diagnose limits and lifecycle failures | Bounded process channel, then stderr | Immediate channel delivery; external retention policy after stderr |
 
-The relay must not receive room labels, invite secrets, end-to-end keys or plaintext.
+The relay must not receive room labels, numeric passwords, derived session secrets, end-to-end keys or plaintext.
 
 The relay retains the rendezvous tag, two live connection handles and canonical pending ciphertext in RAM. Pending frames are bounded by count and total encoded bytes and their buffers are zeroized when removed. An ACK removes the oldest pending ciphertext from the opposite direction, packet TTL removes stale entries, and BURN, disconnect, idle TTL or relay restart removes the whole room. Outbound forwarding also uses bounded channels; backpressure failure closes and purges the session.
 

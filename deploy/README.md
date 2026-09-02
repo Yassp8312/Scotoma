@@ -8,10 +8,10 @@ This directory is a single-host prototype deployment, not production approval. C
 |---|---|---|
 | Caddy HTTPS/WSS | host ports 443 TCP/UDP | yes |
 | Caddy ACME redirect/challenge | host port 80 TCP | yes |
-| Relay `/v1/connect` and `/health` | container network port 8787 | only through Caddy |
+| Relay `/v2/connect` and `/health` | container network port 8787 | only through Caddy |
 | Relay `/metrics` | relay container loopback port 8788 | no |
 
-Caddy routes only exact `/health` and `/v1/connect` paths. Every other public path, including `/metrics`, returns 404. It does not enable access logs and strips forwarded client-address headers before contacting the relay. Process/error logs and certificate-account data remain operational metadata and require restricted host access and retention.
+Caddy routes only exact `/health` and `/v2/connect` paths. Every other public path, including `/metrics`, returns 404. It does not enable access logs and strips forwarded client-address headers before contacting the relay. Process/error logs and certificate-account data remain operational metadata and require restricted host access and retention.
 
 ## Start
 
@@ -23,7 +23,7 @@ Caddy routes only exact `/health` and `/v1/connect` paths. Every other public pa
 SCOTOMA_DOMAIN=relay.example.com docker compose -f deploy/compose.yml up --build -d
 ```
 
-The client endpoint is `wss://relay.example.com/v1/connect`. The public health check is `https://relay.example.com/health`; `https://relay.example.com/metrics` must return 404.
+The client endpoint is `wss://relay.example.com/v2/connect`. The public health check is `https://relay.example.com/health`; `https://relay.example.com/metrics` must return 404.
 
 The Caddy data volume is intentionally persistent because ACME account and certificate state must survive restarts. The relay container has no persistent volume and runs as an unprivileged user with a read-only filesystem and all Linux capabilities removed.
 

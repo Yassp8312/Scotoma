@@ -1,6 +1,6 @@
 # ADR 0003: Generated high-entropy invite secrets
 
-- Status: Accepted
+- Status: Superseded by ADR 0013 for protocol version 2
 - Date: 2026-08-31
 
 ## Context
@@ -16,4 +16,3 @@ The secure MVP generates at least 128 random secret bits using the operating-sys
 - Invites are less memorable but resist practical enumeration.
 - The room remains a product affordance rather than a security factor.
 - Clipboard and out-of-band transfer risks must be explained in the UI.
-

@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 axum.workspace = true
 futures-util.workspace = true
+getrandom.workspace = true
 scotoma-protocol = { path = "../scotoma-protocol" }
 tokio.workspace = true
 zeroize.workspace = true

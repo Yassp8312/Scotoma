@@ -7,7 +7,7 @@ This document describes the intended MVP. The current code is not yet a secure m
 ## Assets
 
 - message plaintext;
-- invite secret;
+- numeric password and derived session secret;
 - session and message keys;
 - cryptographic state;
 - pending ciphertext;
@@ -21,7 +21,7 @@ This document describes the intended MVP. The current code is not yet a secure m
 - the two intended endpoint devices while uncompromised;
 - the operating-system cryptographic random-number generator;
 - selected cryptographic libraries within their documented guarantees;
-- the out-of-band channel only to deliver the complete high-entropy invite to the intended peer.
+- the out-of-band channel only to deliver the complete room and password to the intended peer.
 
 ### Explicitly untrusted
 
@@ -38,7 +38,7 @@ This document describes the intended MVP. The current code is not yet a secure m
 2. A malicious or compromised relay reading, modifying, replaying or dropping frames.
 3. A remote attacker guessing rooms or exhausting relay resources.
 4. A third client attempting to join an occupied rendezvous.
-5. An attacker who later learns the invite secret or a current session key.
+5. An attacker who later learns the numeric password or a current session key.
 6. A person with a lost device after its session has ended.
 
 ## Security goals
@@ -66,12 +66,12 @@ This document describes the intended MVP. The current code is not yet a secure m
 
 | Abuse | Required control |
 |---|---|
-| Offline guessing of a human secret | MVP accepts only generated high-entropy secrets |
+| Offline guessing of a numeric password | Argon2id raises each guess cost; short passwords remain explicitly weak and private rendezvous remains a review gate |
 | Room enumeration | Room alone never identifies a rendezvous |
 | Third participant | Maximum two peers and authenticated key confirmation |
 | Frame replay | Monotonic counters, bounded replay window and authenticated headers |
 | Memory exhaustion | Frame, queue, room, concurrent-connection and outbound-channel limits before growth |
-| Upgrade or frame flood | Global upgrade and per-connection/per-room token buckets |
+| Upgrade or frame flood | Soft adaptive puzzle threshold, hard global upgrade bucket and per-connection/per-room token buckets |
 | Slow connection exhaustion | Independent join, pairing, session-handshake and write timeouts; idle and absolute room TTL; global socket semaphore |
 | Logging leakage | Closed-schema events with no dynamic fields, label-free metrics and automated anti-leakage tests |
 | Accidental metrics publication | Separate administrative listener plus an exact-path public proxy allowlist |
@@ -89,7 +89,7 @@ The authenticated end-to-end test sends 100 ordered messages through a one-frame
 
 - No cryptographic protocol moves to production without maintained-library review and test vectors.
 - The `snow`-based Noise construction in ADR 0007 is approved only for the CLI prototype. Closed alpha requires review of the exact composition and a resolution for non-zeroized library state.
-- Human-chosen passwords require a new PAKE decision and online-guessing controls; they must never be silently accepted as a Noise PSK.
+- Human-chosen passwords are converted to a domain-separated session secret with Argon2id and are never used directly as a Noise PSK. This does not remove offline guessing or the unresolved private-rendezvous/PAKE review gate.
 - No public high-risk recommendation occurs without independent security review.
 - Any new persistence, notification or telemetry requires a threat-model and data-lifecycle update.
 - Process-local rate limits are not DDoS protection; public hosting requires independently configured edge and network controls that do not weaken the privacy boundary.

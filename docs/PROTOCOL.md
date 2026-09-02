@@ -2,11 +2,11 @@
 
 ## Status
 
-This remains a prototype protocol document, not a claim of independent security review. ADR 0007 selects a fixed Noise handshake for the CLI prototype; production approval remains blocked on implementation review and secure-memory gaps.
+This remains a prototype protocol document, not a claim of independent security review. ADR 0007 selects a fixed Noise handshake and ADR 0013 defines numeric credentials and adaptive admission; production approval remains blocked on implementation review, cross-platform benchmarking, private-rendezvous analysis and secure-memory gaps.
 
 ## Versioning
 
-- Current protocol version: `1`.
+- Current protocol version: `2`.
 - Every frame carries its protocol version and kind.
 - Unknown versions and frame kinds fail closed.
 - Downgrade negotiation is not permitted in the MVP.
@@ -25,9 +25,15 @@ payload      opaque bytes
 
 This outer envelope is a parser and routing boundary. It is not encryption, authentication or replay protection by itself. For application, ACK and BURN frames, the protocol places a second complete envelope inside Noise ciphertext and requires its kind and counter to equal the outer values after authenticated decryption.
 
+## Numeric credentials and local derivation
+
+Room and password are canonical ASCII-decimal strings. Each input must contain between 1 and 128 digits before normalization; non-ASCII digits, signs, separators, whitespace and larger values fail before copying. Leading zeroes are removed, with an all-zero value represented as `0`. This explicitly supports 39-digit values without unbounded input allocation.
+
+The client applies Argon2id v1.3 to the canonical password with a domain-separated, SHA-256 room-bound salt and produces a 32-byte session secret. Prototype parameters are 8 MiB, two iterations and one lane. The room is length-prefixed in every derivation. The raw room, password and derived secret never enter the relay wire format. Argon2id raises guessing cost but does not make a short password strong; the deterministic rendezvous tag remains an offline verifier at that cost. See ADR 0013.
+
 ## Relay rendezvous wire format
 
-Clients connect to `/v1/connect` and send exactly one fixed-size binary join packet before any protocol frame:
+Clients connect to `/v2/connect` and send exactly one fixed-size binary join packet before any protocol frame:
 
 ```text
 version         u8
@@ -42,24 +48,29 @@ The tag must not appear in the URL, query string or application logs. The relay 
 | Waiting | `version, 0x81, role` | First peer is waiting |
 | Peer ready | `version, 0x82, role` | Exactly two peers are paired |
 | Room closed | `version, 0x83` | The other connection left and the room was purged |
+| Puzzle challenge | `version, 0x84, difficulty, nonce[16]` | Excess traffic must prove client work before room allocation |
 | Error | `version, 0xff` | Generic failure with no secret-bearing detail |
+
+A challenged client searches for a big-endian `u64` whose SHA-256 puzzle digest has the requested number of leading zero bits, then sends `version, 2, solution_u64`. The challenge is random, bound to the rendezvous tag and current socket, limited to at most 24 bits and shares the bounded join timeout. Invalid solutions are rejected before the hub allocates a room.
 
 Role `1` is the initiator and role `2` the responder. A third connection is rejected. After pairing, the relay parses each protocol frame against the size and version limits, re-encodes it canonically and forwards it without interpreting the opaque payload. Any disconnect destroys the entire room; a later connection starts a new room rather than inheriting stale session state.
 
-The relay retains canonical `Ciphertext` frames in a bounded per-room FIFO until ACK, packet TTL or room destruction. Handshake, ACK and BURN frames are never retained. Because the acknowledged counter is encrypted, an outer `Ack` removes the oldest pending ciphertext sent by the opposite peer; this is sound only under the version-1 ordered, zero-gap transport. Pending limits count complete encoded frames. Exceeding a frame, byte or outbound-channel limit fails closed and destroys the room.
+The relay retains canonical `Ciphertext` frames in a bounded per-room FIFO until ACK, packet TTL or room destruction. Handshake, ACK and BURN frames are never retained. Because the acknowledged counter is encrypted, an outer `Ack` removes the oldest pending ciphertext sent by the opposite peer; this is sound only under the version-2 ordered, zero-gap transport. Pending limits count complete encoded frames. Exceeding a frame, byte or outbound-channel limit fails closed and destroys the room.
 
 Each socket performs opportunistic cleanup at a bounded interval. Pending frames expire independently after their packet TTL. Protocol-frame activity refreshes the room idle timestamp; an idle timeout removes the room and closes both sockets. Restarting the relay removes all rooms immediately.
 
 ## Relay abuse controls
 
-The prototype applies four independent, in-memory controls before work can grow without bound:
+The prototype applies independent, in-memory controls before work can grow without bound:
 
-- a global token bucket limits WebSocket upgrade requests without retaining IP addresses;
+- a soft global token bucket admits normal WebSocket traffic without a puzzle;
+- traffic above the soft threshold must solve a relay-issued client puzzle before room allocation;
+- a separate hard global token bucket rejects excess WebSocket upgrades without retaining IP addresses;
 - a semaphore caps all simultaneous upgraded sockets, including clients that have not completed a join;
 - a per-connection token bucket counts every post-join WebSocket message, including ping and pong controls;
 - a per-room token bucket limits the aggregate of canonical protocol frames from both participants.
 
-Exhausted upgrade rate returns HTTP 429 and exhausted connection capacity returns HTTP 503 before WebSocket upgrade. Exceeding a post-join connection or room frame limit fails closed: the offending socket ends and normal unregister logic purges the room. Token buckets use monotonic process time and have no persistent identity or history. These controls bound one relay instance; an edge proxy or hosting platform still needs network-level flood protection for public deployment.
+Exhausted hard upgrade rate returns HTTP 429 and exhausted connection capacity returns HTTP 503 before WebSocket upgrade. Exceeding a post-join connection or room frame limit fails closed: the offending socket ends and normal unregister logic purges the room. Token buckets use monotonic process time and have no persistent identity or history. The adaptive puzzle does not protect TCP, TLS, bandwidth or the WebSocket upgrade itself; those remain edge responsibilities.
 
 ## Slow-client deadlines
 
@@ -83,7 +94,7 @@ Emission uses a bounded, non-blocking process-local channel. A full or disconnec
 
 ## WSS deployment boundary
 
-The Rust relay intentionally does not terminate TLS. For the single-host prototype, Caddy owns the Internet-facing ports and certificate lifecycle, then proxies only exact `/health` and `/v1/connect` routes to the relay over a private container network. Standard WebSocket upgrade tunneling turns the public endpoint into WSS. Every unlisted route returns 404, access logging is not enabled and forwarded client-address headers are removed before the upstream request.
+The Rust relay intentionally does not terminate TLS. For the single-host prototype, Caddy owns the Internet-facing ports and certificate lifecycle, then proxies only exact `/health` and `/v2/connect` routes to the relay over a private container network. Standard WebSocket upgrade tunneling turns the public endpoint into WSS. Every unlisted route returns 404, access logging is not enabled and forwarded client-address headers are removed before the upstream request.
 
 The edge bounds HTTP header/body reads and header size before the request reaches Axum. The relay container is unprivileged, read-only, capability-free and has no persistent volume. Only Caddy certificate/ACME state persists. Cleartext upstream traffic is permitted solely when edge and relay share one trusted host; cross-host operation requires encrypted, authenticated transport. See ADR 0012 and `deploy/README.md` for the exact boundary and remaining gates.
 
@@ -111,9 +122,9 @@ From an active state, the session may move to `RECONNECTING`, `BURNED`, `EXPIRED
 
 ## Selected prototype handshake
 
-ADR 0007 selects `Noise_NNpsk0_25519_ChaChaPoly_SHA256` through `snow` 0.10.0, and SCT-008 implements it in `scotoma-protocol`. The raw invite secret is domain-separated into a Noise PSK; the relay-visible rendezvous tag is never used as that PSK. The fixed SCOTOMA prologue binds protocol version, room, rendezvous tag and the relay-assigned initiator/responder mapping.
+ADR 0007 selects `Noise_NNpsk0_25519_ChaChaPoly_SHA256` through `snow` 0.10.0, and SCT-008 implements it in `scotoma-protocol`. The locally derived session secret is domain-separated into a Noise PSK; the relay-visible rendezvous tag is never used as that PSK. The fixed SCOTOMA prologue binds protocol version, room, rendezvous tag and the relay-assigned initiator/responder mapping.
 
-Two Noise handshake messages are followed by one encrypted key-confirmation message in each direction. Neither endpoint reaches `CONNECTED` until the appropriate directional confirmation succeeds. Any wrong secret, role, room, transcript, ordering or authentication result becomes the same terminal handshake error. There is no cipher-suite negotiation or downgrade path in version 1.
+Two Noise handshake messages are followed by one encrypted key-confirmation message in each direction. Neither endpoint reaches `CONNECTED` until the appropriate directional confirmation succeeds. Any wrong secret, role, room, transcript, ordering or authentication result becomes the same terminal handshake error. There is no cipher-suite negotiation or downgrade path in version 2.
 
 ## Authenticated application transport
 
