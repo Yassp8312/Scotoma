@@ -1,0 +1,7 @@
+# The installed local GNU toolchain does not include dlltool, which Rust's
+# raw-dylib support needs for getrandom's default modern Windows backend.
+# getrandom explicitly supports this Windows CSPRNG backend; the setting is
+# scoped to the affected host target and does not apply to Android or Linux.
+[target.x86_64-pc-windows-gnu]
+rustflags = ["--cfg", 'getrandom_backend="windows_legacy"']
+

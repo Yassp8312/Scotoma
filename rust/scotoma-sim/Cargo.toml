@@ -1,0 +1,21 @@
+[package]
+name = "scotoma-sim"
+description = "Local protocol simulator for SCOTOMA"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+futures-util.workspace = true
+scotoma-protocol = { path = "../scotoma-protocol" }
+tokio.workspace = true
+tokio-tungstenite.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+scotoma-relay = { path = "../scotoma-relay" }
+
+[lints]
+workspace = true

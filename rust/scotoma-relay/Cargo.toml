@@ -1,0 +1,21 @@
+[package]
+name = "scotoma-relay"
+description = "Ephemeral blind relay for SCOTOMA"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+axum.workspace = true
+futures-util.workspace = true
+scotoma-protocol = { path = "../scotoma-protocol" }
+tokio.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+tokio-tungstenite.workspace = true
+
+[lints]
+workspace = true

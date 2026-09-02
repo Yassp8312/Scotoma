@@ -1,0 +1,18 @@
+[package]
+name = "scotoma-protocol"
+description = "Protocol types and state machine for SCOTOMA"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+getrandom.workspace = true
+hmac.workspace = true
+sha2.workspace = true
+snow.workspace = true
+zeroize.workspace = true
+
+[lints]
+workspace = true

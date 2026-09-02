@@ -1,0 +1,140 @@
+# Protocol boundaries
+
+## Status
+
+This remains a prototype protocol document, not a claim of independent security review. ADR 0007 selects a fixed Noise handshake for the CLI prototype; production approval remains blocked on implementation review and secure-memory gaps.
+
+## Versioning
+
+- Current protocol version: `1`.
+- Every frame carries its protocol version and kind.
+- Unknown versions and frame kinds fail closed.
+- Downgrade negotiation is not permitted in the MVP.
+
+## Frame envelope
+
+The initial transport envelope contains:
+
+```text
+version      u8
+kind         u8
+counter      u64, big endian
+payload_len  u32, big endian
+payload      opaque bytes
+```
+
+This outer envelope is a parser and routing boundary. It is not encryption, authentication or replay protection by itself. For application, ACK and BURN frames, the protocol places a second complete envelope inside Noise ciphertext and requires its kind and counter to equal the outer values after authenticated decryption.
+
+## Relay rendezvous wire format
+
+Clients connect to `/v1/connect` and send exactly one fixed-size binary join packet before any protocol frame:
+
+```text
+version         u8
+kind            u8 = 1
+rendezvous_tag  32 opaque bytes
+```
+
+The tag must not appear in the URL, query string or application logs. The relay assigns roles by join order and sends versioned binary control events:
+
+| Event | Encoding | Meaning |
+|---|---|---|
+| Waiting | `version, 0x81, role` | First peer is waiting |
+| Peer ready | `version, 0x82, role` | Exactly two peers are paired |
+| Room closed | `version, 0x83` | The other connection left and the room was purged |
+| Error | `version, 0xff` | Generic failure with no secret-bearing detail |
+
+Role `1` is the initiator and role `2` the responder. A third connection is rejected. After pairing, the relay parses each protocol frame against the size and version limits, re-encodes it canonically and forwards it without interpreting the opaque payload. Any disconnect destroys the entire room; a later connection starts a new room rather than inheriting stale session state.
+
+The relay retains canonical `Ciphertext` frames in a bounded per-room FIFO until ACK, packet TTL or room destruction. Handshake, ACK and BURN frames are never retained. Because the acknowledged counter is encrypted, an outer `Ack` removes the oldest pending ciphertext sent by the opposite peer; this is sound only under the version-1 ordered, zero-gap transport. Pending limits count complete encoded frames. Exceeding a frame, byte or outbound-channel limit fails closed and destroys the room.
+
+Each socket performs opportunistic cleanup at a bounded interval. Pending frames expire independently after their packet TTL. Protocol-frame activity refreshes the room idle timestamp; an idle timeout removes the room and closes both sockets. Restarting the relay removes all rooms immediately.
+
+## Relay abuse controls
+
+The prototype applies four independent, in-memory controls before work can grow without bound:
+
+- a global token bucket limits WebSocket upgrade requests without retaining IP addresses;
+- a semaphore caps all simultaneous upgraded sockets, including clients that have not completed a join;
+- a per-connection token bucket counts every post-join WebSocket message, including ping and pong controls;
+- a per-room token bucket limits the aggregate of canonical protocol frames from both participants.
+
+Exhausted upgrade rate returns HTTP 429 and exhausted connection capacity returns HTTP 503 before WebSocket upgrade. Exceeding a post-join connection or room frame limit fails closed: the offending socket ends and normal unregister logic purges the room. Token buckets use monotonic process time and have no persistent identity or history. These controls bound one relay instance; an edge proxy or hosting platform still needs network-level flood protection for public deployment.
+
+## Slow-client deadlines
+
+Resource phases have independent monotonic deadlines:
+
+- the fixed join packet must arrive within 30 seconds of WebSocket upgrade;
+- the first participant waits at most 30 seconds for the second participant;
+- once paired, the room has 30 seconds to reach its first application/control frame after the Noise handshake;
+- every WebSocket write, including relay events, frames, pong, rejection and close, has a 10-second budget;
+- established rooms expire after 30 minutes of protocol inactivity and after an absolute two-hour lifetime regardless of activity.
+
+Pairing and session-handshake deadlines are absolute within their phase, so trickled handshake frames do not extend them. The relay cannot authenticate the first application frame and treats its outer kind only as a resource-phase hint; the clients still enforce the real authenticated state machine. Timeout cleanup purges pending frames and notifies peers when bounded outbound capacity permits, then closes the sockets in all cases.
+
+## Frame kinds
+
+| Value | Kind | Purpose |
+|---:|---|---|
+| 1 | Handshake | Opaque authenticated-key-exchange payload |
+| 2 | Ciphertext | End-to-end encrypted application message |
+| 3 | Ack | Authenticated delivery acknowledgement |
+| 4 | Burn | Authenticated session-destruction control |
+| 5 | Error | Generic, non-secret-bearing protocol failure |
+
+## Required session states
+
+`IDLE → WAITING_FOR_PEER → HANDSHAKING → CONNECTED`
+
+From an active state, the session may move to `RECONNECTING`, `BURNED`, `EXPIRED` or `FAILED`. Terminal states cannot be reused.
+
+## Selected prototype handshake
+
+ADR 0007 selects `Noise_NNpsk0_25519_ChaChaPoly_SHA256` through `snow` 0.10.0, and SCT-008 implements it in `scotoma-protocol`. The raw invite secret is domain-separated into a Noise PSK; the relay-visible rendezvous tag is never used as that PSK. The fixed SCOTOMA prologue binds protocol version, room, rendezvous tag and the relay-assigned initiator/responder mapping.
+
+Two Noise handshake messages are followed by one encrypted key-confirmation message in each direction. Neither endpoint reaches `CONNECTED` until the appropriate directional confirmation succeeds. Any wrong secret, role, room, transcript, ordering or authentication result becomes the same terminal handshake error. There is no cipher-suite negotiation or downgrade path in version 1.
+
+## Authenticated application transport
+
+After key confirmation, each direction starts an independent application counter at zero. `Ciphertext`, `Ack` and terminal `Burn` controls use the authenticated transport. The sender encodes a complete inner frame, encrypts all of it with the Noise transport state and repeats the inner kind and counter in the outer routing frame:
+
+```text
+outer(version, kind, counter, payload = Noise(
+    inner(version, kind, counter, payload)
+))
+```
+
+The receiver first compares the public outer counter with the exact next expected counter. A lower value is a replay and is discarded without consuming Noise state. A higher value is a forbidden gap and fails the session. After decryption, the inner frame must parse canonically and its kind and counter must match the outer header; any mismatch or AEAD failure is terminal. The skipped-message window is zero.
+
+After each successfully encrypted frame the sender calls `rekey_outgoing`; after each authenticated, accepted frame the receiver calls `rekey_incoming`. Counters are directional and do not include the four handshake frames. Counter state and transport keys cannot be reused after disconnection or failure.
+
+An ACK is an authenticated `Ack` frame with an eight-byte big-endian payload containing the application-message counter it confirms. The sender validates this value end to end. Independently, the blind relay uses the outer ACK kind to delete the oldest pending ciphertext from the opposite direction. An invalid or forged ACK can therefore disrupt relay retention, but it cannot pass end-to-end authentication; a room occupant already has equivalent denial-of-service power by disconnecting.
+
+A BURN is an authenticated `Burn` frame with an empty inner payload. Creating it destroys the sender's handshake hash and Noise transport state immediately, even if network delivery later fails. The receiver destroys its own state only after authenticating the inner frame, type, counter and empty payload. The relay forwards the outer BURN once and purges the entire room. Since the relay cannot authenticate end-to-end content, a room occupant can force relay purge with a forged outer BURN but cannot force the peer to enter its authenticated `BURNED` state.
+
+With the default 16 KiB outer payload limit, the maximum application payload is 16,354 bytes: 16 KiB minus the 14-byte inner envelope and 16-byte ChaCha20-Poly1305 tag.
+
+## Cryptographic review questions
+
+ADR 0007 records the current answers to these review questions. They must be revisited before production approval:
+
+1. Which maintained library implements the chosen PAKE/AKE?
+2. Does it provide explicit mutual key confirmation?
+3. How are initiator/responder roles bound into the transcript?
+4. How are the app name, protocol version and rendezvous context bound?
+5. Which property exists if the invite secret is disclosed later?
+6. How are per-message keys advanced and old keys destroyed?
+7. How are out-of-order, duplicate and skipped messages bounded?
+8. What license and external-use guarantees apply?
+9. Which published test vectors can be reproduced?
+10. What independent review exists?
+
+## Prohibited shortcuts
+
+- Encrypting directly with a human password.
+- Using `hash(room || password)` as both rendezvous ID and encryption key.
+- Reusing nonces or counters after reconnection.
+- Treating TLS as end-to-end encryption.
+- Logging decrypted or pre-encryption data for debugging.
+- Implementing a PAKE or ratchet directly from an RFC without a maintained library and expert review.
