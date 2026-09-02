@@ -8,7 +8,7 @@ Two participants who possess the same room and high-entropy secret can rendezvou
 
 ## Current status
 
-The repository is in **Milestone 1: Rust protocol prototype**. It contains:
+The repository is in **Milestone 2: Ephemeral relay**. It contains:
 
 - the product and security boundaries;
 - a Rust workspace for the protocol core, relay and simulator;
@@ -19,9 +19,12 @@ The repository is in **Milestone 1: Rust protocol prototype**. It contains:
 - bounded pending-ciphertext retention with ACK purge, packet/room TTL and authenticated BURN;
 - privacy-preserving global, connection and room rate limits without IP profiles;
 - phased join/pairing/handshake deadlines, bounded writes and an absolute room lifetime;
+- redacted fixed-schema operational events and aggregate in-memory metrics;
+- adversarial relay coverage and a 100-message authenticated/rekeyed integration path;
+- separate public and administrative listeners plus a containerized WSS/TLS edge;
 - tests and continuous integration.
 
-The first Rust protocol sprint is complete for the prototype. Two CLI clients authenticate, exchange ordered ciphertext and ACKs through the relay, then finish with an authenticated BURN that destroys both transport states and purges the room. Pending ciphertext exists only in bounded, zeroizing relay memory until ACK, packet TTL, BURN, disconnect or relay restart. ADR 0007 still blocks production approval on independent implementation review and secure-memory gaps.
+The Rust protocol and ephemeral-relay milestones are complete for the prototype. Two CLI clients authenticate, exchange ordered ciphertext and ACKs through the relay, then finish with an authenticated BURN that destroys both transport states and purges the room. Pending ciphertext exists only in bounded, zeroizing relay memory until ACK, packet TTL, BURN, disconnect or relay restart. ADR 0007 still blocks production approval on independent implementation review and secure-memory gaps.
 
 The development relay listens only on loopback by default:
 
@@ -29,7 +32,7 @@ The development relay listens only on loopback by default:
 cargo run -p scotoma-relay
 ```
 
-It exposes `ws://127.0.0.1:8787/v1/connect` and `GET /health`. A public deployment must terminate TLS and expose WSS; the loopback listener is not a production deployment recipe.
+The public listener exposes `ws://127.0.0.1:8787/v1/connect` and `GET /health`. Aggregate `GET /metrics` is isolated on the administrative listener at `127.0.0.1:8788`. The prototype WSS boundary and its remaining release gates are documented in [deploy/README.md](deploy/README.md); it is not production approval.
 
 Generate the invite secret once with the operating-system CSPRNG:
 

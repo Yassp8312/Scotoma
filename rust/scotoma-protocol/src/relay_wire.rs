@@ -238,6 +238,31 @@ mod tests {
     }
 
     #[test]
+    fn join_request_rejects_every_noncanonical_length() {
+        for length in [0, 1, 2, 33, 35, 64] {
+            let packet = vec![0_u8; length];
+            assert!(matches!(
+                JoinRequest::decode(&packet),
+                Err(RelayWireError::InvalidLength { .. })
+            ));
+        }
+    }
+
+    #[test]
+    fn join_request_rejects_unknown_packet_kind() {
+        let mut encoded = JoinRequest {
+            tag: RendezvousTag::from_bytes([7; RENDEZVOUS_TAG_BYTES]),
+        }
+        .encode();
+        encoded[1] = 0xff;
+
+        assert_eq!(
+            JoinRequest::decode(&encoded),
+            Err(RelayWireError::UnknownPacketKind(0xff))
+        );
+    }
+
+    #[test]
     fn relay_events_round_trip() {
         let events = [
             RelayEvent::Waiting(PeerRole::Initiator),

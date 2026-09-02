@@ -3,8 +3,11 @@ use std::io;
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
-use scotoma_protocol::{Frame, FrameKind, ProtocolLimits, RENDEZVOUS_TAG_BYTES, RendezvousTag};
-use scotoma_relay::{JoinRequest, PeerRole, RelayConfig, RelayEvent, serve};
+use scotoma_protocol::{
+    FRAME_HEADER_LEN, Frame, FrameKind, PROTOCOL_VERSION, ProtocolLimits, RENDEZVOUS_TAG_BYTES,
+    RendezvousTag,
+};
+use scotoma_relay::{JoinRequest, PeerRole, RelayConfig, RelayEvent, serve, serve_with_admin};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time::{sleep, timeout};
 use tokio_tungstenite::tungstenite::http::StatusCode;
@@ -292,12 +295,216 @@ async fn paired_but_incomplete_handshake_expires_through_the_server() -> TestRes
     Ok(())
 }
 
+#[tokio::test]
+async fn metrics_endpoint_exposes_only_aggregate_process_state() -> TestResult {
+    let public_listener = TcpListener::bind("127.0.0.1:0").await?;
+    let public_address = public_listener.local_addr()?;
+    let admin_listener = TcpListener::bind("127.0.0.1:0").await?;
+    let admin_address = admin_listener.local_addr()?;
+    let config = RelayConfig {
+        listen_addr: public_address,
+        handshake_timeout: Duration::from_secs(1),
+        pairing_timeout: Duration::from_secs(1),
+        ..RelayConfig::default()
+    };
+    let server =
+        tokio::spawn(
+            async move { serve_with_admin(public_listener, admin_listener, config).await },
+        );
+    let url = format!("ws://{public_address}/v1/connect");
+    let request = JoinRequest {
+        tag: RendezvousTag::from_bytes([0x75; RENDEZVOUS_TAG_BYTES]),
+    };
+    let mut first = connect_and_join(&url, &request).await?;
+    let _ = next_binary(&mut first).await?;
+
+    assert!(
+        get_http(public_address, "/metrics")
+            .await?
+            .starts_with("HTTP/1.1 404")
+    );
+    assert!(
+        get_http(admin_address, "/health")
+            .await?
+            .starts_with("HTTP/1.1 404")
+    );
+    let active = get_metrics(admin_address).await?;
+
+    assert!(active.contains("scotoma_relay_upgrades_accepted_total 1\n"));
+    assert!(active.contains("scotoma_relay_active_connections 1\n"));
+    assert!(active.contains("scotoma_relay_active_rooms 1\n"));
+    assert!(active.contains("scotoma_relay_pending_frames 0\n"));
+    assert!(!active.contains("rendezvous"));
+    assert!(!active.contains("payload"));
+    assert!(!active.contains("75757575"));
+
+    first.send(Message::Close(None)).await?;
+    sleep(Duration::from_millis(30)).await;
+    let closed = get_metrics(admin_address).await?;
+    assert!(closed.contains("scotoma_relay_active_connections 0\n"));
+    assert!(closed.contains("scotoma_relay_active_rooms 0\n"));
+    assert!(closed.contains("scotoma_relay_rooms_closed_total 1\n"));
+
+    server.abort();
+    let _ = server.await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn malformed_protocol_frames_close_and_release_the_room() -> TestResult {
+    let listener = TcpListener::bind("127.0.0.1:0").await?;
+    let address = listener.local_addr()?;
+    let config = RelayConfig {
+        listen_addr: address,
+        handshake_timeout: Duration::from_secs(2),
+        event_channel_capacity: 0,
+        ..RelayConfig::default()
+    };
+    let server = tokio::spawn(async move { serve(listener, config).await });
+    let url = format!("ws://{address}/v1/connect");
+
+    for (tag_byte, hostile_packet) in [0x80, 0x81, 0x82, 0x83, 0x84, 0x85]
+        .into_iter()
+        .zip(hostile_frame_corpus())
+    {
+        let request = JoinRequest {
+            tag: RendezvousTag::from_bytes([tag_byte; RENDEZVOUS_TAG_BYTES]),
+        };
+        let (mut attacker, mut peer) = paired_clients(&url, &request).await?;
+
+        attacker
+            .send(Message::Binary(hostile_packet.into()))
+            .await?;
+        assert_eq!(
+            RelayEvent::decode(&next_binary(&mut peer).await?)?,
+            RelayEvent::RoomClosed
+        );
+
+        let mut replacement = connect_and_join(&url, &request).await?;
+        assert_eq!(
+            RelayEvent::decode(&next_binary(&mut replacement).await?)?,
+            RelayEvent::Waiting(PeerRole::Initiator)
+        );
+        replacement.send(Message::Close(None)).await?;
+    }
+
+    server.abort();
+    let _ = server.await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn text_and_oversized_messages_fail_closed() -> TestResult {
+    let listener = TcpListener::bind("127.0.0.1:0").await?;
+    let address = listener.local_addr()?;
+    let config = RelayConfig {
+        listen_addr: address,
+        handshake_timeout: Duration::from_secs(2),
+        event_channel_capacity: 0,
+        ..RelayConfig::default()
+    };
+    let maximum = config.max_websocket_message_bytes();
+    let server = tokio::spawn(async move { serve(listener, config).await });
+    let url = format!("ws://{address}/v1/connect");
+
+    let text_request = JoinRequest {
+        tag: RendezvousTag::from_bytes([0x90; RENDEZVOUS_TAG_BYTES]),
+    };
+    let (mut text_sender, mut text_peer) = paired_clients(&url, &text_request).await?;
+    text_sender.send(Message::Text("hostile".into())).await?;
+    assert_eq!(
+        RelayEvent::decode(&next_binary(&mut text_peer).await?)?,
+        RelayEvent::RoomClosed
+    );
+
+    let oversized_request = JoinRequest {
+        tag: RendezvousTag::from_bytes([0x91; RENDEZVOUS_TAG_BYTES]),
+    };
+    let (mut oversized_sender, mut oversized_peer) =
+        paired_clients(&url, &oversized_request).await?;
+    oversized_sender
+        .send(Message::Binary(vec![0_u8; maximum + 1].into()))
+        .await?;
+    assert_eq!(
+        RelayEvent::decode(&next_binary(&mut oversized_peer).await?)?,
+        RelayEvent::RoomClosed
+    );
+
+    server.abort();
+    let _ = server.await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn fresh_relay_process_has_no_inherited_room_state() -> TestResult {
+    let request = JoinRequest {
+        tag: RendezvousTag::from_bytes([0xa0; RENDEZVOUS_TAG_BYTES]),
+    };
+    let first_listener = TcpListener::bind("127.0.0.1:0").await?;
+    let first_address = first_listener.local_addr()?;
+    let config = RelayConfig {
+        listen_addr: first_address,
+        event_channel_capacity: 0,
+        ..RelayConfig::default()
+    };
+    let first_server = tokio::spawn(async move { serve(first_listener, config).await });
+    let mut first = connect_and_join(&format!("ws://{first_address}/v1/connect"), &request).await?;
+    assert_eq!(
+        RelayEvent::decode(&next_binary(&mut first).await?)?,
+        RelayEvent::Waiting(PeerRole::Initiator)
+    );
+
+    first_server.abort();
+    let _ = first_server.await;
+    drop(first);
+
+    let second_listener = TcpListener::bind("127.0.0.1:0").await?;
+    let second_address = second_listener.local_addr()?;
+    let second_config = RelayConfig {
+        listen_addr: second_address,
+        event_channel_capacity: 0,
+        ..RelayConfig::default()
+    };
+    let second_server = tokio::spawn(async move { serve(second_listener, second_config).await });
+    let mut after_restart =
+        connect_and_join(&format!("ws://{second_address}/v1/connect"), &request).await?;
+    assert_eq!(
+        RelayEvent::decode(&next_binary(&mut after_restart).await?)?,
+        RelayEvent::Waiting(PeerRole::Initiator)
+    );
+
+    second_server.abort();
+    let _ = second_server.await;
+    Ok(())
+}
+
 async fn connect_and_join(url: &str, request: &JoinRequest) -> TestResult<ClientSocket> {
     let (mut socket, _) = connect_async(url).await?;
     socket
         .send(Message::Binary(request.encode().into()))
         .await?;
     Ok(socket)
+}
+
+async fn paired_clients(
+    url: &str,
+    request: &JoinRequest,
+) -> TestResult<(ClientSocket, ClientSocket)> {
+    let mut first = connect_and_join(url, request).await?;
+    assert_eq!(
+        RelayEvent::decode(&next_binary(&mut first).await?)?,
+        RelayEvent::Waiting(PeerRole::Initiator)
+    );
+    let mut second = connect_and_join(url, request).await?;
+    assert_eq!(
+        RelayEvent::decode(&next_binary(&mut first).await?)?,
+        RelayEvent::PeerReady(PeerRole::Initiator)
+    );
+    assert_eq!(
+        RelayEvent::decode(&next_binary(&mut second).await?)?,
+        RelayEvent::PeerReady(PeerRole::Responder)
+    );
+    Ok((first, second))
 }
 
 async fn next_binary(socket: &mut ClientSocket) -> TestResult<Vec<u8>> {
@@ -314,8 +521,60 @@ async fn next_binary(socket: &mut ClientSocket) -> TestResult<Vec<u8>> {
     }
 }
 
+async fn get_metrics(address: std::net::SocketAddr) -> TestResult<String> {
+    let response = get_http(address, "/metrics").await?;
+    let (_, body) = response
+        .split_once("\r\n\r\n")
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "missing HTTP body"))?;
+    Ok(body.to_owned())
+}
+
+async fn get_http(address: std::net::SocketAddr, path: &'static str) -> TestResult<String> {
+    Ok(tokio::task::spawn_blocking(move || -> io::Result<String> {
+        use std::io::{Read as _, Write as _};
+
+        let mut stream = std::net::TcpStream::connect(address)?;
+        stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+        stream.write_all(
+            format!("GET {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+                .as_bytes(),
+        )?;
+        let mut response = String::new();
+        stream.read_to_string(&mut response)?;
+        Ok(response)
+    })
+    .await??)
+}
+
 fn test_frame(kind: FrameKind, counter: u64) -> TestResult<Vec<u8>> {
     Ok(Frame::new(kind, counter, vec![0x7c; 16], ProtocolLimits::default())?.encode()?)
+}
+
+fn hostile_frame_corpus() -> Vec<Vec<u8>> {
+    let mut wrong_version = vec![0_u8; FRAME_HEADER_LEN];
+    wrong_version[0] = PROTOCOL_VERSION + 1;
+
+    let mut wrong_kind = vec![0_u8; FRAME_HEADER_LEN];
+    wrong_kind[0] = PROTOCOL_VERSION;
+    wrong_kind[1] = 0xff;
+
+    let mut missing_payload = vec![0_u8; FRAME_HEADER_LEN];
+    missing_payload[0] = PROTOCOL_VERSION;
+    missing_payload[1] = FrameKind::Ciphertext as u8;
+    missing_payload[FRAME_HEADER_LEN - 1] = 1;
+
+    let mut trailing_payload = vec![0_u8; FRAME_HEADER_LEN + 1];
+    trailing_payload[0] = PROTOCOL_VERSION;
+    trailing_payload[1] = FrameKind::Ciphertext as u8;
+
+    vec![
+        Vec::new(),
+        vec![0_u8; FRAME_HEADER_LEN - 1],
+        wrong_version,
+        wrong_kind,
+        missing_payload,
+        trailing_payload,
+    ]
 }
 
 fn assert_http_error(error: WebSocketError, expected: StatusCode) {

@@ -9,7 +9,7 @@ use tokio::net::TcpListener;
 type TestResult = Result<(), Box<dyn Error>>;
 
 #[tokio::test]
-async fn two_clients_exchange_messages_then_burn_through_the_real_relay() -> TestResult {
+async fn two_clients_exchange_one_hundred_messages_then_burn() -> TestResult {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let address = listener.local_addr()?;
     let relay_config = RelayConfig {
@@ -19,6 +19,11 @@ async fn two_clients_exchange_messages_then_burn_through_the_real_relay() -> Tes
             max_pending_frames_per_room: 1,
             ..ProtocolLimits::default()
         },
+        max_connection_frames_per_second: 5_000,
+        connection_frame_burst: 5_000,
+        max_room_frames_per_second: 10_000,
+        room_frame_burst: 10_000,
+        event_channel_capacity: 0,
         ..RelayConfig::default()
     };
     let server = tokio::spawn(async move { serve(listener, relay_config).await });
@@ -49,19 +54,15 @@ async fn two_clients_exchange_messages_then_burn_through_the_real_relay() -> Tes
         second.handshake_hash().expect("confirmed second hash")
     );
 
-    let sending = first.send_text_and_wait_ack("hello through the relay");
-    let receiving = second.receive_text_and_ack();
-    let (acknowledged, received) = tokio::join!(sending, receiving);
+    for counter in 0_u64..100 {
+        let message = format!("authenticated message {counter:03}");
+        let sending = first.send_text_and_wait_ack(&message);
+        let receiving = second.receive_text_and_ack();
+        let (acknowledged, received) = tokio::join!(sending, receiving);
 
-    assert_eq!(acknowledged?, 0);
-    assert_eq!(received?, "hello through the relay");
-
-    let sending = first.send_text_and_wait_ack("second message after ACK purge");
-    let receiving = second.receive_text_and_ack();
-    let (acknowledged, received) = tokio::join!(sending, receiving);
-
-    assert_eq!(acknowledged?, 1);
-    assert_eq!(received?, "second message after ACK purge");
+        assert_eq!(acknowledged?, counter);
+        assert_eq!(received?, message);
+    }
 
     let burning = first.burn();
     let receiving_burn = second.wait_for_burn();

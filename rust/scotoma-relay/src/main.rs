@@ -1,19 +1,24 @@
 use std::error::Error;
 
-use scotoma_relay::{RelayConfig, serve};
+use scotoma_relay::{DeploymentConfig, serve_with_admin};
 use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let config = RelayConfig::default();
-    let listener = TcpListener::bind(config.listen_addr).await?;
+    let config = DeploymentConfig::from_environment()?;
+    let public_listener = TcpListener::bind(config.relay.listen_addr).await?;
+    let admin_listener = TcpListener::bind(config.admin_listen_addr).await?;
 
     println!(
-        "scotoma-relay listening on ws://{}/v1/connect (loopback development only)",
-        config.listen_addr
+        "scotoma-relay public listener: http://{} (WebSocket path /v1/connect)",
+        config.relay.listen_addr
     );
-    println!("public deployments must terminate TLS and expose WSS");
+    println!(
+        "scotoma-relay private metrics listener: http://{}/metrics",
+        config.admin_listen_addr
+    );
+    println!("public deployments must terminate TLS at a trusted edge and expose only WSS");
 
-    serve(listener, config).await?;
+    serve_with_admin(public_listener, admin_listener, config.relay).await?;
     Ok(())
 }

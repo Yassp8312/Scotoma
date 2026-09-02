@@ -73,6 +73,26 @@ Resource phases have independent monotonic deadlines:
 
 Pairing and session-handshake deadlines are absolute within their phase, so trickled handshake frames do not extend them. The relay cannot authenticate the first application frame and treats its outer kind only as a resource-phase hint; the clients still enforce the real authenticated state machine. Timeout cleanup purges pending frames and notifies peers when bounded outbound capacity permits, then closes the sockets in all cases.
 
+## Redacted observability
+
+Operational events are a closed enum rendered as one-line JSON with exactly two string fields: fixed component name and fixed event category. The event API accepts no IP, tag, room, peer, frame, counter, size, error text or payload. Events cover limits, join failures, phase expiry, BURN, disconnect and slow writers.
+
+Emission uses a bounded, non-blocking process-local channel. A full or disconnected sink drops the event and increments `scotoma_relay_events_dropped_total`; socket tasks never wait for stderr. Setting event-channel capacity to zero disables the sink. The default capacity is 256.
+
+`GET /metrics` exposes only fixed-name numeric process aggregates: accepted upgrades, active connections and rooms, room lifecycle totals, forwarded frames, pending-frame gauge, rejected joins, protocol/capacity/rate violations, timeouts, BURN and dropped events. No labels are accepted, preventing high-cardinality identifiers from entering the metric model. Metrics are served by a separate administrative router, defaulting to `127.0.0.1:8788`; the public router has no metrics route. Both routers share the same process state.
+
+## WSS deployment boundary
+
+The Rust relay intentionally does not terminate TLS. For the single-host prototype, Caddy owns the Internet-facing ports and certificate lifecycle, then proxies only exact `/health` and `/v1/connect` routes to the relay over a private container network. Standard WebSocket upgrade tunneling turns the public endpoint into WSS. Every unlisted route returns 404, access logging is not enabled and forwarded client-address headers are removed before the upstream request.
+
+The edge bounds HTTP header/body reads and header size before the request reaches Axum. The relay container is unprivileged, read-only, capability-free and has no persistent volume. Only Caddy certificate/ACME state persists. Cleartext upstream traffic is permitted solely when edge and relay share one trusted host; cross-host operation requires encrypted, authenticated transport. See ADR 0012 and `deploy/README.md` for the exact boundary and remaining gates.
+
+## Adversarial verification boundary
+
+The live relay test suite sends malformed canonical frames, text messages and a binary message one byte larger than the configured WebSocket maximum. Every rejected post-join input must end the offending connection, notify the peer and purge the room so the same rendezvous tag starts cleanly. Join parsing separately rejects every noncanonical packet length and unknown packet kind. Relay process replacement is tested to begin with no inherited rooms.
+
+The authenticated integration path exchanges 100 ordered application messages through a pending queue limited to one frame, checks every encrypted ACK, continuously rekeys both directions and ends with authenticated BURN. This establishes executable behavior for the prototype limits; it does not expand the cryptographic approval recorded in ADR 0007.
+
 ## Frame kinds
 
 | Value | Kind | Purpose |

@@ -326,4 +326,33 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn hostile_frame_corpus_fails_closed() {
+        let mut wrong_version = vec![0_u8; FRAME_HEADER_LEN];
+        wrong_version[0] = PROTOCOL_VERSION + 1;
+        wrong_version[1] = FrameKind::Ciphertext as u8;
+        let mut wrong_kind = vec![0_u8; FRAME_HEADER_LEN];
+        wrong_kind[0] = PROTOCOL_VERSION;
+        wrong_kind[1] = 0xff;
+        let mut missing_payload = vec![0_u8; FRAME_HEADER_LEN];
+        missing_payload[0] = PROTOCOL_VERSION;
+        missing_payload[1] = FrameKind::Ciphertext as u8;
+        missing_payload[10..14].copy_from_slice(&1_u32.to_be_bytes());
+        let mut trailing_payload = vec![0_u8; FRAME_HEADER_LEN + 1];
+        trailing_payload[0] = PROTOCOL_VERSION;
+        trailing_payload[1] = FrameKind::Ciphertext as u8;
+        let corpus = [
+            Vec::new(),
+            vec![0_u8; FRAME_HEADER_LEN - 1],
+            wrong_version,
+            wrong_kind,
+            missing_payload,
+            trailing_payload,
+        ];
+
+        for encoded in corpus {
+            assert!(Frame::decode(&encoded, ProtocolLimits::default()).is_err());
+        }
+    }
 }

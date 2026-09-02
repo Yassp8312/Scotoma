@@ -27,7 +27,8 @@ The CLI reads the hexadecimal invite and the initiator's outgoing message into z
 | Rendezvous tag | Pair two connections | RAM | Room close, burn or idle TTL |
 | Connection handles | Route frames | RAM | Disconnect or room close |
 | Pending opaque frame | Brief delivery buffering | RAM | ACK, burn or packet TTL |
-| Aggregate counters | Capacity and health | RAM or non-identifying metrics | Rolling operational window |
+| Aggregate counters | Capacity and health | Atomic process memory and private admin `/metrics` | Process death or monitoring scrape |
+| Operational event category | Diagnose limits and lifecycle failures | Bounded process channel, then stderr | Immediate channel delivery; external retention policy after stderr |
 
 The relay must not receive room labels, invite secrets, end-to-end keys or plaintext.
 
@@ -56,6 +57,10 @@ These are experiment defaults, not public guarantees:
 | Frames per room | 80/second, burst 160 |
 
 Rate-limit state consists only of process-local token counts and monotonic timestamps. The relay does not build IP-based profiles or persist rate history. These values are prototype starting points and require load testing before deployment.
+
+Operational events have no dynamic client fields. They still reveal that an event occurred at approximately the log timestamp, so production stderr retention and access must be short and restricted. Metrics have no labels but reveal aggregate current activity; `/metrics` exists only on the separate administrative listener and must not be published. The prototype event queue holds at most 256 fixed enum values and drops excess events rather than blocking relay work.
+
+The WSS edge necessarily handles client IP addresses, connection timing and traffic volume while terminating TLS. The prototype Caddy configuration does not enable access logs and removes forwarding headers before contacting the relay. Caddy process/error logs and persistent ACME/certificate data remain infrastructure metadata subject to restricted access and retention; they do not contain SCOTOMA room labels, invite secrets or WebSocket payloads by design.
 
 ## Lifecycle events
 

@@ -34,3 +34,23 @@ jobs:
 
       - name: Audit locked dependencies
         run: cargo audit
+
+  deployment-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Validate Compose model
+        run: docker compose -f deploy/compose.yml config
+
+      - name: Validate Caddy configuration
+        run: >-
+          docker run --rm
+          --env SCOTOMA_DOMAIN=relay.example.com
+          --volume "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro"
+          caddy:2.11.4-alpine
+          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: Build unprivileged relay image
+        run: docker build --file deploy/Dockerfile --tag scotoma-relay:test .

@@ -1,0 +1,38 @@
+{
+	servers {
+		timeouts {
+			read_body 10s
+			read_header 10s
+			idle 5m
+		}
+		max_header_size 16KB
+		0rtt off
+	}
+}
+
+{$SCOTOMA_DOMAIN:localhost} {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	@relay_routes path /health /v1/connect
+	handle @relay_routes {
+		reverse_proxy relay:8787 {
+			header_up -X-Forwarded-For
+			header_up -X-Forwarded-Host
+			header_up -X-Forwarded-Proto
+			stream_timeout 2h5m
+			stream_close_delay 5m
+			transport http {
+				compression off
+				dial_timeout 3s
+				response_header_timeout 10s
+			}
+		}
+	}
+
+	handle {
+		respond 404
+	}
+}

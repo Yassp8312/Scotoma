@@ -21,9 +21,8 @@ Each claim must link to implementation evidence and tests before release.
 - “Impossible to hack.”
 - “The server knows nothing.”
 
-The server necessarily observes a connection and can observe limited routing and traffic metadata. Claims must distinguish content confidentiality from metadata privacy.
+The TLS edge and relay necessarily observe a connection and can observe limited routing and traffic metadata. Claims must distinguish content confidentiality from metadata privacy; end-to-end encryption does not hide IP addresses, timing or traffic volume from the deployment edge.
 
 ## Alpha wording
 
 > SCOTOMA is an experimental research build. Its protocol and implementation have not yet received an independent security audit. Do not use it for sensitive communication.
-

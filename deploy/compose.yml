@@ -1,0 +1,60 @@
+name: scotoma-relay
+
+services:
+  relay:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      SCOTOMA_PUBLIC_LISTEN_ADDR: 0.0.0.0:8787
+      SCOTOMA_ADMIN_LISTEN_ADDR: 127.0.0.1:8788
+    expose:
+      - "8787"
+    networks:
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    depends_on:
+      - relay
+    environment:
+      SCOTOMA_DOMAIN: ${SCOTOMA_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+networks:
+  edge: {}
+  backend:
+    internal: true
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}

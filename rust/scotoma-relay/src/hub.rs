@@ -7,6 +7,7 @@ use scotoma_protocol::{Frame, FrameKind, RendezvousTag};
 use tokio::sync::{Mutex, mpsc};
 use zeroize::Zeroizing;
 
+use crate::observability::{Observability, OperationalEvent};
 use crate::rate_limit::RateLimiter;
 use crate::{PeerRole, RelayConfig, RelayEvent};
 
@@ -84,7 +85,8 @@ impl Room {
         }
     }
 
-    fn purge_expired_frames(&mut self, now: Instant, config: RelayConfig) {
+    fn purge_expired_frames(&mut self, now: Instant, config: RelayConfig) -> usize {
+        let mut removed = 0_usize;
         while self.pending.front().is_some_and(|pending| {
             now.saturating_duration_since(pending.inserted_at) >= config.pending_frame_ttl
         }) {
@@ -92,22 +94,26 @@ impl Room {
                 break;
             };
             self.pending_bytes = self.pending_bytes.saturating_sub(expired.encoded.len());
+            removed = removed.saturating_add(1);
         }
+        removed
     }
 
-    fn acknowledge_oldest_from_peer(&mut self, sender_id: PeerId) {
+    fn acknowledge_oldest_from_peer(&mut self, sender_id: PeerId) -> bool {
         let Some(index) = self
             .pending
             .iter()
             .position(|pending| pending.sender_id != sender_id)
         else {
-            return;
+            return false;
         };
         if let Some(acknowledged) = self.pending.remove(index) {
             self.pending_bytes = self
                 .pending_bytes
                 .saturating_sub(acknowledged.encoded.len());
+            return true;
         }
+        false
     }
 }
 
@@ -136,16 +142,23 @@ pub(crate) struct RelayHub {
     state: Arc<Mutex<HubState>>,
     next_peer_id: Arc<AtomicU64>,
     config: RelayConfig,
+    observability: Observability,
 }
 
 impl RelayHub {
+    #[cfg(test)]
     pub fn new(config: RelayConfig) -> Self {
+        Self::with_observability(config, Observability::default())
+    }
+
+    pub fn with_observability(config: RelayConfig, observability: Observability) -> Self {
         Self {
             state: Arc::new(Mutex::new(HubState {
                 rooms: HashMap::new(),
             })),
             next_peer_id: Arc::new(AtomicU64::new(1)),
             config,
+            observability,
         }
     }
 
@@ -155,6 +168,7 @@ impl RelayHub {
             return Err(HubError::Capacity);
         }
 
+        let creates_room = !state.rooms.contains_key(&tag);
         let id = self.next_peer_id.fetch_add(1, Ordering::Relaxed);
         let (sender, receiver) = mpsc::channel(self.config.outbound_channel_capacity.max(1));
         let now = Instant::now();
@@ -170,6 +184,9 @@ impl RelayHub {
                     id,
                     outbound: sender,
                 });
+                if creates_room {
+                    self.observability.room_opened();
+                }
                 Ok(Registration {
                     id,
                     role: PeerRole::Initiator,
@@ -183,7 +200,9 @@ impl RelayHub {
                     .try_send(Outbound::Event(RelayEvent::PeerReady(PeerRole::Initiator)))
                     .is_err()
                 {
-                    state.rooms.remove(&tag);
+                    if let Some(removed) = state.rooms.remove(&tag) {
+                        self.observe_room_closed(&removed, OperationalEvent::RoomDisconnected);
+                    }
                     return Err(HubError::PeerUnavailable);
                 }
 
@@ -219,9 +238,12 @@ impl RelayHub {
             return Err(HubError::PeerUnavailable);
         }
         if !room.frame_limiter.allow(now) {
+            self.observability
+                .record(OperationalEvent::RoomFrameRateLimited);
             return Err(HubError::RateLimited);
         }
-        room.purge_expired_frames(now, self.config);
+        let expired = room.purge_expired_frames(now, self.config);
+        self.observability.pending_removed(expired);
         room.last_activity = now;
         if matches!(
             frame.kind(),
@@ -236,18 +258,21 @@ impl RelayHub {
             .find(|peer| peer.id != sender_id)
             .ok_or(HubError::PeerUnavailable)?;
         if frame.kind() == FrameKind::Ciphertext {
-            let next_count = room
-                .pending
-                .len()
-                .checked_add(1)
-                .ok_or(HubError::Capacity)?;
-            let next_bytes = room
-                .pending_bytes
-                .checked_add(encoded.len())
-                .ok_or(HubError::Capacity)?;
+            let Some(next_count) = room.pending.len().checked_add(1) else {
+                self.observability
+                    .record(OperationalEvent::RoomCapacityRejected);
+                return Err(HubError::Capacity);
+            };
+            let Some(next_bytes) = room.pending_bytes.checked_add(encoded.len()) else {
+                self.observability
+                    .record(OperationalEvent::RoomCapacityRejected);
+                return Err(HubError::Capacity);
+            };
             if next_count > self.config.protocol_limits.max_pending_frames_per_room
                 || next_bytes > self.config.protocol_limits.max_pending_bytes_per_room
             {
+                self.observability
+                    .record(OperationalEvent::RoomCapacityRejected);
                 return Err(HubError::Capacity);
             }
         }
@@ -258,10 +283,16 @@ impl RelayHub {
             .map_err(|_| HubError::PeerUnavailable);
 
         if frame.kind() == FrameKind::Burn {
-            state.rooms.remove(tag);
+            if forward_result.is_ok() {
+                self.observability.frame_forwarded();
+            }
+            if let Some(removed) = state.rooms.remove(tag) {
+                self.observe_room_closed(&removed, OperationalEvent::RoomBurned);
+            }
             return forward_result;
         }
         forward_result?;
+        self.observability.frame_forwarded();
 
         match frame.kind() {
             FrameKind::Ciphertext => {
@@ -271,8 +302,13 @@ impl RelayHub {
                     encoded: Zeroizing::new(encoded),
                     inserted_at: now,
                 });
+                self.observability.pending_added();
             }
-            FrameKind::Ack => room.acknowledge_oldest_from_peer(sender_id),
+            FrameKind::Ack => {
+                if room.acknowledge_oldest_from_peer(sender_id) {
+                    self.observability.pending_removed(1);
+                }
+            }
             FrameKind::Handshake | FrameKind::Burn | FrameKind::Error => {}
         }
         Ok(())
@@ -284,7 +320,8 @@ impl RelayHub {
         let Some(room) = state.rooms.get_mut(tag) else {
             return true;
         };
-        room.purge_expired_frames(now, self.config);
+        let expired = room.purge_expired_frames(now, self.config);
+        self.observability.pending_removed(expired);
         let waiting_expired = room.peers.len() < 2
             && now.saturating_duration_since(room.created_at) >= self.config.pairing_timeout;
         let handshake_expired = room.peers.len() == 2
@@ -296,13 +333,25 @@ impl RelayHub {
             now.saturating_duration_since(room.last_activity) >= self.config.room_idle_ttl;
         let lifetime_expired =
             now.saturating_duration_since(room.created_at) >= self.config.max_room_lifetime;
-        if !(waiting_expired || handshake_expired || idle_expired || lifetime_expired) {
+        let event = if waiting_expired {
+            Some(OperationalEvent::RoomExpiredPairing)
+        } else if handshake_expired {
+            Some(OperationalEvent::RoomExpiredHandshake)
+        } else if idle_expired {
+            Some(OperationalEvent::RoomExpiredIdle)
+        } else if lifetime_expired {
+            Some(OperationalEvent::RoomExpiredLifetime)
+        } else {
+            None
+        };
+        let Some(event) = event else {
             return false;
-        }
+        };
 
         let Some(room) = state.rooms.remove(tag) else {
             return true;
         };
+        self.observe_room_closed(&room, event);
         for peer in room.peers {
             let _ = peer
                 .outbound
@@ -317,6 +366,7 @@ impl RelayHub {
             return;
         };
 
+        self.observe_room_closed(&room, OperationalEvent::RoomDisconnected);
         for peer in room.peers {
             if peer.id != peer_id {
                 let _ = peer
@@ -324,6 +374,11 @@ impl RelayHub {
                     .try_send(Outbound::Event(RelayEvent::RoomClosed));
             }
         }
+    }
+
+    fn observe_room_closed(&self, room: &Room, event: OperationalEvent) {
+        self.observability.record(event);
+        self.observability.room_closed(room.pending.len());
     }
 }
 
@@ -335,6 +390,7 @@ mod tests {
     use tokio::time::sleep;
 
     use super::{HubError, Outbound, RelayHub};
+    use crate::observability::Observability;
     use crate::{PeerRole, RelayConfig, RelayEvent};
 
     fn tag(value: u8) -> RendezvousTag {
@@ -421,7 +477,8 @@ mod tests {
 
     #[tokio::test]
     async fn ciphertext_is_retained_until_the_opposite_peer_acknowledges() {
-        let hub = RelayHub::new(config());
+        let observability = Observability::default();
+        let hub = RelayHub::with_observability(config(), observability.clone());
         let room_tag = tag(5);
         let first = hub.register(room_tag.clone()).await.expect("first peer");
         let mut first_receiver = first.receiver;
@@ -438,6 +495,12 @@ mod tests {
             Some(Outbound::Frame(frame)) if frame == encoded_ciphertext
         ));
         assert_eq!(pending_stats(&hub, &room_tag).await.0, 1);
+        assert!(
+            observability
+                .snapshot()
+                .render()
+                .contains("scotoma_relay_pending_frames 1\n")
+        );
 
         let (ack, encoded_ack) = encoded_frame(FrameKind::Ack, 0);
         hub.process_frame(&room_tag, second.id, &ack, encoded_ack)
@@ -445,6 +508,12 @@ mod tests {
             .expect("ACK forwarded");
 
         assert_eq!(pending_stats(&hub, &room_tag).await, (0, 0));
+        assert!(
+            observability
+                .snapshot()
+                .render()
+                .contains("scotoma_relay_pending_frames 0\n")
+        );
     }
 
     #[tokio::test]
