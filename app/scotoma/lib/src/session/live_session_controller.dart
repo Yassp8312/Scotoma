@@ -14,6 +14,8 @@ enum LiveSessionPhase {
   connected,
   burning,
   peerBurned,
+  connectionLost,
+  deliveryTimedOut,
   closed,
   failed,
   timedOut,
@@ -68,6 +70,8 @@ final class LiveSessionController {
     LiveSessionPhase.failed ||
     LiveSessionPhase.timedOut ||
     LiveSessionPhase.peerBurned ||
+    LiveSessionPhase.connectionLost ||
+    LiveSessionPhase.deliveryTimedOut ||
     LiveSessionPhase.disposed => true,
     _ => false,
   };
@@ -109,6 +113,8 @@ final class LiveSessionController {
       _terminate(switch (outcome) {
         TransportOutcome.closed => LiveSessionPhase.closed,
         TransportOutcome.peerBurned => LiveSessionPhase.peerBurned,
+        TransportOutcome.connectionLost => LiveSessionPhase.connectionLost,
+        TransportOutcome.deliveryTimedOut => LiveSessionPhase.deliveryTimedOut,
         TransportOutcome.failed => LiveSessionPhase.failed,
       });
     } catch (_) {
@@ -129,6 +135,8 @@ final class LiveSessionController {
         TransportPhase.connected => LiveSessionPhase.connected,
         TransportPhase.burning => LiveSessionPhase.burning,
         TransportPhase.peerBurned => LiveSessionPhase.peerBurned,
+        TransportPhase.connectionLost => LiveSessionPhase.connectionLost,
+        TransportPhase.deliveryTimedOut => LiveSessionPhase.deliveryTimedOut,
         TransportPhase.closed => LiveSessionPhase.closed,
         TransportPhase.failed => LiveSessionPhase.failed,
       };
@@ -138,7 +146,9 @@ final class LiveSessionController {
       _drainEvents();
       if (next == LiveSessionPhase.closed ||
           next == LiveSessionPhase.failed ||
-          next == LiveSessionPhase.peerBurned) {
+          next == LiveSessionPhase.peerBurned ||
+          next == LiveSessionPhase.connectionLost ||
+          next == LiveSessionPhase.deliveryTimedOut) {
         _terminate(next);
       } else if (next != _phase) {
         _setPhase(next);

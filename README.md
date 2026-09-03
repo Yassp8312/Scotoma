@@ -31,7 +31,10 @@ The repository has entered **Milestone 3: Flutter client**. It contains:
 - an isolated Dart/Rust compatibility probe and separate Android/web Flutter
   harness in `spikes/client_bridge`; its bounded credential ingress is now used
   by the main Android client, including bidirectional authenticated messages,
-  ACK delivery state and terminal BURN.
+  ACK delivery state and terminal BURN;
+- a fail-closed reliability policy: relay/socket loss ends the session, while a
+  missing authenticated ACK expires after 15 seconds without automatic resend
+  or reconnect.
 
 The Rust protocol and ephemeral-relay milestones are complete for the prototype. Two CLI clients authenticate, exchange ordered ciphertext and ACKs through the relay, then finish with an authenticated BURN that destroys both transport states and purges the room. Pending ciphertext exists only in bounded, zeroizing relay memory until ACK, packet TTL, BURN, disconnect or relay restart. ADR 0007 still blocks production approval on independent implementation review and secure-memory gaps.
 

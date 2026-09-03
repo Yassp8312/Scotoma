@@ -11,11 +11,19 @@ enum TransportPhase {
   connected,
   burning,
   peerBurned,
+  connectionLost,
+  deliveryTimedOut,
   closed,
   failed,
 }
 
-enum TransportOutcome { closed, peerBurned, failed }
+enum TransportOutcome {
+  closed,
+  peerBurned,
+  connectionLost,
+  deliveryTimedOut,
+  failed,
+}
 
 enum ChatTransportEventKind { delivered, received }
 
@@ -110,6 +118,8 @@ class CredentialSessionPort implements SessionPort {
         CredentialPhase.connected => TransportPhase.connected,
         CredentialPhase.burning => TransportPhase.burning,
         CredentialPhase.peerBurned => TransportPhase.peerBurned,
+        CredentialPhase.connectionLost => TransportPhase.connectionLost,
+        CredentialPhase.deliveryTimedOut => TransportPhase.deliveryTimedOut,
         CredentialPhase.closed => TransportPhase.closed,
         _ => TransportPhase.failed,
       };
@@ -125,6 +135,8 @@ class CredentialSessionPort implements SessionPort {
       return switch (await _handle.runTransport(relayUrl: relayUrl)) {
         CredentialPhase.closed => TransportOutcome.closed,
         CredentialPhase.peerBurned => TransportOutcome.peerBurned,
+        CredentialPhase.connectionLost => TransportOutcome.connectionLost,
+        CredentialPhase.deliveryTimedOut => TransportOutcome.deliveryTimedOut,
         _ => TransportOutcome.failed,
       };
     } catch (_) {

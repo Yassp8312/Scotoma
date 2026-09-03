@@ -142,6 +142,14 @@ After each successfully encrypted frame the sender calls `rekey_outgoing`; after
 
 An ACK is an authenticated `Ack` frame with an eight-byte big-endian payload containing the application-message counter it confirms. The sender validates this value end to end. Independently, the blind relay uses the outer ACK kind to delete the oldest pending ciphertext from the opposite direction. An invalid or forged ACK can therefore disrupt relay retention, but it cannot pass end-to-end authentication; a room occupant already has equivalent denial-of-service power by disconnecting.
 
+The prototype client permits one unacknowledged local application message. It
+waits 15 seconds for the exact authenticated ACK and then destroys the session
+without retransmitting. This is an at-most-one automatic attempt, not an
+exactly-once guarantee: if only the ACK was lost, the sender sees an unconfirmed
+delivery even though the recipient may already have read the message. Socket
+loss, relay rejection and peer disconnect are likewise terminal and never
+trigger an automatic reconnect with the old transport state.
+
 A BURN is an authenticated `Burn` frame with an empty inner payload. Creating it destroys the sender's handshake hash and Noise transport state immediately, even if network delivery later fails. The receiver destroys its own state only after authenticating the inner frame, type, counter and empty payload. The relay forwards the outer BURN once and purges the entire room. Since the relay cannot authenticate end-to-end content, a room occupant can force relay purge with a forged outer BURN but cannot force the peer to enter its authenticated `BURNED` state.
 
 With the default 16 KiB outer payload limit, the maximum application payload is 16,354 bytes: 16 KiB minus the 14-byte inner envelope and 16-byte ChaCha20-Poly1305 tag.

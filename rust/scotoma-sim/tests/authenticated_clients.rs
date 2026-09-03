@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::time::Duration;
 
-use scotoma_client::{ClientConfig, LiveCommand, LiveEvent, LiveExit, authenticate};
+use scotoma_client::{ClientConfig, ClientError, LiveCommand, LiveEvent, LiveExit, authenticate};
 use scotoma_protocol::{NumericPassword, PeerRole, ProtocolLimits, RoomCode};
 use scotoma_relay::{RelayConfig, serve};
 use tokio::net::TcpListener;
@@ -151,6 +151,77 @@ async fn live_loops_exchange_bidirectionally_ack_and_burn() -> TestResult {
     ));
     assert_eq!(second_task.await??, LiveExit::PeerBurn);
 
+    server.abort();
+    let _ = server.await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn missing_ack_is_terminal_and_never_retried() -> TestResult {
+    let listener = TcpListener::bind("127.0.0.1:0").await?;
+    let address = listener.local_addr()?;
+    let server = tokio::spawn(async move { serve(listener, RelayConfig::default()).await });
+    let relay_url = format!("ws://{address}/v2/connect");
+    let room = RoomCode::parse("99")?;
+    let first = authenticate(ClientConfig {
+        relay_url: relay_url.clone(),
+        room: room.clone(),
+        password: NumericPassword::parse("101")?,
+        operation_timeout: Duration::from_secs(2),
+    });
+    let second = authenticate(ClientConfig {
+        relay_url,
+        room,
+        password: NumericPassword::parse("101")?,
+        operation_timeout: Duration::from_secs(2),
+    });
+    let (first, second) = tokio::try_join!(first, second)?;
+    let (commands, receiver) = mpsc::channel(1);
+    let task = tokio::spawn(first.run_live_with_ack_timeout(
+        receiver,
+        |_| {},
+        || false,
+        Duration::from_millis(50),
+    ));
+    commands
+        .send(LiveCommand::SendText(Zeroizing::new(b"no retry".to_vec())))
+        .await?;
+
+    assert_eq!(task.await?, Err(ClientError::DeliveryTimeout));
+    second.close().await?;
+    server.abort();
+    let _ = server.await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn peer_disconnect_is_terminal_for_the_live_loop() -> TestResult {
+    let listener = TcpListener::bind("127.0.0.1:0").await?;
+    let address = listener.local_addr()?;
+    let server = tokio::spawn(async move { serve(listener, RelayConfig::default()).await });
+    let relay_url = format!("ws://{address}/v2/connect");
+    let room = RoomCode::parse("100")?;
+    let first = authenticate(ClientConfig {
+        relay_url: relay_url.clone(),
+        room: room.clone(),
+        password: NumericPassword::parse("200")?,
+        operation_timeout: Duration::from_secs(2),
+    });
+    let second = authenticate(ClientConfig {
+        relay_url,
+        room,
+        password: NumericPassword::parse("200")?,
+        operation_timeout: Duration::from_secs(2),
+    });
+    let (first, second) = tokio::try_join!(first, second)?;
+    let (_commands, receiver) = mpsc::channel(1);
+    let task = tokio::spawn(first.run_live(receiver, |_| {}, || false));
+
+    second.close().await?;
+    assert!(matches!(
+        task.await?,
+        Err(ClientError::Connection | ClientError::RelayRejected)
+    ));
     server.abort();
     let _ = server.await;
     Ok(())

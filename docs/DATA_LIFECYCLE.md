@@ -49,6 +49,7 @@ These are experiment defaults, not public guarantees:
 | Waiting-for-peer timeout | 30 seconds |
 | Paired session-handshake timeout | 30 seconds |
 | WebSocket write timeout | 10 seconds |
+| Client authenticated-ACK deadline | 15 seconds |
 | Pending-frame TTL | 2 minutes |
 | Room idle TTL | 30 minutes |
 | Absolute room lifetime | 2 hours |
@@ -67,7 +68,7 @@ The WSS edge necessarily handles client IP addresses, connection timing and traf
 
 ### ACK
 
-An authenticated recipient acknowledgement proves delivery to the sending endpoint. The version-1 ordered relay removes the oldest pending ciphertext from the opposite sender when it observes the outer ACK kind. It cannot read or validate the encrypted acknowledged counter. An ACK does not remove plaintext from either client's visible in-memory history.
+An authenticated recipient acknowledgement proves delivery to the sending endpoint. The version-2 ordered relay removes the oldest pending ciphertext from the opposite sender when it observes the outer ACK kind. It cannot read or validate the encrypted acknowledged counter. An ACK does not remove plaintext from either client's visible in-memory history. If no valid ACK reaches the sender within 15 seconds, the client closes without retransmission. The peer might still have accepted the message if only its ACK was lost, so this terminal state is reported as unconfirmed rather than undelivered.
 
 ### Leave
 

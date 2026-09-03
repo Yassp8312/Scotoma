@@ -2,7 +2,7 @@
 
 Flutter shell for the accountless, ephemeral SCOTOMA client.
 
-## Current boundary — block 11
+## Current boundary — block 12
 
 The main Android client now provides:
 
@@ -19,6 +19,8 @@ The main Android client now provides:
 - bidirectional text messages encrypted and authenticated in Rust, one pending
   local send until its authenticated ACK, and a 100-message in-memory UI bound;
 - authenticated BURN from the explicit destroy action;
+- terminal connection-loss and delivery-timeout states, with a 15-second ACK
+  deadline and no automatic message resend or session reconnect;
 - credential clearing on submit, cancellation, backgrounding and disposal;
 - terminal close semantics that reject a late derivation result;
 - Android backup exclusion and screenshot-blocking configuration (device
@@ -52,7 +54,7 @@ an ignored app build directory, then packages the main debug APK. Direct
 Current main Android artifact:
 
 - `build/app/outputs/flutter-apk/app-debug.apk`: 150,500,797 bytes.
-- SHA-256: `E4E1651D4BD1AF92D8B2D19B7E58FC88A04C956C9774D190A91EF224071D65FE`.
+- SHA-256: `7F542F96BD60094AC4610DE15F2ECE24DB3E2DB66013CF5BEC9AE3B60247E918`.
 - Package: `app.scotoma.scotoma`; native code: `arm64-v8a`.
 
 The Android screenshot flag is only a mitigation and cannot prevent a second
@@ -67,6 +69,9 @@ public WSS/TLS or a two-phone handshake.
 The block-11 chat APK compiles, but its prepared phone↔CLI message/ACK/BURN test
 could not run because the TECNO disappeared from ADB before installation. The
 equivalent two-session bridge smoke passed on Windows against the real relay.
+Block 12 rebuilds that APK with terminal network-loss handling and a bounded ACK
+deadline. The device remains absent from ADB, so the physical chat test is still
+pending; the equivalent native relay smoke and all 17 Flutter tests pass.
 
 ## Memory and platform limits
 
@@ -93,6 +98,11 @@ Incoming plaintext necessarily becomes an immutable Dart `String` so Flutter
 can render it, and neither that string nor keyboard/engine copies can be
 deterministically wiped. The app stores no history, but this is not proof of
 physical erasure.
+
+If an ACK is lost after the recipient accepted a message, the sender cannot
+distinguish that case from a message that never arrived. SCOTOMA therefore shows
+“Entrega no confirmada”, destroys the session and never retries automatically;
+this prevents an invisible duplicate but does not promise exactly-once delivery.
 
 ## Windows development environment
 

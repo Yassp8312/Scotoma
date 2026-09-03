@@ -10,7 +10,7 @@ Last updated: 2026-09-03
 | 1 — Rust protocol prototype | Complete for prototype |
 | 2 — Ephemeral relay | Complete for prototype |
 | 3 — Flutter client (Android/web; iOS scaffold) | In progress |
-| 4 — Session reliability | Not started |
+| 4 — Session reliability | In progress |
 | 5 — Security hardening | Not started |
 | 6 — Closed alpha | Not started |
 
@@ -40,8 +40,9 @@ The ten-ticket first sprint and five-ticket relay-hardening sprint are complete 
 | SCT-023 — Client platform boundary | Android device path validated; web/iOS pending | Android backup/capture restrictions and release cleartext denial configured; TECNO BF7 integration passed; memory, keyboard and web limits documented |
 | SCT-024 — Rust bridge integration | Main Android session integrated; web-production validation gated | ADRs 0022–0023: bounded ingress, Rust-only derivation, relay/Noise ownership and lifecycle close; web form fails closed |
 | SCT-025 — Live session UI | Complete for Android prototype; device-chat rerun pending | Live Rust transport drives connection/chat states; bounded bidirectional UI, authenticated ACK and BURN are implemented |
+| SCT-026 — Terminal network and ACK policy | Complete for prototype | A lost relay/socket and a 15-second missing ACK end the session distinctly; no automatic reconnect or message resend |
 
-The Flutter client currently passes `flutter analyze` and 15 unit/widget tests.
+The Flutter client currently passes `flutter analyze` and 17 unit/widget tests.
 These tests cover ASCII-only input, 39/128-digit bounds, invalid paste rejection,
 leading zeroes, autofill configuration, empty recreated app state, compact
 layout, one-shot launch ownership, background close, late completion and
@@ -55,7 +56,7 @@ main Android APK is 150,500,797 bytes and contains the optimized ARM64 Rust
 library plus secure ingress symbol. Inspection confirms backup is disabled and
 cleartext is debug-only. The APK is at
 `app/scotoma/build/app/outputs/flutter-apk/app-debug.apk`, with SHA-256
-`E4E1651D4BD1AF92D8B2D19B7E58FC88A04C956C9774D190A91EF224071D65FE`.
+`7F542F96BD60094AC4610DE15F2ECE24DB3E2DB66013CF5BEC9AE3B60247E918`.
 This is a device-tested debug artifact, not a signed release. The local
 Gradle loopback error was bypassed with a process-local short `TEMP`/`TMP` on D:;
 switching JDK alone did not resolve it. Flutter currently uses the existing
@@ -64,7 +65,7 @@ production signing and public transport validation are still pending; this is
 not completion of the full client milestone.
 
 The isolated bridge probe passes Rust formatting, Clippy with warnings denied,
-eight Rust unit tests, Dart formatting/analysis and a native smoke test (one call
+17 Rust unit tests, Dart formatting/analysis and native smoke tests (one call
 plus 16 concurrent metadata calls and an RNG availability check through FFI).
 Through block 6 only opaque handles, finite statuses, public metadata, fixed
 error codes and success booleans crossed the ordinary API, without numeric
@@ -120,7 +121,8 @@ do not establish memory erasure or native cancellation. Those are next-block
 gates, not fixes claimed by this benchmark. Protocol v2 strips leading zeroes
 from BOTH room and password; the Flutter form preserves them only while editing.
 That benchmark block left the main app disconnected. Block 9 now adopts the
-bridge for local derivation only; live chat remains disconnected.
+bridge for local derivation only; later blocks replaced that boundary with the
+live transport described below.
 
 Block 4 hardens the core's Argon2 workspace/output and room/tag owned-memory
 cleanup without changing v2 derivation or wire semantics. A synthetic opaque
@@ -218,6 +220,17 @@ phone↔CLI chat test is prepared but did not run because the TECNO disconnected
 from ADB immediately before the test; the earlier device rendezvous test remains
 valid evidence only for derivation, relay waiting and cancellation. See ADR 0024.
 
+Block 12 defines the first client reliability policy. A local message waits at
+most 15 seconds for its exact authenticated ACK; expiration closes the session
+without an automatic resend, because the peer may have received the plaintext
+even when its ACK was lost. Relay rejection, socket loss and peer disconnect
+also close terminally without reconnecting. Rust, the bridge and Flutter keep
+delivery timeout distinct from connection loss and clear all local transport
+queues during teardown. Current coverage is 82 root tests, 17 bridge Rust tests
+and 17 Flutter tests; the Windows two-session relay smoke, Wasm build and Android
+ARM64 APK build pass. The physical Android chat rerun is still pending because
+no device is currently listed by ADB. See ADR 0025.
+
 ## Protocol v2 security block
 
 
@@ -246,6 +259,7 @@ valid evidence only for derivation, relay waiting and cancellation. See ADR 0024
 - Workspace tests: passing.
 - Relay integration: packet TTL releases pending capacity, idle TTL notifies both sockets, a third peer is rejected and disconnect purges the room.
 - Authenticated-client integration: two clients complete Noise through the real relay, exchange 100 encrypted messages through a one-frame pending queue with continuous rekeying, validate every ACK and complete authenticated BURN.
+- Reliability integration: a missing ACK reaches a terminal delivery timeout without automatic retransmission, while peer disconnect ends the live loop as connection loss.
 - Cryptographic negative tests: wrong secret/room, handshake and ciphertext tampering, altered inner/outer headers, stage misuse, confirmation replay, application replay and skipped counters fail closed; authenticated BURN makes both transport states terminal.
 - Abuse-control integration: excess upgrades return HTTP 429, exhausted connection capacity returns HTTP 503, and excess frame bursts close and purge the room.
 - Adaptive-admission integration: ordinary traffic enters without a puzzle; pressure-mode traffic must return a valid relay-issued proof before room allocation.
@@ -254,5 +268,5 @@ valid evidence only for derivation, relay waiting and cancellation. See ADR 0024
 - Adversarial integration: noncanonical joins and malformed frames fail closed; text and oversized WebSocket messages close the room; teardown releases the rendezvous tag; a fresh relay process inherits no room state.
 - Deployment-boundary integration: public `/metrics` and administrative public routes return 404 while both listeners share the live aggregate state.
 - Deployment validation: Caddy 2.11.4 accepted the configuration locally using its verified official binary; Compose and image builds are CI gates because Docker is unavailable in the current local environment.
-- Test count: 79 passing tests across the workspace and all targets.
+- Test count: 82 passing tests across the workspace and all targets.
 - RustSec audit: configured in CI; the first local installation was interrupted twice by crates.io network timeouts and must be rerun when connectivity is stable.

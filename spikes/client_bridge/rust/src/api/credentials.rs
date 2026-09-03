@@ -11,7 +11,8 @@ use std::sync::{
 use flutter_rust_bridge::frb;
 #[cfg(not(target_arch = "wasm32"))]
 use scotoma_client::{
-    ClientProgress, DerivedClientConfig, LiveCommand, LiveEvent, LiveExit, authenticate_derived,
+    ClientError, ClientProgress, DerivedClientConfig, LiveCommand, LiveEvent, LiveExit,
+    authenticate_derived,
 };
 use scotoma_protocol::{
     MAX_NUMERIC_DIGITS, NumericPassword, PasswordKdfParams, RoomCode, SessionSecret,
@@ -35,6 +36,8 @@ pub enum CredentialPhase {
     Connected,
     Burning,
     PeerBurned,
+    ConnectionLost,
+    DeliveryTimedOut,
     Closed,
     Failed,
 }
@@ -342,7 +345,7 @@ impl CredentialProbe {
         let client = tokio::select! {
             result = &mut connect => match result {
                 Ok(client) => client,
-                Err(_) => return self.fail_transport(),
+                Err(error) => return self.fail_with_client_error(error),
             },
             () = self.wait_for_close() => return CredentialPhase::Closed,
         };
@@ -374,9 +377,9 @@ impl CredentialProbe {
             Ok(LiveExit::PeerBurn) => {
                 state.phase = CredentialPhase::PeerBurned;
             }
-            Err(_) => {
+            Err(error) => {
                 state.events.clear();
-                state.phase = CredentialPhase::Failed;
+                state.phase = phase_for_client_error(error);
             }
         }
         state.phase
@@ -431,6 +434,18 @@ impl CredentialProbe {
         state.phase
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    fn fail_with_client_error(&self, error: ClientError) -> CredentialPhase {
+        let mut state = self.lock_state();
+        if state.phase != CredentialPhase::Closed {
+            state.material = None;
+            state.commands = None;
+            state.events.clear();
+            state.phase = phase_for_client_error(error);
+        }
+        state.phase
+    }
+
     /// Logical cancellation, not preemption. Do NOT enter a poisoned Wasm
     /// runtime; a production web supervisor remains a separate gate.
     #[frb(sync)]
@@ -471,6 +486,15 @@ fn valid_relay_url(value: &str) -> bool {
         && value.len() <= 2_048
         && (value.starts_with("ws://") || value.starts_with("wss://"))
         && !value.contains(['\r', '\n', '#'])
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+const fn phase_for_client_error(error: ClientError) -> CredentialPhase {
+    match error {
+        ClientError::Connection | ClientError::RelayRejected => CredentialPhase::ConnectionLost,
+        ClientError::DeliveryTimeout => CredentialPhase::DeliveryTimedOut,
+        ClientError::Authentication | ClientError::InvalidInviteInput => CredentialPhase::Failed,
+    }
 }
 
 /// Validates and moves a credential pair into a single bounded Rust-owned slot.
@@ -804,5 +828,25 @@ mod tests {
         let message = take_staged_message(token).expect("matching token");
         assert_eq!(message.as_slice(), "hola \u{1f510}".as_bytes());
         assert!(take_staged_message(token).is_none());
+    }
+
+    #[test]
+    fn transport_errors_map_to_distinct_terminal_phases() {
+        assert_eq!(
+            phase_for_client_error(ClientError::Connection),
+            CredentialPhase::ConnectionLost
+        );
+        assert_eq!(
+            phase_for_client_error(ClientError::RelayRejected),
+            CredentialPhase::ConnectionLost
+        );
+        assert_eq!(
+            phase_for_client_error(ClientError::DeliveryTimeout),
+            CredentialPhase::DeliveryTimedOut
+        );
+        assert_eq!(
+            phase_for_client_error(ClientError::Authentication),
+            CredentialPhase::Failed
+        );
     }
 }

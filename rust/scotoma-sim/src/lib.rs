@@ -19,6 +19,8 @@ use zeroize::Zeroizing;
 
 type ClientSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
+pub const DEFAULT_ACK_TIMEOUT: Duration = Duration::from_secs(15);
+
 /// Connection inputs for one authenticated CLI client.
 pub struct ClientConfig {
     pub relay_url: String,
@@ -286,19 +288,51 @@ impl AuthenticatedClient {
     /// Returns a generic transport category for malformed, unauthenticated,
     /// out-of-order or failed socket operations.
     pub async fn run_live(
+        self,
+        commands: tokio::sync::mpsc::Receiver<LiveCommand>,
+        on_event: impl FnMut(LiveEvent),
+        cancelled: impl Fn() -> bool,
+    ) -> Result<LiveExit, ClientError> {
+        self.run_live_with_ack_timeout(commands, on_event, cancelled, DEFAULT_ACK_TIMEOUT)
+            .await
+    }
+
+    /// Runs the live loop with an explicit ACK deadline, primarily for bounded
+    /// platform policy and deterministic tests. Timed-out ciphertext is never
+    /// retransmitted automatically.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ClientError::DeliveryTimeout`] when the current local message
+    /// is not acknowledged before `ack_timeout`, or another generic transport
+    /// category for socket/authentication failure.
+    pub async fn run_live_with_ack_timeout(
         mut self,
         mut commands: tokio::sync::mpsc::Receiver<LiveCommand>,
         mut on_event: impl FnMut(LiveEvent),
         cancelled: impl Fn() -> bool,
+        ack_timeout: Duration,
     ) -> Result<LiveExit, ClientError> {
+        if ack_timeout.is_zero() {
+            return Err(ClientError::DeliveryTimeout);
+        }
         let mut pending_counter = None;
         loop {
             if cancelled() {
                 let _ = self.socket.send(Message::Close(None)).await;
                 return Ok(LiveExit::LocalClose);
             }
+            let pending_deadline = pending_counter.map(|(_, deadline)| deadline);
+            let ack_wait = async move {
+                if let Some(deadline) = pending_deadline {
+                    tokio::time::sleep_until(deadline).await;
+                } else {
+                    std::future::pending::<()>().await;
+                }
+            };
             tokio::select! {
                 () = tokio::time::sleep(Duration::from_millis(50)) => {}
+                () = ack_wait => return Err(ClientError::DeliveryTimeout),
                 command = commands.recv() => match command {
                     Some(LiveCommand::SendText(text)) if pending_counter.is_none() => {
                         let frame = self.handshake.encrypt_transport_frame(
@@ -308,7 +342,7 @@ impl AuthenticatedClient {
                         ).map_err(|_| ClientError::Authentication)?;
                         let counter = frame.counter();
                         send_protocol_frame(&mut self.socket, &frame, self.operation_timeout).await?;
-                        pending_counter = Some(counter);
+                        pending_counter = Some((counter, tokio::time::Instant::now() + ack_timeout));
                     }
                     Some(LiveCommand::SendText(_)) => return Err(ClientError::Authentication),
                     Some(LiveCommand::Burn) => {
@@ -345,7 +379,7 @@ impl AuthenticatedClient {
                             FrameKind::Ack => {
                                 let acknowledged = authenticated.acknowledged_counter()
                                     .ok_or(ClientError::Authentication)?;
-                                if pending_counter != Some(acknowledged) {
+                                if pending_counter.map(|(counter, _)| counter) != Some(acknowledged) {
                                     return Err(ClientError::Authentication);
                                 }
                                 pending_counter = None;
@@ -392,6 +426,7 @@ pub enum ClientError {
     Connection,
     RelayRejected,
     Authentication,
+    DeliveryTimeout,
     InvalidInviteInput,
 }
 
@@ -401,6 +436,7 @@ impl Display for ClientError {
             Self::Connection => formatter.write_str("relay connection failed"),
             Self::RelayRejected => formatter.write_str("relay session failed"),
             Self::Authentication => formatter.write_str("peer authentication failed"),
+            Self::DeliveryTimeout => formatter.write_str("message delivery timed out"),
             Self::InvalidInviteInput => {
                 formatter.write_str("room and password must be 1 to 128 ASCII digits")
             }

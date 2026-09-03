@@ -166,6 +166,51 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('connection loss is terminal and returns to an empty form', (
+    tester,
+  ) async {
+    final backend = _FakeBackend.immediate();
+    await _openImmediateSession(tester, backend);
+
+    backend.port.finishTransport(
+      TransportOutcome.connectionLost,
+      TransportPhase.connectionLost,
+    );
+    await tester.pump(const Duration(milliseconds: 150));
+
+    expect(find.text('Conexión interrumpida'), findsOneWidget);
+    expect(backend.port.closeCalls, 1);
+    expect(backend.port.disposeCalls, 1);
+
+    await tester.tap(find.byKey(const Key('cancel-session-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('room-field')), findsOneWidget);
+  });
+
+  testWidgets('missing ACK closes without automatically resending', (
+    tester,
+  ) async {
+    final backend = _FakeBackend.immediate();
+    await _openImmediateSession(tester, backend);
+
+    await tester.enterText(find.byKey(const Key('message-field')), 'una vez');
+    await tester.tap(find.byKey(const Key('send-message-button')));
+    await tester.pump();
+    backend.port.finishTransport(
+      TransportOutcome.deliveryTimedOut,
+      TransportPhase.deliveryTimedOut,
+    );
+    await tester.pump(const Duration(milliseconds: 150));
+
+    expect(find.text('Entrega no confirmada'), findsOneWidget);
+    expect(backend.port.sentTexts, ['una vez']);
+    expect(backend.port.closeCalls, 1);
+    expect(backend.port.disposeCalls, 1);
+
+    await tester.tap(find.byKey(const Key('cancel-session-button')));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('background clears credentials before submission', (
     tester,
   ) async {
@@ -297,6 +342,11 @@ final class _FakePort implements AppSessionPort {
 
   void complete(DeriveOutcome outcome) {
     if (!_result.isCompleted) _result.complete(outcome);
+  }
+
+  void finishTransport(TransportOutcome outcome, TransportPhase phase) {
+    _transportPhase = phase;
+    if (!_transport.isCompleted) _transport.complete(outcome);
   }
 
   @override

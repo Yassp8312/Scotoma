@@ -185,7 +185,7 @@ _Presentation _presentation(LiveSessionPhase phase) => switch (phase) {
   ),
   LiveSessionPhase.connected => const _Presentation(
     title: 'Canal seguro conectado',
-    message: 'El handshake Noise terminó y el socket sigue vivo. El envío de mensajes se habilitará en el próximo bloque.',
+    message: 'El handshake Noise terminó. Los mensajes viajan cifrados y requieren confirmación autenticada.',
     icon: Icons.verified_user_outlined,
     busy: false,
   ),
@@ -200,6 +200,18 @@ _Presentation _presentation(LiveSessionPhase phase) => switch (phase) {
     title: 'La otra persona destruyó la sesión',
     message: 'El BURN fue autenticado. Las claves locales y el socket quedaron cerrados.',
     icon: Icons.local_fire_department_outlined,
+    busy: false,
+  ),
+  LiveSessionPhase.connectionLost => const _Presentation(
+    title: 'Conexión interrumpida',
+    message: 'El socket se cerró y la sesión no se reintentará. Introduce nuevamente ambos números para comenzar otra.',
+    icon: Icons.cloud_off_outlined,
+    busy: false,
+  ),
+  LiveSessionPhase.deliveryTimedOut => const _Presentation(
+    title: 'Entrega no confirmada',
+    message: 'No llegó un ACK autenticado dentro del límite. El mensaje no se reenvió automáticamente y la sesión fue cerrada.',
+    icon: Icons.mark_chat_unread_outlined,
     busy: false,
   ),
   LiveSessionPhase.closed || LiveSessionPhase.disposed => const _Presentation(

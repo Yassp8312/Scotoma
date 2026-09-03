@@ -1139,8 +1139,10 @@ impl SseDecode for crate::api::credentials::CredentialPhase {
             7 => crate::api::credentials::CredentialPhase::Connected,
             8 => crate::api::credentials::CredentialPhase::Burning,
             9 => crate::api::credentials::CredentialPhase::PeerBurned,
-            10 => crate::api::credentials::CredentialPhase::Closed,
-            11 => crate::api::credentials::CredentialPhase::Failed,
+            10 => crate::api::credentials::CredentialPhase::ConnectionLost,
+            11 => crate::api::credentials::CredentialPhase::DeliveryTimedOut,
+            12 => crate::api::credentials::CredentialPhase::Closed,
+            13 => crate::api::credentials::CredentialPhase::Failed,
             _ => unreachable!("Invalid variant for CredentialPhase: {}", inner),
         };
     }
@@ -1441,8 +1443,10 @@ impl flutter_rust_bridge::IntoDart for crate::api::credentials::CredentialPhase 
             Self::Connected => 7.into_dart(),
             Self::Burning => 8.into_dart(),
             Self::PeerBurned => 9.into_dart(),
-            Self::Closed => 10.into_dart(),
-            Self::Failed => 11.into_dart(),
+            Self::ConnectionLost => 10.into_dart(),
+            Self::DeliveryTimedOut => 11.into_dart(),
+            Self::Closed => 12.into_dart(),
+            Self::Failed => 13.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -1618,8 +1622,10 @@ impl SseEncode for crate::api::credentials::CredentialPhase {
                 crate::api::credentials::CredentialPhase::Connected => 7,
                 crate::api::credentials::CredentialPhase::Burning => 8,
                 crate::api::credentials::CredentialPhase::PeerBurned => 9,
-                crate::api::credentials::CredentialPhase::Closed => 10,
-                crate::api::credentials::CredentialPhase::Failed => 11,
+                crate::api::credentials::CredentialPhase::ConnectionLost => 10,
+                crate::api::credentials::CredentialPhase::DeliveryTimedOut => 11,
+                crate::api::credentials::CredentialPhase::Closed => 12,
+                crate::api::credentials::CredentialPhase::Failed => 13,
                 _ => {
                     unimplemented!("");
                 }
