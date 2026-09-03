@@ -1,0 +1,11 @@
+name: scotoma_bridge_probe
+description: Isolated, non-secret Dart/Rust bridge compatibility probe.
+publish_to: none
+version: 0.0.0
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  ffi: 2.2.0
+  flutter_rust_bridge: 2.13.0

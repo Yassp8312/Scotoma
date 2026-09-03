@@ -1,0 +1,25 @@
+name: scotoma
+description: "Cliente efímero y sin cuentas para SCOTOMA."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_rust_bridge: 2.13.0
+  scotoma_bridge_probe:
+    path: ../../spikes/client_bridge
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

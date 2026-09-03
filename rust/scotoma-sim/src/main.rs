@@ -3,8 +3,8 @@ use std::error::Error;
 use std::io::{self, Write};
 use std::time::Duration;
 
+use scotoma_client::{ClientConfig, authenticate, encode_hex};
 use scotoma_protocol::{NumericPassword, PeerRole, RoomCode};
-use scotoma_sim::{ClientConfig, authenticate, encode_hex};
 use zeroize::Zeroizing;
 
 #[tokio::main]

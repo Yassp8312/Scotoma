@@ -1,4 +1,4 @@
-//! CLI client plumbing for the SCOTOMA protocol prototype.
+//! Reusable live client plumbing for the SCOTOMA protocol prototype.
 
 use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter};
@@ -8,12 +8,14 @@ use futures_util::{SinkExt, StreamExt};
 use scotoma_protocol::{
     Frame, FrameKind, HandshakeRole, HandshakeSession, JoinRequest, NumericPassword,
     PasswordKdfParams, PeerRole, ProtocolLimits, PuzzleSolution, RelayEvent, RendezvousTag,
-    RoomCode, derive_rendezvous_tag, derive_session_secret, solve_admission_challenge,
+    RoomCode, SessionSecret, derive_rendezvous_tag, derive_session_secret,
+    solve_admission_challenge,
 };
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
+use zeroize::Zeroizing;
 
 type ClientSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
@@ -23,6 +25,80 @@ pub struct ClientConfig {
     pub room: RoomCode,
     pub password: NumericPassword,
     pub operation_timeout: Duration,
+}
+
+/// Already-derived connection inputs. The password never crosses this boundary.
+pub struct DerivedClientConfig {
+    pub relay_url: String,
+    pub room: RoomCode,
+    pub secret: SessionSecret,
+    pub operation_timeout: Duration,
+}
+
+impl Debug for DerivedClientConfig {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DerivedClientConfig")
+            .field("relay_url", &self.relay_url)
+            .field("room", &"[REDACTED]")
+            .field("secret", &"[REDACTED]")
+            .field("operation_timeout", &self.operation_timeout)
+            .finish_non_exhaustive()
+    }
+}
+
+/// Coarse, non-secret progress visible to the application UI.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClientProgress {
+    Connecting,
+    WaitingForPeer,
+    Handshaking,
+    Connected,
+}
+
+/// Bounded commands accepted by an authenticated live session.
+pub enum LiveCommand {
+    SendText(Zeroizing<Vec<u8>>),
+    Burn,
+}
+
+impl Debug for LiveCommand {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::SendText(text) => formatter
+                .debug_tuple("SendText")
+                .field(&format_args!("[REDACTED; {} bytes]", text.len()))
+                .finish(),
+            Self::Burn => formatter.write_str("Burn"),
+        }
+    }
+}
+
+/// Authenticated events produced by a live session.
+pub enum LiveEvent {
+    Delivered(u64),
+    ReceivedText(Zeroizing<String>),
+    PeerBurned,
+}
+
+impl Debug for LiveEvent {
+    fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Delivered(counter) => formatter.debug_tuple("Delivered").field(counter).finish(),
+            Self::ReceivedText(text) => formatter
+                .debug_tuple("ReceivedText")
+                .field(&format_args!("[REDACTED; {} bytes]", text.len()))
+                .finish(),
+            Self::PeerBurned => formatter.write_str("PeerBurned"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LiveExit {
+    LocalClose,
+    LocalBurn,
+    PeerBurn,
 }
 
 impl Debug for ClientConfig {
@@ -164,6 +240,140 @@ impl AuthenticatedClient {
             .await
             .map_err(|_| ClientError::Connection)
     }
+
+    /// Keeps the authenticated socket alive until local cancellation or remote close.
+    ///
+    /// # Errors
+    ///
+    /// Returns a non-secret transport category if the peer closes or sends an
+    /// application frame before the message layer has been enabled.
+    pub async fn hold_until_cancelled(
+        mut self,
+        cancelled: impl Fn() -> bool,
+    ) -> Result<(), ClientError> {
+        loop {
+            if cancelled() {
+                let _ = self.socket.send(Message::Close(None)).await;
+                return Ok(());
+            }
+            tokio::select! {
+                () = tokio::time::sleep(Duration::from_millis(50)) => {}
+                incoming = self.socket.next() => match incoming {
+                    Some(Ok(Message::Ping(payload))) => {
+                        self.socket.send(Message::Pong(payload)).await
+                            .map_err(|_| ClientError::Connection)?;
+                    }
+                    Some(Ok(Message::Pong(_))) => {}
+                    Some(Ok(Message::Close(_))) | None => return Err(ClientError::RelayRejected),
+                    Some(Ok(Message::Binary(_) | Message::Text(_))) => {
+                        return Err(ClientError::Authentication);
+                    }
+                    Some(Ok(Message::Frame(_)) | Err(_)) => {
+                        return Err(ClientError::Connection);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Runs bidirectional authenticated messaging until close or BURN.
+    ///
+    /// At most one locally-sent ciphertext may await an ACK. Received text is
+    /// acknowledged before it is emitted to the caller.
+    ///
+    /// # Errors
+    ///
+    /// Returns a generic transport category for malformed, unauthenticated,
+    /// out-of-order or failed socket operations.
+    pub async fn run_live(
+        mut self,
+        mut commands: tokio::sync::mpsc::Receiver<LiveCommand>,
+        mut on_event: impl FnMut(LiveEvent),
+        cancelled: impl Fn() -> bool,
+    ) -> Result<LiveExit, ClientError> {
+        let mut pending_counter = None;
+        loop {
+            if cancelled() {
+                let _ = self.socket.send(Message::Close(None)).await;
+                return Ok(LiveExit::LocalClose);
+            }
+            tokio::select! {
+                () = tokio::time::sleep(Duration::from_millis(50)) => {}
+                command = commands.recv() => match command {
+                    Some(LiveCommand::SendText(text)) if pending_counter.is_none() => {
+                        let frame = self.handshake.encrypt_transport_frame(
+                            FrameKind::Ciphertext,
+                            &text,
+                            ProtocolLimits::default(),
+                        ).map_err(|_| ClientError::Authentication)?;
+                        let counter = frame.counter();
+                        send_protocol_frame(&mut self.socket, &frame, self.operation_timeout).await?;
+                        pending_counter = Some(counter);
+                    }
+                    Some(LiveCommand::SendText(_)) => return Err(ClientError::Authentication),
+                    Some(LiveCommand::Burn) => {
+                        let burn = self.handshake.encrypt_burn_frame(ProtocolLimits::default())
+                            .map_err(|_| ClientError::Authentication)?;
+                        send_protocol_frame(&mut self.socket, &burn, self.operation_timeout).await?;
+                        let _ = self.socket.send(Message::Close(None)).await;
+                        return Ok(LiveExit::LocalBurn);
+                    }
+                    None => {
+                        let _ = self.socket.send(Message::Close(None)).await;
+                        return Ok(LiveExit::LocalClose);
+                    }
+                },
+                incoming = self.socket.next() => match incoming {
+                    Some(Ok(Message::Binary(packet))) => {
+                        let frame = decode_protocol_packet(&packet)?;
+                        let authenticated = self.handshake
+                            .decrypt_transport_frame(&frame, ProtocolLimits::default())
+                            .map_err(|_| ClientError::Authentication)?;
+                        match authenticated.kind() {
+                            FrameKind::Ciphertext => {
+                                let mut bytes = Zeroizing::new(authenticated.payload().to_vec());
+                                let text = String::from_utf8(std::mem::take(&mut *bytes))
+                                    .map_err(|_| ClientError::Authentication)?;
+                                let ack = self.handshake.encrypt_transport_frame(
+                                    FrameKind::Ack,
+                                    &authenticated.counter().to_be_bytes(),
+                                    ProtocolLimits::default(),
+                                ).map_err(|_| ClientError::Authentication)?;
+                                send_protocol_frame(&mut self.socket, &ack, self.operation_timeout).await?;
+                                on_event(LiveEvent::ReceivedText(Zeroizing::new(text)));
+                            }
+                            FrameKind::Ack => {
+                                let acknowledged = authenticated.acknowledged_counter()
+                                    .ok_or(ClientError::Authentication)?;
+                                if pending_counter != Some(acknowledged) {
+                                    return Err(ClientError::Authentication);
+                                }
+                                pending_counter = None;
+                                on_event(LiveEvent::Delivered(acknowledged));
+                            }
+                            FrameKind::Burn => {
+                                on_event(LiveEvent::PeerBurned);
+                                let _ = self.socket.send(Message::Close(None)).await;
+                                return Ok(LiveExit::PeerBurn);
+                            }
+                            FrameKind::Handshake | FrameKind::Error => {
+                                return Err(ClientError::Authentication);
+                            }
+                        }
+                    }
+                    Some(Ok(Message::Ping(payload))) => {
+                        self.socket.send(Message::Pong(payload)).await
+                            .map_err(|_| ClientError::Connection)?;
+                    }
+                    Some(Ok(Message::Pong(_))) => {}
+                    Some(Ok(Message::Close(_))) | None => return Err(ClientError::RelayRejected),
+                    Some(Ok(Message::Text(_) | Message::Frame(_)) | Err(_)) => {
+                        return Err(ClientError::Connection);
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl Debug for AuthenticatedClient {
@@ -216,6 +426,34 @@ pub async fn authenticate(config: ClientConfig) -> Result<AuthenticatedClient, C
     let secret = derive_session_secret(&room, &password, PasswordKdfParams::default())
         .map_err(|_| ClientError::Authentication)?;
     drop(password);
+    authenticate_derived(
+        DerivedClientConfig {
+            relay_url,
+            room,
+            secret,
+            operation_timeout,
+        },
+        |_| {},
+    )
+    .await
+}
+
+/// Connects using Rust-owned, already-derived material and reports only coarse progress.
+///
+/// # Errors
+///
+/// Returns a non-secret failure category for connection, relay or Noise errors.
+pub async fn authenticate_derived(
+    config: DerivedClientConfig,
+    mut progress: impl FnMut(ClientProgress),
+) -> Result<AuthenticatedClient, ClientError> {
+    let DerivedClientConfig {
+        relay_url,
+        room,
+        secret,
+        operation_timeout,
+    } = config;
+    progress(ClientProgress::Connecting);
     let tag = derive_rendezvous_tag(&room, &secret).map_err(|_| ClientError::Authentication)?;
     let connect = timeout(operation_timeout, connect_async(&relay_url))
         .await
@@ -229,7 +467,8 @@ pub async fn authenticate(config: ClientConfig) -> Result<AuthenticatedClient, C
         operation_timeout,
     )
     .await?;
-    let role = await_pairing(&mut socket, &tag, operation_timeout).await?;
+    let role = await_pairing(&mut socket, &tag, operation_timeout, &mut progress).await?;
+    progress(ClientProgress::Handshaking);
     let handshake_role = match role {
         PeerRole::Initiator => HandshakeRole::Initiator,
         PeerRole::Responder => HandshakeRole::Responder,
@@ -271,6 +510,8 @@ pub async fn authenticate(config: ClientConfig) -> Result<AuthenticatedClient, C
         return Err(ClientError::Authentication);
     }
 
+    progress(ClientProgress::Connected);
+
     Ok(AuthenticatedClient {
         role,
         socket,
@@ -295,6 +536,7 @@ async fn await_pairing(
     socket: &mut ClientSocket,
     tag: &RendezvousTag,
     operation_timeout: Duration,
+    progress: &mut impl FnMut(ClientProgress),
 ) -> Result<PeerRole, ClientError> {
     let mut first = receive_binary(socket, operation_timeout).await?;
     if let RelayEvent::PuzzleChallenge(challenge) =
@@ -317,6 +559,7 @@ async fn await_pairing(
     }
     match RelayEvent::decode(&first).map_err(|_| ClientError::RelayRejected)? {
         RelayEvent::Waiting(PeerRole::Initiator) => {
+            progress(ClientProgress::WaitingForPeer);
             let ready = receive_binary(socket, operation_timeout).await?;
             match RelayEvent::decode(&ready).map_err(|_| ClientError::RelayRejected)? {
                 RelayEvent::PeerReady(PeerRole::Initiator) => Ok(PeerRole::Initiator),
@@ -371,15 +614,17 @@ async fn receive_protocol_frame(
     operation_timeout: Duration,
 ) -> Result<Frame, ClientError> {
     let encoded = receive_binary(socket, operation_timeout).await?;
+    decode_protocol_packet(&encoded)
+}
+
+fn decode_protocol_packet(encoded: &[u8]) -> Result<Frame, ClientError> {
     if matches!(
-        RelayEvent::decode(&encoded),
+        RelayEvent::decode(encoded),
         Ok(RelayEvent::RoomClosed | RelayEvent::Error)
     ) {
         return Err(ClientError::RelayRejected);
     }
-    let frame = Frame::decode(&encoded, ProtocolLimits::default())
-        .map_err(|_| ClientError::Authentication)?;
-    Ok(frame)
+    Frame::decode(encoded, ProtocolLimits::default()).map_err(|_| ClientError::Authentication)
 }
 
 async fn send_binary(

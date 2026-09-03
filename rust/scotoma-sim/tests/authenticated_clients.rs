@@ -1,10 +1,12 @@
 use std::error::Error;
 use std::time::Duration;
 
+use scotoma_client::{ClientConfig, LiveCommand, LiveEvent, LiveExit, authenticate};
 use scotoma_protocol::{NumericPassword, PeerRole, ProtocolLimits, RoomCode};
 use scotoma_relay::{RelayConfig, serve};
-use scotoma_sim::{ClientConfig, authenticate};
 use tokio::net::TcpListener;
+use tokio::sync::mpsc;
+use zeroize::Zeroizing;
 
 type TestResult = Result<(), Box<dyn Error>>;
 
@@ -68,6 +70,86 @@ async fn two_clients_exchange_one_hundred_messages_then_burn() -> TestResult {
     let (burned, peer_burned) = tokio::join!(burning, receiving_burn);
     burned?;
     peer_burned?;
+
+    server.abort();
+    let _ = server.await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn live_loops_exchange_bidirectionally_ack_and_burn() -> TestResult {
+    let listener = TcpListener::bind("127.0.0.1:0").await?;
+    let address = listener.local_addr()?;
+    let server = tokio::spawn(async move { serve(listener, RelayConfig::default()).await });
+    let relay_url = format!("ws://{address}/v2/connect");
+    let room = RoomCode::parse("13")?;
+    let first = authenticate(ClientConfig {
+        relay_url: relay_url.clone(),
+        room: room.clone(),
+        password: NumericPassword::parse("1370")?,
+        operation_timeout: Duration::from_secs(2),
+    });
+    let second = authenticate(ClientConfig {
+        relay_url,
+        room,
+        password: NumericPassword::parse("1370")?,
+        operation_timeout: Duration::from_secs(2),
+    });
+    let (first, second) = tokio::try_join!(first, second)?;
+    let (first_commands, first_receiver) = mpsc::channel(2);
+    let (second_commands, second_receiver) = mpsc::channel(2);
+    let (first_events, mut first_events_rx) = mpsc::unbounded_channel();
+    let (second_events, mut second_events_rx) = mpsc::unbounded_channel();
+    let first_task = tokio::spawn(first.run_live(
+        first_receiver,
+        move |event| {
+            let _ = first_events.send(event);
+        },
+        || false,
+    ));
+    let second_task = tokio::spawn(second.run_live(
+        second_receiver,
+        move |event| {
+            let _ = second_events.send(event);
+        },
+        || false,
+    ));
+
+    first_commands
+        .send(LiveCommand::SendText(Zeroizing::new(
+            "mensaje uno".as_bytes().to_vec(),
+        )))
+        .await?;
+    assert!(matches!(
+        second_events_rx.recv().await,
+        Some(LiveEvent::ReceivedText(text)) if text.as_str() == "mensaje uno"
+    ));
+    assert!(matches!(
+        first_events_rx.recv().await,
+        Some(LiveEvent::Delivered(0))
+    ));
+
+    second_commands
+        .send(LiveCommand::SendText(Zeroizing::new(
+            "respuesta".as_bytes().to_vec(),
+        )))
+        .await?;
+    assert!(matches!(
+        first_events_rx.recv().await,
+        Some(LiveEvent::ReceivedText(text)) if text.as_str() == "respuesta"
+    ));
+    assert!(matches!(
+        second_events_rx.recv().await,
+        Some(LiveEvent::Delivered(1))
+    ));
+
+    first_commands.send(LiveCommand::Burn).await?;
+    assert_eq!(first_task.await??, LiveExit::LocalBurn);
+    assert!(matches!(
+        second_events_rx.recv().await,
+        Some(LiveEvent::PeerBurned)
+    ));
+    assert_eq!(second_task.await??, LiveExit::PeerBurn);
 
     server.abort();
     let _ = server.await;

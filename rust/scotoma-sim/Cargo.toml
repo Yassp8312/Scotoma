@@ -7,6 +7,9 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[lib]
+name = "scotoma_client"
+
 [dependencies]
 futures-util.workspace = true
 scotoma-protocol = { path = "../scotoma-protocol" }

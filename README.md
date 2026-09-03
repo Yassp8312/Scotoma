@@ -8,7 +8,7 @@ Two participants who enter the same numeric room and numeric password can rendez
 
 ## Current status
 
-The repository is in **Milestone 2: Ephemeral relay**. It contains:
+The repository has entered **Milestone 3: Flutter client**. It contains:
 
 - the product and security boundaries;
 - a Rust workspace for the protocol core, relay and simulator;
@@ -24,6 +24,14 @@ The repository is in **Milestone 2: Ephemeral relay**. It contains:
 - adversarial relay coverage and a 100-message authenticated/rekeyed integration path;
 - separate public and administrative listeners plus a containerized WSS/TLS edge;
 - tests and continuous integration.
+- an Android Flutter client with numeric credential validation, one-shot
+  form-to-Rust ownership, local key derivation, live relay rendezvous and Noise
+  confirmation with no local persistence; the production web form remains
+  fail-closed and iOS remains a scaffold.
+- an isolated Dart/Rust compatibility probe and separate Android/web Flutter
+  harness in `spikes/client_bridge`; its bounded credential ingress is now used
+  by the main Android client, including bidirectional authenticated messages,
+  ACK delivery state and terminal BURN.
 
 The Rust protocol and ephemeral-relay milestones are complete for the prototype. Two CLI clients authenticate, exchange ordered ciphertext and ACKs through the relay, then finish with an authenticated BURN that destroys both transport states and purges the room. Pending ciphertext exists only in bounded, zeroizing relay memory until ACK, packet TTL, BURN, disconnect or relay restart. ADR 0007 still blocks production approval on independent implementation review and secure-memory gaps.
 

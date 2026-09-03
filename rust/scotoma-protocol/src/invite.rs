@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt::{self, Debug, Display, Formatter};
 
-use argon2::{Algorithm, Argon2, Params, Version};
+use argon2::{Algorithm, Argon2, Block, Params, Version};
 use hmac::digest::KeyInit;
 use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256};
@@ -43,7 +43,13 @@ impl Debug for RoomCode {
 
 impl Display for RoomCode {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> fmt::Result {
-        formatter.write_str(&self.0)
+        formatter.write_str("RoomCode([REDACTED])")
+    }
+}
+
+impl Drop for RoomCode {
+    fn drop(&mut self) {
+        self.0.zeroize();
     }
 }
 
@@ -190,16 +196,54 @@ pub fn derive_session_secret(
         Some(SESSION_SECRET_BYTES),
     )
     .map_err(|_| KeyDerivationError)?;
+    // Allocate before handling password-derived material. Reservation failure
+    // remains a generic error; process abort/OS kill is outside Drop guarantees.
+    let mut memory = Vec::new();
+    memory
+        .try_reserve_exact(params.block_count())
+        .map_err(|_| KeyDerivationError)?;
+    memory.resize(params.block_count(), Block::default());
     let argon = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     let mut salt_hasher = Sha256::new();
     salt_hasher.update(PASSWORD_SALT_CONTEXT);
     update_length_prefixed(&mut salt_hasher, room.as_str().as_bytes())?;
     let salt = salt_hasher.finalize();
-    let mut output = [0_u8; SESSION_SECRET_BYTES];
+    // Protect the output from its creation, including an early error return.
+    let mut output = SessionSecret([0_u8; SESSION_SECRET_BYTES]);
+    hash_with_wiped_memory(
+        &argon,
+        password.expose_bytes(),
+        &salt,
+        &mut output.0,
+        &mut memory,
+    )?;
+    Ok(output)
+}
+
+/// Borrowed guard lets tests inspect live memory AFTER cleanup, without reading
+/// freed allocations or introducing unsafe code. No secret reaches spare Vec
+/// capacity: Argon2 only receives this initialized slice.
+struct KdfMemory<'a>(&'a mut [Block]);
+
+impl Drop for KdfMemory<'_> {
+    fn drop(&mut self) {
+        for block in &mut *self.0 {
+            block.zeroize();
+        }
+    }
+}
+
+fn hash_with_wiped_memory(
+    argon: &Argon2<'_>,
+    password: &[u8],
+    salt: &[u8],
+    output: &mut [u8],
+    memory: &mut [Block],
+) -> Result<(), KeyDerivationError> {
+    let workspace = KdfMemory(memory);
     argon
-        .hash_password_into(password.expose_bytes(), &salt, &mut output)
-        .map_err(|_| KeyDerivationError)?;
-    Ok(SessionSecret(output))
+        .hash_password_into_with_memory(password, salt, output, &mut *workspace.0)
+        .map_err(|_| KeyDerivationError)
 }
 
 /// Opaque routing value visible to the relay but inappropriate for logs.
@@ -224,6 +268,12 @@ impl Debug for RendezvousTag {
     }
 }
 
+impl Drop for RendezvousTag {
+    fn drop(&mut self) {
+        self.0.zeroize();
+    }
+}
+
 /// Derives the opaque relay routing tag from v2 key material.
 ///
 /// # Errors
@@ -238,10 +288,11 @@ pub fn derive_rendezvous_tag(
     mac.update(RENDEZVOUS_CONTEXT);
     update_hmac_length_prefixed(&mut mac, room.as_str().as_bytes())?;
 
-    let output = mac.finalize().into_bytes();
-    let mut tag = [0_u8; RENDEZVOUS_TAG_BYTES];
-    tag.copy_from_slice(&output);
-    Ok(RendezvousTag(tag))
+    let mut output = mac.finalize().into_bytes();
+    let mut tag = RendezvousTag([0_u8; RENDEZVOUS_TAG_BYTES]);
+    tag.0.copy_from_slice(&output);
+    output.as_mut_slice().zeroize();
+    Ok(tag)
 }
 
 fn update_length_prefixed(digest: &mut Sha256, value: &[u8]) -> Result<(), KeyDerivationError> {
@@ -354,6 +405,88 @@ mod tests {
 
         assert_eq!(format!("{password:?}"), "NumericPassword([REDACTED])");
         assert_eq!(format!("{room:?}"), "RoomCode([REDACTED])");
+        assert_eq!(format!("{room}"), "RoomCode([REDACTED])");
         assert_eq!(format!("{secret:?}"), "SessionSecret([REDACTED])");
+    }
+
+    #[test]
+    fn workspace_is_wiped_on_success_error_and_unwind() {
+        use argon2::{Algorithm, Argon2, Block, Params, Version};
+        let argon = Argon2::new(
+            Algorithm::Argon2id,
+            Version::V0x13,
+            Params::new(8, 1, 1, Some(32)).unwrap(),
+        );
+        let mut blocks = vec![Block::default(); 8];
+        for bad_salt in [false, true] {
+            // Seed the workspace so the error case cannot pass vacuously.
+            for block in &mut blocks {
+                block.as_mut().fill(42);
+            }
+            let mut out = [0; 32];
+            let salt: &[u8] = if bad_salt { b"x" } else { b"public-salt" };
+            let result = super::hash_with_wiped_memory(
+                &argon,
+                b"public-fixture",
+                salt,
+                &mut out,
+                &mut blocks,
+            );
+            assert_eq!(result.is_err(), bad_salt);
+            assert!(blocks.iter().all(|b| b.as_ref().iter().all(|v| *v == 0)));
+        }
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let workspace = super::KdfMemory(&mut blocks);
+            workspace.0[0].as_mut().fill(43);
+            panic!("synthetic workspace unwind");
+        }));
+        assert!(result.is_err());
+        assert!(blocks.iter().all(|b| b.as_ref().iter().all(|v| *v == 0)));
+    }
+
+    #[test]
+    fn explicit_workspace_matches_original_v2_derivation() {
+        use argon2::{Algorithm, Argon2, Params, Version};
+        use sha2::{Digest, Sha256};
+        let room = RoomCode::parse("00013").unwrap();
+        let password = NumericPassword::parse("001370").unwrap();
+        for memory_kib in [8, 128] {
+            let settings = PasswordKdfParams {
+                memory_kib,
+                iterations: 2,
+                lanes: 1,
+            };
+            let actual = derive_session_secret(&room, &password, settings).unwrap();
+            let mut hash = Sha256::new();
+            hash.update(super::PASSWORD_SALT_CONTEXT);
+            super::update_length_prefixed(&mut hash, room.as_str().as_bytes()).unwrap();
+            let argon = Argon2::new(
+                Algorithm::Argon2id,
+                Version::V0x13,
+                Params::new(memory_kib, 2, 1, Some(32)).unwrap(),
+            );
+            let mut expected = [0; 32];
+            argon
+                .hash_password_into(password.expose_bytes(), &hash.finalize(), &mut expected)
+                .unwrap();
+            assert_eq!(actual.expose_bytes(), &expected);
+        }
+    }
+
+    #[test]
+    fn invalid_kdf_parameters_return_only_generic_errors() {
+        let room = RoomCode::parse("13").unwrap();
+        let password = NumericPassword::parse("1370").unwrap();
+        let error = derive_session_secret(
+            &room,
+            &password,
+            PasswordKdfParams {
+                memory_kib: 0,
+                iterations: 0,
+                lanes: 0,
+            },
+        )
+        .unwrap_err();
+        assert_eq!(error.to_string(), "unable to derive session key material");
     }
 }

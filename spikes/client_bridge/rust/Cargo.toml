@@ -1,0 +1,33 @@
+[package]
+name = "scotoma_bridge_probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "LicenseRef-Proprietary-Pending"
+
+# Keep experimental bridge dependencies out of the relay's workspace/lockfile.
+[workspace]
+resolver = "3"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+flutter_rust_bridge = "=2.13.0"
+scotoma-protocol = { path = "../../../rust/scotoma-protocol" }
+getrandom = "=0.3.4"
+zeroize = "=1.9.0"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+scotoma-client = { package = "scotoma-sim", path = "../../../rust/scotoma-sim" }
+tokio = { version = "=1.47.1", features = ["time"] }
+
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+getrandom = { version = "=0.3.4", features = ["wasm_js"] }
+js-sys = "=0.3.104"
+wasm-bindgen = "=0.2.127"
+
+[lints.rust]
+# FRB attributes use this named cfg during code generation. Keep checking all
+# other cfgs rather than suppressing unexpected_cfgs across the crate.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
