@@ -8,7 +8,7 @@ pub enum SessionState {
     WaitingForPeer,
     Handshaking,
     Connected,
-    Reconnecting,
+    ConnectionLost,
     Burned,
     Expired,
     Failed,
@@ -25,18 +25,15 @@ impl SessionState {
         let next = match (self, event) {
             (Self::Idle, SessionEvent::StartWaiting) => Self::WaitingForPeer,
             (Self::WaitingForPeer, SessionEvent::PeerAvailable) => Self::Handshaking,
-            (Self::Handshaking, SessionEvent::HandshakeSucceeded)
-            | (Self::Reconnecting, SessionEvent::Reconnected) => Self::Connected,
+            (Self::Handshaking, SessionEvent::HandshakeSucceeded) => Self::Connected,
             (Self::Handshaking, SessionEvent::HandshakeFailed) => Self::Failed,
-            (Self::Connected, SessionEvent::ConnectionLost) => Self::Reconnecting,
-            (
-                Self::WaitingForPeer | Self::Handshaking | Self::Connected | Self::Reconnecting,
-                SessionEvent::Burn,
-            ) => Self::Burned,
-            (
-                Self::WaitingForPeer | Self::Handshaking | Self::Connected | Self::Reconnecting,
-                SessionEvent::Expire,
-            ) => Self::Expired,
+            (Self::Connected, SessionEvent::ConnectionLost) => Self::ConnectionLost,
+            (Self::WaitingForPeer | Self::Handshaking | Self::Connected, SessionEvent::Burn) => {
+                Self::Burned
+            }
+            (Self::WaitingForPeer | Self::Handshaking | Self::Connected, SessionEvent::Expire) => {
+                Self::Expired
+            }
             _ => return Err(TransitionError { state: self, event }),
         };
 
@@ -46,7 +43,10 @@ impl SessionState {
     /// Terminal sessions cannot be resumed or reused.
     #[must_use]
     pub const fn is_terminal(self) -> bool {
-        matches!(self, Self::Burned | Self::Expired | Self::Failed)
+        matches!(
+            self,
+            Self::ConnectionLost | Self::Burned | Self::Expired | Self::Failed
+        )
     }
 }
 
@@ -58,7 +58,6 @@ pub enum SessionEvent {
     HandshakeSucceeded,
     HandshakeFailed,
     ConnectionLost,
-    Reconnected,
     Burn,
     Expire,
 }
@@ -98,13 +97,14 @@ mod tests {
     }
 
     #[test]
-    fn reconnect_returns_to_connected() {
+    fn connection_loss_is_terminal() {
         let state = SessionState::Connected
             .transition(SessionEvent::ConnectionLost)
-            .and_then(|state| state.transition(SessionEvent::Reconnected))
-            .expect("valid reconnection path");
+            .expect("connected sessions can lose their transport");
 
-        assert_eq!(state, SessionState::Connected);
+        assert_eq!(state, SessionState::ConnectionLost);
+        assert!(state.is_terminal());
+        assert!(state.transition(SessionEvent::StartWaiting).is_err());
     }
 
     #[test]

@@ -1,0 +1,10 @@
+[host]
+linker = "x86_64-w64-mingw32-clang.exe"
+rustflags = [
+  "--cfg", 'getrandom_backend="windows_legacy"',
+  "-C", "link-self-contained=yes",
+  "-C", "dlltool=llvm-dlltool.exe",
+]
+
+[target.wasm32-unknown-unknown]
+rustflags = ["--cfg", 'getrandom_backend="wasm_js"']

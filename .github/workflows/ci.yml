@@ -14,11 +14,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Install stable Rust
-        run: rustup toolchain install stable --profile minimal --component clippy,rustfmt
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.96.0 --profile minimal --component clippy,rustfmt
 
-      - name: Select stable Rust
-        run: rustup default stable
+      - name: Select pinned Rust
+        run: rustup default 1.96.0
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -29,11 +29,73 @@ jobs:
       - name: Run tests
         run: cargo test --workspace --all-targets
 
-      - name: Install RustSec audit tool
-        run: cargo install cargo-audit --version 0.22.2 --locked
+  fuzz-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
 
-      - name: Audit locked dependencies
-        run: cargo audit
+      - name: Install pinned nightly Rust
+        run: rustup toolchain install nightly-2026-09-01 --profile minimal
+
+      - name: Install pinned fuzz runner
+        run: cargo install cargo-fuzz --version 0.13.2 --locked
+
+      - name: Fuzz untrusted wire and credential decoders
+        run: >-
+          cargo +nightly-2026-09-01 fuzz run wire_decoders --
+          -max_total_time=30 -max_len=16400
+
+      - name: Fuzz terminal session-state invariants
+        run: >-
+          cargo +nightly-2026-09-01 fuzz run session_state --
+          -max_total_time=30 -max_len=256
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.96.0 --profile minimal
+
+      - name: Select pinned Rust
+        run: rustup default 1.96.0
+
+      - name: Install pinned supply-chain tools
+        run: |
+          cargo install cargo-audit --version 0.22.2 --locked
+          cargo install cargo-deny --version 0.20.2 --locked
+          cargo install cargo-cyclonedx --version 0.5.9 --locked
+
+      - name: Audit both independent Rust lockfiles
+        run: |
+          cargo audit --file Cargo.lock
+          cargo audit --file packages/scotoma_bridge/rust/Cargo.lock
+
+      - name: Enforce advisory, license and source policy
+        run: |
+          cargo deny check
+          cargo deny --manifest-path packages/scotoma_bridge/rust/Cargo.toml check
+
+      - name: Fix SBOM timestamp to the audited commit
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+
+      - name: Generate reproducible CycloneDX inventories
+        run: |
+          mkdir -p artifacts/sbom
+          cargo cyclonedx --manifest-path rust/scotoma-relay/Cargo.toml --format json --spec-version 1.5 --target all --override-filename scotoma-relay.cdx
+          cargo cyclonedx --manifest-path packages/scotoma_bridge/rust/Cargo.toml --format json --spec-version 1.5 --target all --override-filename scotoma-bridge.cdx
+          mv rust/scotoma-relay/scotoma-relay.cdx.json artifacts/sbom/
+          mv packages/scotoma_bridge/rust/scotoma-bridge.cdx.json artifacts/sbom/
+
+      - name: Retain SBOMs with the workflow run
+        uses: actions/upload-artifact@v4
+        with:
+          name: scotoma-cyclonedx-${{ github.sha }}
+          path: artifacts/sbom/*.cdx.json
+          if-no-files-found: error
 
   deployment-boundary:
     runs-on: ubuntu-latest
@@ -42,6 +104,8 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Validate Compose model
+        env:
+          SCOTOMA_DOMAIN: relay.example.com
         run: docker compose -f deploy/compose.yml config
 
       - name: Validate Caddy configuration
@@ -49,7 +113,7 @@ jobs:
           docker run --rm
           --env SCOTOMA_DOMAIN=relay.example.com
           --volume "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro"
-          caddy:2.11.4-alpine
+          caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
           caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
       - name: Build unprivileged relay image

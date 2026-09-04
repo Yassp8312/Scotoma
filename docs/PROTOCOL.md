@@ -104,6 +104,15 @@ The live relay test suite sends malformed canonical frames, text messages and a 
 
 The authenticated integration path exchanges 100 ordered application messages through a pending queue limited to one frame, checks every encrypted ACK, continuously rekeys both directions and ends with authenticated BURN. This establishes executable behavior for the prototype limits; it does not expand the cryptographic approval recorded in ADR 0007.
 
+The web client executes the same frame parser and `HandshakeSession` inside
+Rust/Wasm. Its browser adapter owns only the WebSocket and bounded binary
+packets. Connection and handshake waits use absolute 30-second monotonic
+deadlines with 50 ms cancellation polling; an outstanding application message
+uses a 15-second monotonic ACK deadline and is never retransmitted. Browser
+builds require `wss://` except for explicit loopback development URLs. Ping and
+Pong are handled by the user agent because browser WebSocket APIs do not expose
+control frames.
+
 ## Frame kinds
 
 | Value | Kind | Purpose |
@@ -118,13 +127,21 @@ The authenticated integration path exchanges 100 ordered application messages th
 
 `IDLE → WAITING_FOR_PEER → HANDSHAKING → CONNECTED`
 
-From an active state, the session may move to `RECONNECTING`, `BURNED`, `EXPIRED` or `FAILED`. Terminal states cannot be reused.
+From an active state, the session may move to `CONNECTION_LOST`, `BURNED`, `EXPIRED` or `FAILED`. All four are terminal and cannot be reused.
 
 ## Selected prototype handshake
 
 ADR 0007 selects `Noise_NNpsk0_25519_ChaChaPoly_SHA256` through `snow` 0.10.0, and SCT-008 implements it in `scotoma-protocol`. The locally derived session secret is domain-separated into a Noise PSK; the relay-visible rendezvous tag is never used as that PSK. The fixed SCOTOMA prologue binds protocol version, room, rendezvous tag and the relay-assigned initiator/responder mapping.
 
 Two Noise handshake messages are followed by one encrypted key-confirmation message in each direction. Neither endpoint reaches `CONNECTED` until the appropriate directional confirmation succeeds. Any wrong secret, role, room, transcript, ordering or authentication result becomes the same terminal handshake error. There is no cipher-suite negotiation or downgrade path in version 2.
+
+Once confirmed, each client renders the first six bytes of the 32-byte Noise
+handshake hash as three groups of four uppercase hexadecimal characters. The
+result is a 48-bit human-comparison channel binding. Matching values are useful
+only when compared through another trusted path; the display does not by itself
+authenticate a person's identity, strengthen a weak numeric password or serve
+as a key. The client exposes it only while connected and clears it on every
+terminal transition.
 
 ## Authenticated application transport
 
@@ -156,7 +173,9 @@ With the default 16 KiB outer payload limit, the maximum application payload is 
 
 ## Cryptographic review questions
 
-ADR 0007 records the current answers to these review questions. They must be revisited before production approval:
+ADR 0007 records the prototype handshake answers and ADR 0031 records the
+private-rendezvous decision. The complete composition must be revisited before
+closed-alpha or production approval:
 
 1. Which maintained library implements the chosen PAKE/AKE?
 2. Does it provide explicit mutual key confirmation?
@@ -173,7 +192,7 @@ ADR 0007 records the current answers to these review questions. They must be rev
 
 - Encrypting directly with a human password.
 - Using `hash(room || password)` as both rendezvous ID and encryption key.
-- Reusing nonces or counters after reconnection.
+- Reusing nonces, counters or transport state after any session loss.
 - Treating TLS as end-to-end encryption.
 - Logging decrypted or pre-encryption data for debugging.
 - Implementing a PAKE or ratchet directly from an RFC without a maintained library and expert review.

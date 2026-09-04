@@ -6,19 +6,21 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [lib]
 name = "scotoma_client"
 
 [dependencies]
 futures-util.workspace = true
-scotoma-protocol = { path = "../scotoma-protocol" }
+scotoma-protocol = { version = "=0.1.0", path = "../scotoma-protocol" }
 tokio.workspace = true
 tokio-tungstenite.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
-scotoma-relay = { path = "../scotoma-relay" }
+scotoma-relay = { version = "=0.1.0", path = "../scotoma-relay" }
+tokio = { workspace = true, features = ["io-util", "test-util"] }
 
 [lints]
 workspace = true

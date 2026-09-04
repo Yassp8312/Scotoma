@@ -1,10 +1,11 @@
-import 'package:scotoma_bridge_probe/session_controller.dart';
-import 'package:scotoma_bridge_probe/credential_session_port.dart';
+import 'package:scotoma_bridge/session_contract.dart';
+import 'package:scotoma_bridge/session_port.dart';
 
 abstract interface class AppSessionPort {
   Future<DeriveOutcome> derive();
   TransportPhase transportPhase();
   Future<TransportOutcome> runTransport(String relayUrl);
+  String? verificationCode();
   bool sendText(String text);
   ChatTransportEvent? takeEvent();
   bool burn();

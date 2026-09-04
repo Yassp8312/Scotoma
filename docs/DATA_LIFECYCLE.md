@@ -13,11 +13,37 @@
 | Derived session secret | Local Argon2id derivation | Zeroizing process-memory buffer | Handshake completion/failure or process death |
 | Rendezvous tag | Local derivation | Process memory | Burn, expiration or process death |
 | Handshake state | Peer connection | Process memory | Handshake completion/failure or timeout |
+| Verification code | Successful Noise confirmation | Rust state and current Flutter widget state | Any terminal session transition or process death |
 | Session keys | Successful handshake | Process memory | Ratchet advancement, burn, expiration or process death |
-| Plaintext messages | User input or successful decrypt | Process memory | Burn, expiration or process death |
-| Ciphertext awaiting ACK | Message send | Process memory | ACK, burn, expiration or process death |
+| Plaintext messages | User input or successful decrypt | Process memory | Any terminal session transition or process death |
+| Ciphertext awaiting ACK | Message send | Process memory | ACK, any terminal session transition or process death |
 
 Ghost Mode must not write these values to SQLite, files, preferences, backups, notification payloads, crash reports or production logs.
+
+The Flutter application links only the production bridge in
+`packages/scotoma_bridge`. Credentials and outgoing message bytes enter Rust
+through bounded synchronous staging functions, are overwritten in the caller's
+mutable allocations, and are claimed through one-use numeric tokens. The
+generated bridge never accepts raw credential/message byte lists. Diagnostic
+benchmarks, metadata probes and synthetic failures remain in `spikes/` and are
+not part of the application library. Immutable Dart strings and runtime/OS
+copies still cannot be certified as physically erased.
+
+The browser WebSocket receives only relay/control, Noise-handshake and encrypted
+application frames. Each incoming packet is rejected above the protocol bound
+before copying into shared Wasm memory. Outbound framed packets are copied once
+into a short-lived JavaScript-owned `Uint8Array` because the browser cannot send
+the threaded runtime's `SharedArrayBuffer` view directly. No numeric password,
+derived secret or outgoing plaintext uses this WebSocket-copy path. Browser and
+network-stack copies remain outside deterministic erasure guarantees.
+
+On web, the production worker supervisor permanently poisons the page after an
+observed bridge-worker `error` or `messageerror`. Dart then retains every active
+opaque handle in a quarantine list so neither explicit cleanup nor a finalizer
+re-enters the damaged shared Wasm runtime. A full reload is required before new
+credentials can be entered. Retention is the safer fail-stop choice, not an
+erasure claim: quarantined Wasm memory may remain until the browser releases the
+page or process, and an unreported silent worker loss remains possible.
 
 The CLI reads the numeric password and the initiator's outgoing message into zeroizing process-memory buffers and never accepts the password as a command-line argument. Frame payload buffers are also zeroized on drop. The temporary development prompts do not yet suppress terminal echo, and the responder prints decrypted text, so terminal scrollback remains an explicit prototype limitation and the CLI must not be distributed as a closed-alpha client.
 
@@ -70,10 +96,6 @@ The WSS edge necessarily handles client IP addresses, connection timing and traf
 
 An authenticated recipient acknowledgement proves delivery to the sending endpoint. The version-2 ordered relay removes the oldest pending ciphertext from the opposite sender when it observes the outer ACK kind. It cannot read or validate the encrypted acknowledged counter. An ACK does not remove plaintext from either client's visible in-memory history. If no valid ACK reaches the sender within 15 seconds, the client closes without retransmission. The peer might still have accepted the message if only its ACK was lost, so this terminal state is reported as unconfirmed rather than undelivered.
 
-### Leave
-
-Deferred until reconnection credentials and their lifecycle are specified. It must never silently become persistent history.
-
 ### Burn
 
 The initiating client creates the authenticated burn control and immediately destroys local cryptographic state before attempting delivery. The peer destroys its state only after validating the control. The relay forwards BURN once and purges the room, but cannot authenticate its encrypted inner envelope. Network failure may prevent remote delivery, so burn remains best effort.
@@ -84,4 +106,4 @@ In Ghost Mode, client process death destroys the only supported local copy. Runt
 
 ### Relay restart
 
-All rooms and pending frames disappear. Clients must treat this as session loss unless a future, explicitly designed reconnection flow says otherwise.
+All rooms and pending frames disappear. Every client must treat this as terminal session loss and require fresh room/password entry.

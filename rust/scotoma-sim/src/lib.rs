@@ -21,6 +21,19 @@ type ClientSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 pub const DEFAULT_ACK_TIMEOUT: Duration = Duration::from_secs(15);
 
+#[derive(Debug, Clone, Copy)]
+struct AckDeadline(tokio::time::Instant);
+
+impl AckDeadline {
+    fn after(duration: Duration) -> Self {
+        Self(tokio::time::Instant::now() + duration)
+    }
+
+    async fn wait(self) {
+        tokio::time::sleep_until(self.0).await;
+    }
+}
+
 /// Connection inputs for one authenticated CLI client.
 pub struct ClientConfig {
     pub relay_url: String,
@@ -316,7 +329,7 @@ impl AuthenticatedClient {
         if ack_timeout.is_zero() {
             return Err(ClientError::DeliveryTimeout);
         }
-        let mut pending_counter = None;
+        let mut pending_counter: Option<(u64, AckDeadline)> = None;
         loop {
             if cancelled() {
                 let _ = self.socket.send(Message::Close(None)).await;
@@ -325,7 +338,7 @@ impl AuthenticatedClient {
             let pending_deadline = pending_counter.map(|(_, deadline)| deadline);
             let ack_wait = async move {
                 if let Some(deadline) = pending_deadline {
-                    tokio::time::sleep_until(deadline).await;
+                    deadline.wait().await;
                 } else {
                     std::future::pending::<()>().await;
                 }
@@ -342,7 +355,7 @@ impl AuthenticatedClient {
                         ).map_err(|_| ClientError::Authentication)?;
                         let counter = frame.counter();
                         send_protocol_frame(&mut self.socket, &frame, self.operation_timeout).await?;
-                        pending_counter = Some((counter, tokio::time::Instant::now() + ack_timeout));
+                        pending_counter = Some((counter, AckDeadline::after(ack_timeout)));
                     }
                     Some(LiveCommand::SendText(_)) => return Err(ClientError::Authentication),
                     Some(LiveCommand::Burn) => {
@@ -695,10 +708,24 @@ async fn receive_binary(
 
 #[cfg(test)]
 mod tests {
-    use super::encode_hex;
+    use std::time::Duration;
+
+    use super::{AckDeadline, encode_hex};
 
     #[test]
     fn hex_encoder_is_canonical_lowercase() {
         assert_eq!(encode_hex(&[0x00, 0xab, 0xff]), "00abff");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn ack_deadline_uses_the_monotonic_runtime_clock() {
+        let waiter = tokio::spawn(AckDeadline::after(Duration::from_secs(15)).wait());
+
+        tokio::time::advance(Duration::from_secs(14)).await;
+        tokio::task::yield_now().await;
+        assert!(!waiter.is_finished());
+
+        tokio::time::advance(Duration::from_secs(1)).await;
+        waiter.await.expect("deadline task must finish");
     }
 }

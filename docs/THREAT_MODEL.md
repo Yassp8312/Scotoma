@@ -89,7 +89,7 @@ The authenticated end-to-end test sends 100 ordered messages through a one-frame
 
 - No cryptographic protocol moves to production without maintained-library review and test vectors.
 - The `snow`-based Noise construction in ADR 0007 is approved only for the CLI prototype. Closed alpha requires review of the exact composition and a resolution for non-zeroized library state.
-- Human-chosen passwords are converted to a domain-separated session secret with Argon2id and are never used directly as a Noise PSK. This does not remove offline guessing or the unresolved private-rendezvous/PAKE review gate.
+- Human-chosen passwords are converted to a domain-separated session secret with Argon2id and are never used directly as a Noise PSK. This does not remove offline guessing. ADR 0031 records why a PAKE alone does not solve private matching and makes a separately versioned, independently reviewed replacement a closed-alpha gate.
 - No public high-risk recommendation occurs without independent security review.
 - Any new persistence, notification or telemetry requires a threat-model and data-lifecycle update.
 - Process-local rate limits are not DDoS protection; public hosting requires independently configured edge and network controls that do not weaken the privacy boundary.

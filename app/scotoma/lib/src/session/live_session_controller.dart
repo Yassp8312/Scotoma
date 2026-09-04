@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:scotoma/src/session/session_backend.dart';
-import 'package:scotoma_bridge_probe/credential_session_port.dart';
-import 'package:scotoma_bridge_probe/session_controller.dart';
+import 'package:scotoma_bridge/session_port.dart';
+import 'package:scotoma_bridge/session_contract.dart';
 
 enum LiveSessionPhase {
   idle,
@@ -57,6 +57,8 @@ final class LiveSessionController {
   List<ChatMessage> get messages => List.unmodifiable(_messages);
   bool _sendPending = false;
   bool get sendPending => _sendPending;
+  String? _verificationCode;
+  String? get verificationCode => _verificationCode;
   AppSessionPort? _port;
   Timer? _deadline;
   Timer? _poller;
@@ -75,6 +77,7 @@ final class LiveSessionController {
     LiveSessionPhase.disposed => true,
     _ => false,
   };
+  bool get isTerminal => _terminal;
 
   void start() {
     if (_phase != LiveSessionPhase.idle) return;
@@ -142,6 +145,11 @@ final class LiveSessionController {
       };
       if (next == LiveSessionPhase.connected) {
         _deadline?.cancel();
+        _verificationCode ??= _port!.verificationCode();
+        if (_verificationCode == null) {
+          _terminate(LiveSessionPhase.failed);
+          return;
+        }
       }
       _drainEvents();
       if (next == LiveSessionPhase.closed ||
@@ -232,6 +240,9 @@ final class LiveSessionController {
     _disposed = true;
     ++_epoch;
     _phase = LiveSessionPhase.disposed;
+    _messages.clear();
+    _sendPending = false;
+    _verificationCode = null;
     _deadline?.cancel();
     _poller?.cancel();
     _requestClose();
@@ -247,6 +258,9 @@ final class LiveSessionController {
     if (_terminal) return;
     ++_epoch;
     _phase = phase;
+    _messages.clear();
+    _sendPending = false;
+    _verificationCode = null;
     _deadline?.cancel();
     _poller?.cancel();
     _requestClose();

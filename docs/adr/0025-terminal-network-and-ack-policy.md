@@ -1,6 +1,6 @@
 # ADR 0025 — Terminal network and ACK policy
 
-Status: Implemented for prototype; physical Android rerun pending
+Status: Implemented for prototype; physical network matrix pending
 
 Date: 2026-09-03
 
@@ -42,10 +42,10 @@ roaming.
 
 ## Remaining limits
 
-The Android phone↔CLI chat test remains prepared but could not run because no
-authorized device is visible in ADB. Public WSS transition tests, intermittent
-network tests on physical devices, accessibility, iOS, supported web runtime
-supervision and production telemetry without sensitive fields remain gates.
+The current redesigned app passes the physical TECNO relay wait/cancel path.
+The two-party message/ACK/BURN run and intermittent-network tests on physical
+devices remain pending, together with public WSS, accessibility, iOS and
+production telemetry without sensitive fields.
 
 ## References
 

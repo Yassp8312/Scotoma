@@ -1,7 +1,7 @@
 import 'package:scotoma/src/session/session_backend.dart';
-import 'package:scotoma_bridge_probe/credential_session_port.dart';
-import 'package:scotoma_bridge_probe/numeric_transfer.dart';
-import 'package:scotoma_bridge_probe/session_controller.dart';
+import 'package:scotoma_bridge/session_port.dart';
+import 'package:scotoma_bridge/numeric_transfer.dart';
+import 'package:scotoma_bridge/session_contract.dart';
 
 import 'rust_session_initializer_native.dart'
     if (dart.library.js_interop) 'rust_session_initializer_web.dart'
@@ -66,6 +66,9 @@ final class _RustAppSessionPort implements AppSessionPort {
   @override
   Future<TransportOutcome> runTransport(String relayUrl) =>
       _inner.runTransport(relayUrl);
+
+  @override
+  String? verificationCode() => _inner.verificationCode();
 
   @override
   bool sendText(String text) => _inner.sendText(text);

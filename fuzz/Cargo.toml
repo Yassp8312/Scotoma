@@ -1,0 +1,29 @@
+[package]
+name = "scotoma-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+resolver = "3"
+
+[dependencies]
+libfuzzer-sys = "0.4"
+scotoma-protocol = { version = "=0.1.0", path = "../rust/scotoma-protocol" }
+
+[[bin]]
+name = "wire_decoders"
+path = "fuzz_targets/wire_decoders.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "session_state"
+path = "fuzz_targets/session_state.rs"
+test = false
+doc = false
+bench = false

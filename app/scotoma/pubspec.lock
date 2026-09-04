@@ -218,13 +218,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.0.6"
-  scotoma_bridge_probe:
+  scotoma_bridge:
     dependency: "direct main"
     description:
-      path: "../../spikes/client_bridge"
+      path: "../../packages/scotoma_bridge"
       relative: true
     source: path
-    version: "0.0.0"
+    version: "0.1.0"
   sky_engine:
     dependency: transitive
     description: flutter

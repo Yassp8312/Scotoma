@@ -11,8 +11,8 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   flutter_rust_bridge: 2.13.0
-  scotoma_bridge_probe:
-    path: ../../spikes/client_bridge
+  scotoma_bridge:
+    path: ../../packages/scotoma_bridge
 
 dev_dependencies:
   flutter_test:

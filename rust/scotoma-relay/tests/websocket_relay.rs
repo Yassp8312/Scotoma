@@ -7,7 +7,10 @@ use scotoma_protocol::{
     FRAME_HEADER_LEN, Frame, FrameKind, PROTOCOL_VERSION, ProtocolLimits, PuzzleSolution,
     RENDEZVOUS_TAG_BYTES, RendezvousTag, solve_admission_challenge,
 };
-use scotoma_relay::{JoinRequest, PeerRole, RelayConfig, RelayEvent, serve, serve_with_admin};
+use scotoma_relay::{
+    JoinRequest, PeerRole, RelayConfig, RelayEvent, serve, serve_with_admin,
+    serve_with_admin_shutdown,
+};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time::{sleep, timeout};
 use tokio_tungstenite::tungstenite::http::StatusCode;
@@ -16,6 +19,36 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 
 type ClientSocket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 type TestResult<T = ()> = Result<T, Box<dyn Error>>;
+
+#[tokio::test]
+async fn deployment_signal_drains_both_listeners() -> TestResult {
+    let public_listener = TcpListener::bind("127.0.0.1:0").await?;
+    let public_address = public_listener.local_addr()?;
+    let admin_listener = TcpListener::bind("127.0.0.1:0").await?;
+    let (shutdown_sender, shutdown_receiver) = tokio::sync::oneshot::channel();
+    let server = tokio::spawn(async move {
+        serve_with_admin_shutdown(
+            public_listener,
+            admin_listener,
+            RelayConfig::default(),
+            async move {
+                let _ = shutdown_receiver.await;
+            },
+        )
+        .await
+    });
+
+    let response = get_http(public_address, "/health").await?;
+    assert!(response.starts_with("HTTP/1.1 204"));
+    shutdown_sender
+        .send(())
+        .map_err(|()| io::Error::other("shutdown receiver disappeared"))?;
+    let server_result = timeout(Duration::from_secs(2), server)
+        .await
+        .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "graceful shutdown timed out"))??;
+    server_result?;
+    Ok(())
+}
 
 #[tokio::test]
 async fn two_clients_pair_forward_a_frame_and_close_ephemerally() -> TestResult {

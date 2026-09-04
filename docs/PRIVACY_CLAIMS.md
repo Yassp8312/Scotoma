@@ -8,6 +8,7 @@
 - “Ghost Mode keeps the visible conversation in volatile client memory.”
 - “Pending relay messages expire and are removed after acknowledgement.”
 - “SCOTOMA contains no advertising or third-party analytics SDK.”
+- “Participants can compare a short code derived from the confirmed encrypted-channel transcript.”
 
 Each claim must link to implementation evidence and tests before release.
 
@@ -20,6 +21,7 @@ Each claim must link to implementation evidence and tests before release.
 - “BURN erases every copy.”
 - “Impossible to hack.”
 - “The server knows nothing.”
+- “A matching code proves who the other person is.”
 
 The TLS edge and relay necessarily observe a connection and can observe limited routing and traffic metadata. Claims must distinguish content confidentiality from metadata privacy; end-to-end encryption does not hide IP addresses, timing or traffic volume from the deployment edge.
 

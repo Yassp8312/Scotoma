@@ -26,15 +26,26 @@ The repository has entered **Milestone 3: Flutter client**. It contains:
 - tests and continuous integration.
 - an Android Flutter client with numeric credential validation, one-shot
   form-to-Rust ownership, local key derivation, live relay rendezvous and Noise
-  confirmation with no local persistence; the production web form remains
-  fail-closed and iOS remains a scaffold.
-- an isolated Dart/Rust compatibility probe and separate Android/web Flutter
-  harness in `spikes/client_bridge`; its bounded credential ingress is now used
-  by the main Android client, including bidirectional authenticated messages,
-  ACK delivery state and terminal BURN;
+  confirmation with no local persistence; the web client now provides the same
+  local-prototype conversation flow and iOS remains a scaffold.
+- a reduced production Dart/Rust boundary in `packages/scotoma_bridge`, used by
+  Android and the isolated web runtime for bounded credential/message ingress,
+  bidirectional authenticated messages, ACK delivery state and terminal BURN;
+- a threaded production Rust/Wasm build with scoped bridge-worker supervision,
+  permanent runtime quarantine and mandatory secure/cross-origin-isolated
+  startup;
+- a bounded Rust/Wasm browser WebSocket transport with bidirectional encrypted
+  chat, authenticated ACK/BURN, monotonic timeouts and no reconnect or resend;
+- an isolated historical compatibility/fault harness in `spikes/client_bridge`
+  whose diagnostic APIs are not linked into the application;
 - a fail-closed reliability policy: relay/socket loss ends the session, while a
   missing authenticated ACK expires after 15 seconds without automatic resend
   or reconnect.
+- a responsive dark-violet interface derived from the SCOTOMA eye concept,
+  semantic status cues and a short Rust-derived Noise transcript code for
+  out-of-band channel comparison;
+- a private-rendezvous production gate plus version-pinned RustSec, dependency
+  policy, CycloneDX SBOM and bounded parser/state fuzzing automation.
 
 The Rust protocol and ephemeral-relay milestones are complete for the prototype. Two CLI clients authenticate, exchange ordered ciphertext and ACKs through the relay, then finish with an authenticated BURN that destroys both transport states and purges the room. Pending ciphertext exists only in bounded, zeroizing relay memory until ACK, packet TTL, BURN, disconnect or relay restart. ADR 0007 still blocks production approval on independent implementation review and secure-memory gaps.
 
@@ -60,6 +71,9 @@ Enter the same numeric password in both terminals. Room and password accept 1 to
 rust/scotoma-protocol   Protocol types, limits and state machine
 rust/scotoma-relay      Ephemeral relay service
 rust/scotoma-sim        Local CLI simulator
+packages/scotoma_bridge Production Flutter/Rust session boundary
+app/scotoma             Android/web Flutter application
+spikes/client_bridge    Isolated diagnostic bridge harness
 docs                    Product, threat model, lifecycle and ADRs
 ```
 
@@ -70,6 +84,10 @@ cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace --all-targets
 ```
+
+The complete dependency-audit, SBOM and fuzzing commands are documented in
+[docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md). These controls do not remove the
+known offline-guessing limitation of short numeric credentials.
 
 ## Product documents
 

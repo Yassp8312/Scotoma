@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use scotoma_relay::{DeploymentConfig, serve_with_admin};
+use scotoma_relay::{DeploymentConfig, serve_with_admin_shutdown};
 use tokio::net::TcpListener;
 
 #[tokio::main]
@@ -19,6 +19,28 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     println!("public deployments must terminate TLS at a trusted edge and expose only WSS");
 
-    serve_with_admin(public_listener, admin_listener, config.relay).await?;
+    serve_with_admin_shutdown(
+        public_listener,
+        admin_listener,
+        config.relay,
+        shutdown_signal(),
+    )
+    .await?;
     Ok(())
+}
+
+#[cfg(unix)]
+async fn shutdown_signal() {
+    use tokio::signal::unix::{SignalKind, signal};
+
+    let mut terminate = signal(SignalKind::terminate()).expect("install SIGTERM handler");
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {}
+        _ = terminate.recv() => {}
+    }
+}
+
+#[cfg(not(unix))]
+async fn shutdown_signal() {
+    let _ = tokio::signal::ctrl_c().await;
 }

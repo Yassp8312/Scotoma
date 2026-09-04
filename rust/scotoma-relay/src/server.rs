@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::io;
 use std::sync::Arc;
 use std::time::Instant as StandardInstant;
@@ -12,7 +13,7 @@ use futures_util::stream::SplitSink;
 use futures_util::{SinkExt, StreamExt};
 use scotoma_protocol::{AdmissionChallenge, Frame, PuzzleSolution, verify_admission_solution};
 use tokio::net::TcpListener;
-use tokio::sync::{Mutex, Semaphore};
+use tokio::sync::{Mutex, Semaphore, watch};
 use tokio::time::{Instant as TokioInstant, MissedTickBehavior, interval_at, timeout};
 
 use crate::hub::{Outbound, Registration, RelayHub};
@@ -93,6 +94,47 @@ pub async fn serve_with_admin(
     let admin_server = axum::serve(admin_listener, admin_router(state));
     tokio::try_join!(public_server, admin_server)?;
     Ok(())
+}
+
+/// Serves both listeners and drains them after the supplied shutdown signal.
+///
+/// Existing `WebSocket` connections are given the container's grace period to finish. Any
+/// remaining session is then destroyed with the process; no state is persisted
+/// for a later deployment.
+///
+/// # Errors
+///
+/// Returns an I/O error if either HTTP server fails.
+pub async fn serve_with_admin_shutdown<F>(
+    public_listener: TcpListener,
+    admin_listener: TcpListener,
+    config: RelayConfig,
+    shutdown: F,
+) -> io::Result<()>
+where
+    F: Future<Output = ()> + Send + 'static,
+{
+    let state = app_state(config);
+    let (shutdown_sender, shutdown_receiver) = watch::channel(false);
+    let shutdown_task = tokio::spawn(async move {
+        shutdown.await;
+        let _ = shutdown_sender.send(true);
+    });
+
+    let public_server = axum::serve(public_listener, public_router(state.clone()))
+        .with_graceful_shutdown(wait_for_shutdown(shutdown_receiver.clone()));
+    let admin_server = axum::serve(admin_listener, admin_router(state))
+        .with_graceful_shutdown(wait_for_shutdown(shutdown_receiver));
+    let result = tokio::try_join!(public_server, admin_server).map(|_| ());
+    shutdown_task.abort();
+    result
+}
+
+async fn wait_for_shutdown(mut receiver: watch::Receiver<bool>) {
+    if *receiver.borrow() {
+        return;
+    }
+    let _ = receiver.changed().await;
 }
 
 async fn health() -> StatusCode {

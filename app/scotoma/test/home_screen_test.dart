@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scotoma/src/app.dart';
 import 'package:scotoma/src/session/session_backend.dart';
-import 'package:scotoma_bridge_probe/credential_session_port.dart';
-import 'package:scotoma_bridge_probe/session_controller.dart';
+import 'package:scotoma_bridge/session_port.dart';
+import 'package:scotoma_bridge/session_contract.dart';
 
 ScotomaApp _app([_FakeBackend? backend]) =>
     ScotomaApp(backend: backend ?? _FakeBackend.immediate());
@@ -99,11 +99,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('large text remains scrollable on a narrow viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await tester.pumpWidget(_app());
+    await tester.ensureVisible(find.byKey(const Key('continue-button')));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('clears credentials before leaving the form', (tester) async {
     final backend = _FakeBackend.immediate();
     await _openImmediateSession(tester, backend);
 
     expect(find.byKey(const Key('message-field')), findsOneWidget);
+    expect(find.byKey(const Key('verification-code')), findsOneWidget);
+    expect(find.text('0123 ABCD EF45'), findsOneWidget);
     expect(find.text('000013'), findsNothing);
     expect(find.text('1370'), findsNothing);
     expect(backend.roomLength, 6);
@@ -357,6 +376,9 @@ final class _FakePort implements AppSessionPort {
 
   @override
   Future<TransportOutcome> runTransport(String relayUrl) => _transport.future;
+
+  @override
+  String? verificationCode() => '0123 ABCD EF45';
 
   @override
   bool sendText(String text) {

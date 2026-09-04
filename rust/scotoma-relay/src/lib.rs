@@ -8,4 +8,4 @@ mod server;
 
 pub use config::{DeploymentConfig, RelayConfig};
 pub use scotoma_protocol::{JoinRequest, PeerRole, PuzzleSolution, RelayEvent, RelayWireError};
-pub use server::{app, serve, serve_with_admin};
+pub use server::{app, serve, serve_with_admin, serve_with_admin_shutdown};

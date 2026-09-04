@@ -2,6 +2,12 @@
 .github
 target
 **/target
+app
+artifacts
+docs
+fuzz
+packages
+spikes
 *.log
 .idea
 .vscode

@@ -1,5 +1,8 @@
 /target/
 **/target/
+fuzz/artifacts/
+fuzz/coverage/
+artifacts/sbom/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
@@ -9,4 +12,3 @@
 *.log
 .DS_Store
 Thumbs.db
-

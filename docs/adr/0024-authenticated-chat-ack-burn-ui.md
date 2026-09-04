@@ -1,6 +1,6 @@
 # ADR 0024 — Authenticated chat, ACK and BURN UI
 
-Status: Implemented for Android build; physical chat rerun pending
+Status: Implemented; physical two-party chat validation pending
 
 Date: 2026-09-03
 
@@ -43,10 +43,12 @@ file, analytics, notification or history persistence.
 
 ## Remaining limits
 
-The prepared Android phone↔CLI test could not run because the previously
-authorized TECNO disconnected from ADB. Public WSS, offline/network transition
-behavior, resend policy, accessibility/device privacy tests, a second physical
-phone, iOS, supported web supervision and production signing remain gates.
+The current redesigned Android client has since passed derivation, relay waiting,
+credential removal and cancellation on the physical TECNO BF7. It also launches
+as the ordinary installed app and its main window reports `FLAG_SECURE`. A second
+physical participant is still required to validate message/ACK/BURN end to end.
+Public WSS, network-transition behavior, accessibility/device privacy tests,
+iOS and production signing remain gates.
 
 ## References
 

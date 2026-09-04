@@ -1,6 +1,6 @@
 # SCOTOMA — Plan de desarrollo
 
-> Nota de versión (2026-09-02): las decisiones sobre secretos aleatorios y rooms enteras de este plan inicial fueron sustituidas por el bloque de protocolo v2 descrito en `docs/adr/0013-numeric-credentials-and-adaptive-admission-v2.md`. La implementación actual recibe room y contraseña numéricas de 1 a 128 dígitos, deriva localmente con Argon2id y utiliza admisión adaptativa. Las secciones antiguas se conservan como historial de diseño.
+> Decisión vigente (2026-09-03): SCOTOMA recibe room y contraseña numéricas de 1 a 128 dígitos elegidas por cada persona. Android y web forman parte del camino principal hacia producción; iPhone se desarrollará después. Cuentas, contactos, persistencia, modo offline, reconexión, archivos, llamadas, notificaciones y grupos no son funciones pospuestas: no formarán parte del producto.
 
 ## 1. Resultado que buscamos
 
@@ -12,33 +12,28 @@ La promesa de producto debe ser precisa:
 
 SCOTOMA no debe prometer ser “irrastreable”. El relay y los proveedores de red todavía pueden observar metadatos como direcciones IP, horarios y volumen aproximado de tráfico. Tampoco puede impedir que un participante haga capturas, copie el contenido o utilice un dispositivo comprometido.
 
-## 2. Decisiones recomendadas para el primer MVP
+## 2. Decisiones permanentes del producto y del primer MVP
 
-1. **Dos participantes por sala.** Nada de grupos en la primera versión.
-2. **Solo texto.** Sin archivos, audio, llamadas, contactos, perfiles ni notificaciones push.
-3. **Ambos participantes deben estar conectados.** El soporte de mensajes offline se pospone.
-4. **Modo Ghost primero.** Mensajes, claves y estado viven únicamente en RAM del cliente. Si la aplicación muere, el historial desaparece.
+1. **Dos participantes por sala.** No existirán grupos.
+2. **Solo texto.** No existirán archivos, audio, llamadas, contactos, perfiles ni notificaciones push.
+3. **Ambos participantes deben estar conectados.** No existirán mensajes offline ni reconexión de una sesión perdida; cualquier corte obliga a introducir nuevamente room y contraseña.
+4. **Modo Ghost.** Mensajes, claves y estado viven únicamente en RAM del cliente. Si la aplicación muere o la sesión termina, el historial desaparece.
 5. **Relay de una sola instancia y sin base de datos.** Las salas y paquetes pendientes viven en memoria y tienen TTL.
-6. **Android primero.** Flutter permitirá ampliar posteriormente a iOS y escritorio, pero el piloto debe concentrarse en una plataforma.
+6. **Android y web como objetivos principales.** Android se valida primero, pero la versión web funcional forma parte del desarrollo hasta producción. iPhone queda para una fase posterior.
 7. **Código abierto, sin anuncios, analytics ni SDK de rastreo.** La licencia se decidirá antes de incorporar una biblioteca criptográfica con copyleft.
-8. **Secreto generado por la app.** No se aceptarán secretos humanos débiles como `venus` o `1234` en el MVP seguro.
+8. **Credenciales numéricas elegidas por las personas.** Room y contraseña aceptan de 1 a 128 dígitos. La app no las genera ni impone una longitud mínima; debe advertir con precisión que los valores cortos son débiles.
 
 ### La corrección criptográfica más importante
 
 El servidor necesita algún identificador para emparejar a dos clientes. Si ese identificador se calcula de forma determinista desde `ROOM + contraseña humana`, cualquiera que lo observe puede probar contraseñas fuera de línea.
 
-Por tanto, el MVP usará un `SECRET` aleatorio de al menos 128 bits, presentado como código, enlace o QR. El número de sala será una parte memorable de la experiencia, no una fuente real de seguridad.
-
-Un esquema inicial para estudiar —no una especificación final— es:
+La versión 2 deriva localmente una etiqueta con Argon2id a partir de room y contraseña y nunca envía ninguno de esos dos valores al relay. De forma conceptual:
 
 ```text
-rendezvous_tag = HMAC-SHA-256(
-    key     = secret_aleatorio,
-    message = "scotoma-rendezvous-v1" || room
-)
+rendezvous_tag = KDF_versionada(room, contraseña)
 ```
 
-El relay recibe solamente `rendezvous_tag`, nunca `ROOM` ni `SECRET`. Esta construcción solo es defendible si el secreto tiene alta entropía. Si más adelante se quieren admitir contraseñas memorizables, se necesitará un PAKE bien integrado y controles contra intentos en línea; no bastará con agregar Argon2 a una contraseña débil.
+El relay recibe solamente `rendezvous_tag`, nunca room ni contraseña. Como la etiqueta es determinista, un atacante que la observe puede probar combinaciones fuera de línea. Argon2id eleva el coste, pero no vuelve segura una contraseña corta. Antes de afirmar que el producto es adecuado para comunicaciones de alto riesgo habrá que integrar un PAKE mantenido y revisado, rediseñar el encuentro privado o limitar explícitamente la afirmación de seguridad.
 
 SPAKE2 está pensado para dos partes que comparten una contraseña y obtienen una clave sin revelarla. OPAQUE, en cambio, está orientado a autenticación cliente-servidor y tiene fases de registro y autenticación, por lo que no encaja directamente en el encuentro simétrico y efímero de SCOTOMA sin rediseñar el modelo. La elección final dependerá de una implementación mantenida y revisada; no implementaremos el RFC manualmente.
 
@@ -85,12 +80,12 @@ SPAKE2 está pensado para dos partes que comparten una contraseña y obtienen un
 
 ### Responsabilidades del cliente
 
-- Generar secretos con un CSPRNG del sistema.
+- Validar y transferir room y contraseña numéricas sin persistirlas.
 - Calcular el identificador de encuentro.
 - Ejecutar el intercambio autenticado de claves y la confirmación de clave.
 - Cifrar y autenticar cada mensaje antes de enviarlo.
 - Mantener historial y estado criptográfico en RAM.
-- Procesar ACK, duplicados, reordenamiento y reconexiones permitidas.
+- Procesar ACK, duplicados y reordenamiento; toda pérdida de conexión es terminal.
 - Ejecutar `BURN`: destruir estado local, notificar al par y solicitar el cierre del relay.
 
 ### Responsabilidades del relay
@@ -108,7 +103,7 @@ SPAKE2 está pensado para dos partes que comparten una contraseña y obtienen un
 
 ```text
 IDLE
-  │ introducir/generar ROOM + SECRET
+  │ introducir ROOM + CONTRASEÑA
   ▼
 WAITING_FOR_PEER
   │ aparece segundo participante
@@ -118,17 +113,15 @@ HANDSHAKING
   ▼
 CONNECTED
   ├── enviar/recibir/ACK
-  ├── desconexión breve ──► RECONNECTING
+  ├── desconexión ─────────► CONNECTION_LOST
+  ├── ACK agotado ─────────► DELIVERY_TIMED_OUT
   └── BURN ───────────────► BURNED
 
 Error de secreto o confirmación ──► FAILED, sin revelar qué parte fue incorrecta
 TTL excedido                    ──► EXPIRED
 ```
 
-`LEAVE` y la recuperación de una sesión se implementarán después del Modo Ghost. Para conservar la diferencia conceptual:
-
-- **LEAVE:** desconexión recuperable dentro de una ventana corta, sin prometer que la sesión sobrevivirá al cierre del proceso.
-- **BURN:** cierre irreversible de esa sesión, destrucción local y purga de paquetes pendientes del relay.
+No existe `LEAVE` recuperable. Cerrar la aplicación, perder la red o abandonar la pantalla termina la sesión. `BURN` añade un cierre autenticado de mejor esfuerzo para notificar al par y purgar el relay.
 
 `BURN` será siempre una operación de mejor esfuerzo: no puede borrar copias que el otro participante ya haya creado.
 
@@ -148,7 +141,7 @@ Scotoma/
 │   ├── scotoma-relay/          # WebSocket, salas RAM, TTL y límites
 │   └── scotoma-sim/            # dos clientes CLI para pruebas
 ├── app/
-│   └── scotoma/                # Flutter; Android primero
+│   └── scotoma/                # Flutter; Android y web, iPhone posterior
 ├── tests/
 │   ├── integration/
 │   └── adversarial/
@@ -167,7 +160,7 @@ Entregables:
 
 - Inicializar Git y el workspace de Rust.
 - Escribir `PRODUCT.md`, `THREAT_MODEL.md`, `DATA_LIFECYCLE.md` y `PRIVACY_CLAIMS.md`.
-- Definir el vocabulario: room, invite, session, relay, leave, burn y expire.
+- Definir el vocabulario: room, invite, session, relay, burn y expire.
 - Registrar decisiones en ADR: Android primero, dos usuarios, solo texto, online y RAM-only.
 - Decidir licencia después de revisar las dependencias criptográficas.
 - Configurar formato, lint, tests, auditoría de dependencias y CI.
@@ -178,7 +171,7 @@ Criterio de salida: sabemos exactamente qué promete la aplicación, qué datos 
 
 Entregables:
 
-- Generador de invitaciones con secreto aleatorio.
+- Derivación local desde room y contraseña numéricas elegidas por las personas.
 - Derivación versionada de `rendezvous_tag`.
 - Formato binario de frames con versión, tipo, tamaño máximo y contador.
 - Máquina de estados de sesión independiente de la red.
@@ -189,8 +182,8 @@ Entregables:
 
 Casos obligatorios:
 
-- mismo room + mismo secret conecta;
-- secret incorrecto no establece sesión;
+- misma room + misma contraseña conecta;
+- room o contraseña diferente no establece sesión;
 - replay, frame alterado y mensaje duplicado se rechazan;
 - un tercer participante no entra;
 - las claves de mensaje se destruyen cuando dejan de ser necesarias;
@@ -231,9 +224,9 @@ Entregables:
 
 - Instalar Flutter y crear el cliente Android.
 - Integrar el núcleo Rust mediante FFI/`flutter_rust_bridge`, validando antes su impacto de mantenimiento.
-- Pantallas: inicio, crear invitación, entrar, esperando, handshake, chat y confirmación de BURN.
-- QR y copia manual del secreto; nunca enviarlo automáticamente a terceros.
-- Indicadores claros de conectado, reconectando, expirado y quemado.
+- Pantallas: entrada numérica, espera, handshake, chat, fallos terminales y confirmación de BURN.
+- Room y contraseña se introducen en cada sesión y nunca se guardan ni comparten automáticamente.
+- Indicadores claros de conectado, conexión perdida, entrega no confirmada, expirado y quemado.
 - Historial solo en memoria; sin SQLite, archivos, SharedPreferences ni backups.
 - Bloqueo de capturas en Android como mitigación opcional, explicado sin garantías absolutas.
 - Cero permisos innecesarios, trackers, analytics, publicidad y crash reporters externos.
@@ -245,13 +238,27 @@ Criterio de salida: dos teléfonos Android pueden crear/unirse, conversar, perde
 Entregables:
 
 - Comportamiento definido para cortes de red y cambio Wi-Fi/datos.
-- Reconexión corta usando credenciales efímeras ligadas a la sesión.
-- `LEAVE` recuperable solo durante el TTL y `BURN` irreversible.
+- Cierre terminal ante cualquier pérdida de conexión, sin reutilizar claves ni sockets.
+- Sin `LEAVE`, reanudación ni retransmisión automática; `BURN` continúa siendo irreversible y de mejor esfuerzo.
 - Orden, deduplicación y tratamiento de mensajes no confirmados.
-- Pruebas de reloj incorrecto, red lenta, paquetes perdidos y reconexiones simultáneas.
+- Pruebas de reloj incorrecto, red lenta, paquetes perdidos y carreras entre timeout, desconexión y BURN.
 - UX que no muestre “entregado” antes del ACK del destinatario.
 
-Criterio de salida: el historial permanece visible mientras el proceso sigue vivo, aunque haya una interrupción corta, y desaparece bajo las reglas documentadas.
+Criterio de salida: toda interrupción produce un estado terminal inequívoco, ninguna clave o mensaje se reenvía/reutiliza automáticamente y el historial desaparece bajo las reglas documentadas.
+
+### Hito 4B — Cliente web funcional (7–10 días)
+
+Entregables:
+
+- Supervisor de workers para detectar y aislar fallos de Rust/Wasm.
+- Entrada numérica, derivación, relay/Noise, chat, ACK, timeout y BURN con la misma semántica que Android.
+- WSS obligatorio, validación de origen y encabezados COOP/COEP/CSP.
+- Política de caché que impida persistir credenciales, mensajes o estado de sesión.
+- Pruebas navegador↔navegador y Android↔navegador contra el relay real.
+- Compatibilidad verificada en Chrome, Edge, Firefox y Safari.
+- Mensajes de privacidad específicos del navegador, sin prometer bloqueo de capturas ni borrado físico.
+
+Criterio de salida: dos navegadores compatibles y un par Android↔web pueden completar una conversación, ACK y BURN; cualquier fallo del worker o de la red termina la sesión sin exponer campos después de un runtime dañado.
 
 ### Hito 5 — Endurecimiento de seguridad (1–2 semanas)
 
@@ -302,7 +309,7 @@ Orden de tickets:
 
 El MVP solo está terminado cuando puede demostrarse automáticamente que:
 
-- dos clientes con el mismo invite establecen la misma sesión;
+- dos clientes con la misma room y contraseña establecen la misma sesión;
 - un secreto diferente no produce una sesión utilizable;
 - el relay no puede recuperar el texto ni las claves E2EE;
 - cada frame está autenticado y los alterados/repetidos se rechazan;
@@ -317,7 +324,7 @@ El MVP solo está terminado cuando puede demostrarse automáticamente que:
 
 | Riesgo | Respuesta |
 |---|---|
-| Diccionario offline contra secretos humanos | Secretos aleatorios; PAKE antes de permitir contraseñas humanas |
+| Diccionario offline contra credenciales numéricas cortas | Argon2id solo eleva el coste; resolver el encuentro privado/PAKE o limitar las afirmaciones antes de producción de alto riesgo |
 | Criptografía casera | Bibliotecas y protocolos revisados; test vectors y revisión externa |
 | Tercer participante o room squatting | Tag secreto, máximo dos sockets, timeout y confirmación de clave |
 | Replay o reordenamiento | Contadores, IDs únicos, ventana limitada y ratchet mantenido |
@@ -329,17 +336,25 @@ El MVP solo está terminado cuando puede demostrarse automáticamente que:
 | Dependencia de libsignal | Revisar licencia y soporte antes de adoptar; API externa no soportada |
 | Coste real del servicio | Desarrollo/piloto local a coste cero; no prometer hosting público gratis a escala |
 
-## 11. Decisiones deliberadamente pospuestas
+## 11. Exclusiones permanentes y plataformas posteriores
 
-- Mensajes offline y almacenamiento cifrado local (`Session Mode`).
-- iOS, escritorio y web.
-- Archivos, imágenes, voz, llamadas y grupos.
-- Notificaciones push.
-- Multi-dispositivo.
-- Tor, proxies y relays comunitarios.
-- Escalado horizontal; exigiría compartir estado efímero entre procesos.
-- Recuperación de conversaciones: por filosofía, no existirá como historial permanente.
-- Modelo de financiación y publicación en tiendas.
+SCOTOMA no incorporará:
+
+- cuentas, perfiles o contactos;
+- mensajes offline, almacenamiento local o recuperación del historial;
+- reconexión o reanudación automática de una sesión;
+- archivos, imágenes, audio, voz, video o llamadas;
+- notificaciones push;
+- grupos o uso multidispositivo;
+- publicidad o analítica de terceros.
+
+La web forma parte del camino principal hacia producción. Se desarrollarán después:
+
+- iPhone/iOS;
+- escritorio nativo;
+- Tor, proxies y relays comunitarios;
+- escalado horizontal, que exigiría compartir estado efímero entre procesos;
+- modelo de financiación y publicación en tiendas.
 
 ## 12. Referencias técnicas de partida
 
@@ -357,9 +372,21 @@ Para una sola persona trabajando con continuidad:
 
 - Prototipo CLI y relay: **2–3 semanas**.
 - Cliente Android funcional: **2–3 semanas adicionales**.
-- Fiabilidad, hardening y alpha cerrada: **2–4 semanas adicionales**.
+- Web funcional, fiabilidad, hardening y alpha cerrada: **4–7 semanas adicionales**.
 
-Total razonable para una alpha: **6–10 semanas a tiempo completo**, más si hay aprendizaje de Rust, Flutter o criptografía aplicada. Una versión que se anuncie para usuarios de alto riesgo requiere además revisión independiente; esa revisión no debe omitirse para cumplir una fecha.
+Total razonable para una alpha Android+web: **8–13 semanas a tiempo completo** desde el inicio del proyecto, más si hay aprendizaje de Rust, Flutter o criptografía aplicada. iPhone queda fuera de esta estimación. Una versión que se anuncie para usuarios de alto riesgo requiere además revisión independiente; esa revisión no debe omitirse para cumplir una fecha.
+
+## 14. Secuencia desde el bloque 13
+
+1. **Bloque 13 — Fallos de red (completado):** retrasos, ACK tardío, relay caído, reloj incorrecto y carreras BURN/desconexión.
+2. **Bloque 14 — Bridge de producción (completado):** separar diagnósticos, reducir la API exportada y asegurar limpieza terminal.
+3. **Bloque 15 — Runtime web (completado):** supervisor Rust/Wasm, cuarentena segura y encabezados de aislamiento.
+4. **Bloque 16 — Paridad Android/web (completado para el prototipo local):** formulario, chat, ACK, timeout y BURN interoperables; la validación pública WSS queda en el bloque 19.
+5. **Bloque 17 — Frontend final (completado para el prototipo local):** identidad visual oscura, accesibilidad base, código de verificación derivado del transcript Noise y validación responsive/de dos navegadores; las matrices físicas y cross-browser quedan como gates del bloque 20.
+6. **Bloque 18 — Criptografía y supply chain (completado):** v2 queda limitado al prototipo; ADR 0031 exige un encuentro privado versionado y revisión externa antes del alpha cerrado. Fuzzing acotado, RustSec, política de licencias/fuentes y SBOM CycloneDX quedan automatizados y versionados.
+7. **Bloque 19 — Relay de producción (implementación completada; activación externa pendiente):** imágenes por digest, dominio obligatorio, TLS/WSS, límites de proceso/relay, perfil de carga concurrente, métricas privadas, apagado controlado, verificación pública y rollback inmutable. Faltan el dominio/host reales, ACME y los controles DDoS del proveedor.
+8. **Bloque 20 — Release candidate Android+web:** builds firmadas, pruebas de privacidad y alpha cerrada.
+9. **Después — iPhone:** XCFramework Rust, ciclo de vida, pruebas físicas, firma y TestFlight.
 
 ---
 
