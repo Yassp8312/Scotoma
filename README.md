@@ -8,7 +8,7 @@ Two participants who enter the same numeric room and numeric password can rendez
 
 ## Current status
 
-The repository has entered **Milestone 3: Flutter client**. It contains:
+The repository is in **Milestone 5: security and release hardening**. It contains:
 
 - the product and security boundaries;
 - a Rust workspace for the protocol core, relay and simulator;
@@ -45,7 +45,10 @@ The repository has entered **Milestone 3: Flutter client**. It contains:
   semantic status cues and a short Rust-derived Noise transcript code for
   out-of-band channel comparison;
 - a private-rendezvous production gate plus version-pinned RustSec, dependency
-  policy, CycloneDX SBOM and bounded parser/state fuzzing automation.
+  policy, CycloneDX SBOM and bounded parser/state fuzzing automation;
+- branded Android/web application icons, a non-debug Android signing boundary,
+  release artifact verification and a documented zero-cost alpha path using
+  provider subdomains rather than a purchased domain.
 
 The Rust protocol and ephemeral-relay milestones are complete for the prototype. Two CLI clients authenticate, exchange ordered ciphertext and ACKs through the relay, then finish with an authenticated BURN that destroys both transport states and purges the room. Pending ciphertext exists only in bounded, zeroizing relay memory until ACK, packet TTL, BURN, disconnect or relay restart. ADR 0007 still blocks production approval on independent implementation review and secure-memory gaps.
 
@@ -89,6 +92,10 @@ The complete dependency-audit, SBOM and fuzzing commands are documented in
 [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md). These controls do not remove the
 known offline-guessing limitation of short numeric credentials.
 
+The optional no-cost alpha deployment and its availability/privacy limitations
+are documented in [docs/FREE_ALPHA.md](docs/FREE_ALPHA.md). It is not the
+production boundary for high-risk communications.
+
 ## Product documents
 
 - [Development plan](PLAN_DESARROLLO.md)
@@ -98,6 +105,7 @@ known offline-guessing limitation of short numeric credentials.
 - [Protocol boundaries](docs/PROTOCOL.md)
 - [Privacy claims](docs/PRIVACY_CLAIMS.md)
 - [Development status](docs/STATUS.md)
+- [Zero-cost alpha](docs/FREE_ALPHA.md)
 - [Security policy](SECURITY.md)
 
 ## License

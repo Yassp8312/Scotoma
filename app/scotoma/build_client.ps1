@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('Check', 'Android', 'AndroidTest', 'Web', 'WebRuntime')]
+    [ValidateSet('Check', 'Android', 'AndroidTest', 'AndroidRelease', 'Web', 'WebRuntime')]
     [string]$Mode = 'Check',
     [string]$ToolsRoot = 'D:\Tools',
     [string]$DeviceId,
@@ -38,7 +38,7 @@ try {
     if ($Mode -eq 'AndroidTest' -and [string]::IsNullOrWhiteSpace($DeviceId)) {
         throw 'Supply -DeviceId for the authorized Android device.'
     }
-    if ($Mode -in @('Android', 'AndroidTest')) {
+    if ($Mode -in @('Android', 'AndroidTest', 'AndroidRelease')) {
         & (Join-Path $bridgeRoot 'verify.ps1') -Mode Android -ToolsRoot $ToolsRoot -Release
         if ($LASTEXITCODE -ne 0) { throw 'Rust Android build failed.' }
         $jni = Join-Path $PSScriptRoot 'build\rust-jni\arm64-v8a'
@@ -74,12 +74,49 @@ try {
         'AndroidTest' {
             Invoke-Checked $flutter @('test', 'integration_test/session_start_test.dart', '-d', $DeviceId, '--no-pub')
         }
+        'AndroidRelease' {
+            if (-not (Test-Path -LiteralPath 'android\key.properties' -PathType Leaf)) {
+                throw 'Create android/key.properties and the protected release keystore first.'
+            }
+            Invoke-Checked $flutter @(
+                'build', 'apk', '--release', '--target-platform', 'android-arm64',
+                '--split-per-abi', '--no-pub'
+            )
+            Invoke-Checked $flutter @(
+                'build', 'appbundle', '--release', '--target-platform', 'android-arm64',
+                '--no-pub'
+            )
+            & (Join-Path $PSScriptRoot 'verify_android_release.ps1') -ToolsRoot $ToolsRoot
+            if ($LASTEXITCODE -ne 0) { throw 'Android release verification failed.' }
+        }
         'Web' {
             Invoke-Checked $flutter @(
                 'build', 'web', '--release', '--no-web-resources-cdn', '--no-pub',
                 "--dart-define=SCOTOMA_RELAY_URL=$RelayUrl"
             )
             Copy-Item -LiteralPath (Join-Path $bridgeRoot 'build\frb-web\pkg') -Destination 'build\web' -Recurse -Force
+            $relayUri = [Uri]$RelayUrl
+            $relayAuthority = "$($relayUri.Scheme)://$($relayUri.Host)"
+            if (-not $relayUri.IsDefaultPort) {
+                $relayAuthority += ":$($relayUri.Port)"
+            }
+            $headers = @(
+                '/*',
+                '  Cache-Control: no-store',
+                '  Pragma: no-cache',
+                '  Cross-Origin-Opener-Policy: same-origin',
+                '  Cross-Origin-Embedder-Policy: require-corp',
+                '  Cross-Origin-Resource-Policy: same-origin',
+                '  X-Content-Type-Options: nosniff',
+                '  Referrer-Policy: no-referrer',
+                '  Permissions-Policy: camera=(), microphone=(), geolocation=()',
+                "  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; connect-src 'self' $relayAuthority; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; manifest-src 'self'"
+            )
+            [IO.File]::WriteAllLines(
+                (Join-Path $PSScriptRoot 'build\web\_headers'),
+                $headers,
+                [Text.UTF8Encoding]::new($false)
+            )
         }
         'WebRuntime' {
             Invoke-Checked $flutter @('build', 'web', '--release', '--no-web-resources-cdn', '--no-pub', '-t', 'lib/web_runtime_smoke.dart')

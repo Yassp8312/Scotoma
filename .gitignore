@@ -3,6 +3,10 @@
 fuzz/artifacts/
 fuzz/coverage/
 artifacts/sbom/
+artifacts/release/
+**/key.properties
+**/*.jks
+**/*.keystore
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies

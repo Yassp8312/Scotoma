@@ -2,7 +2,7 @@
 
 Flutter shell for the accountless, ephemeral SCOTOMA client.
 
-## Current boundary — block 17
+## Current boundary — block 20 release baseline
 
 The main Android client now provides:
 
@@ -25,15 +25,19 @@ The main Android client now provides:
   current draft on every terminal transition;
 - credential clearing on submit, cancellation, backgrounding and disposal;
 - terminal close semantics that reject a late derivation result;
-- Android backup exclusion and screenshot-blocking configuration (device
-  behavior has not yet been verified);
+- Android backup exclusion and screenshot-blocking configuration, with
+  `FLAG_SECURE` observed on the physical TECNO window;
 - release-only TLS enforcement on Android, with cleartext allowed only in the
   debug manifest for the local development relay.
 - a responsive dark/cool visual system with a scalable SCOTOMA mark, semantic
   status labels and minimum 48-pixel interaction targets;
 - a short channel-verification code derived inside Rust from the confirmed
   Noise transcript, available only while connected and intended for
-  out-of-band comparison.
+  out-of-band comparison;
+- SCOTOMA-branded legacy, round and adaptive Android launcher icons plus the
+  matching web/PWA icons;
+- release signing that never falls back to Flutter's debug identity, together
+  with an APK/AAB privacy, signature and checksum verifier.
 
 The web entrypoint now loads the threaded production Rust/Wasm bridge only in a
 secure, cross-origin-isolated page. A scoped worker supervisor permanently
@@ -56,6 +60,7 @@ not linked into the app.
 .\build_client.ps1 -Mode Check
 .\build_client.ps1 -Mode Android
 .\build_client.ps1 -Mode AndroidTest -DeviceId '<authorized-device-id>'
+.\build_client.ps1 -Mode AndroidRelease
 .\build_client.ps1 -Mode Web
 .\build_client.ps1 -Mode Web -RelayUrl 'wss://relay.example/v2/connect'
 .\build_client.ps1 -Mode WebRuntime
@@ -64,13 +69,16 @@ not linked into the app.
 
 The Android command builds optimized Rust first, copies the ARM64 library into
 an ignored app build directory, then packages the main debug APK. Direct
-`flutter build apk` does not perform that Rust step. The current APK supports
-`arm64-v8a` only; ARMv7/x86_64 and Play App Bundle packaging are later gates.
+`flutter build apk` does not perform that Rust step. `AndroidRelease` requires a
+private local signing configuration, emits a signed split APK and AAB, rejects
+debuggable/backup/cleartext or diagnostic builds and prints SHA-256 hashes. The
+current APK supports `arm64-v8a` only; ARMv7/x86_64 remain later compatibility
+gates.
 
 Current main Android artifact:
 
-- `build/app/outputs/flutter-apk/app-debug.apk`: 150,500,791 bytes.
-- SHA-256: `D8876B5563F64B06C27C07931F205552A3B1BB57E355BD276B50FFBC6E514BAC`.
+- `build/app/outputs/flutter-apk/app-debug.apk`: 150,501,860 bytes.
+- SHA-256: `D26464C521B1BCFEF1AAECFA1764D59CDB380308B6308F3AA5F76F89E4CA49DF`.
 - Package: `app.scotoma.scotoma`; native code: `arm64-v8a`.
 
 The Android screenshot flag is only a mitigation and cannot prevent a second
@@ -85,7 +93,8 @@ public WSS/TLS or a two-phone handshake.
 The current redesigned main APK also passed that same physical wait/cancel path
 on the TECNO BF7 on 2026-09-04. It was then installed as the ordinary launcher
 application, started successfully, and Android reported `FLAG_SECURE` on its
-main window. The two-participant physical message/ACK/BURN run remains pending;
+main window. The branded-icon rebuild was subsequently installed and launched
+on the same device. The two-participant physical message/ACK/BURN run remains pending;
 its equivalent two-session bridge smoke passes on Windows against the real
 relay.
 

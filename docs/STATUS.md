@@ -11,7 +11,7 @@ Last updated: 2026-09-04
 | 2 — Ephemeral relay | Complete for prototype |
 | 3 — Flutter clients (Android and web; iOS deferred) | Complete for local prototype; release matrices pending |
 | 4 — Terminal session reliability | Complete for prototype |
-| 5 — Security hardening | In progress; blocks 18–19 baselines complete |
+| 5 — Security hardening | In progress; blocks 18–20 release baselines implemented |
 | 6 — Closed alpha | Not started |
 
 ## First sprint
@@ -63,11 +63,11 @@ under mandatory secure-context and cross-origin-isolation checks and enables the
 same local-prototype session UI as Android. Flutter Dart/Wasm remains
 incompatible with FRB 2.13.0's recorded JS-interop check.
 Formatting and locked dependencies pass. The current
-main Android APK is 150,500,791 bytes and contains the optimized ARM64 Rust
+main Android APK is 150,501,860 bytes and contains the optimized ARM64 Rust
 library plus secure ingress symbol. Inspection confirms backup is disabled and
 cleartext is debug-only. The APK is at
 `app/scotoma/build/app/outputs/flutter-apk/app-debug.apk`, with SHA-256
-`D8876B5563F64B06C27C07931F205552A3B1BB57E355BD276B50FFBC6E514BAC`.
+`D26464C521B1BCFEF1AAECFA1764D59CDB380308B6308F3AA5F76F89E4CA49DF`.
 This is a debug artifact, not a signed release. This exact redesigned build
 passed the documented relay wait/cancel integration path on the TECNO BF7,
 was installed as the ordinary launcher app and started successfully. Android
@@ -341,6 +341,8 @@ non-Chromium browser matrices remain block-20 gates. See ADR 0030.
 | SCT-033 — Dependency policy and audits | Complete as an automated baseline | Both independent Cargo lockfiles checked by pinned RustSec and `cargo-deny`; license/source policy is versioned |
 | SCT-034 — Rust SBOM | Complete as an automated baseline | Pinned `cargo-cyclonedx` emits retained CycloneDX JSON for both independent Rust graphs |
 | SCT-035 — Production relay baseline | Implementation complete; external activation pending | Digest-pinned images, mandatory domain, TLS/WSS boundary, container limits, concurrent load profile, graceful shutdown, public verifier and immutable rollback runbook |
+| SCT-036 — Branded application artifacts | Complete for Android/web baseline | Supplied eye concept adapted into master artwork; legacy/round/adaptive Android and PWA icon sets; branded APK installed on TECNO |
+| SCT-037 — Zero-cost alpha release path | Implementation complete; external activation pending | Non-debug Android signing boundary and artifact verifier; free Render relay Blueprint; Cloudflare Pages headers restricted to the compiled WSS origin; documented limits |
 
 The remaining Milestone 5 work includes the complete MASVS review, property and
 concurrency campaigns, platform privacy review, release reproducibility/signing
@@ -364,10 +366,11 @@ approval.
 - Adversarial integration: noncanonical joins and malformed frames fail closed; text and oversized WebSocket messages close the room; teardown releases the rendezvous tag; a fresh relay process inherits no room state.
 - Deployment-boundary integration: public `/metrics` and administrative public routes return 404 while both listeners share the live aggregate state.
 - Deployment validation: Caddy 2.11.4 accepted the configuration locally using its verified official binary; Compose and image builds are CI gates because Docker is unavailable in the current local environment.
-- Test count: 88 passing tests across the workspace and all targets.
+- Test count: 90 passing tests across the workspace and all targets.
 - Production web runtime: Node supervisor isolation, isolated/non-isolated
   startup, two-browser chat and Rust↔web interoperability checks pass.
 - Supply-chain baseline: RustSec loaded 1,239 advisories and found no matching vulnerability across the 126-package relay graph or 156-package bridge graph; cargo-deny passed advisories, bans, licenses and sources for both, with recorded duplicate-version and `allo-isolate` manifest-license warnings.
 - SBOM baseline: reproducible CycloneDX 1.5 JSON contains 124 relay components and 155 bridge components; CI retains both inventories per commit.
 - Relay production profile: 40 concurrent rooms × 20 one-KiB messages plus ACK/BURN completed in about 0.5 seconds and returned active rooms, connections and pending frames to zero.
 - Caddy 2.11.4: official Windows release checksum verified; the production Caddyfile validates successfully. Docker/Compose remains a CI gate because this host has no Docker daemon.
+- Zero-cost release baseline: Android releases cannot use the debug identity; Render free relay and Cloudflare Pages direct-upload paths are versioned, with cold-start, metadata and availability limits explicitly excluded from production claims.

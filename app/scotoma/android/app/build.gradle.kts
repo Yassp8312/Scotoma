@@ -1,8 +1,21 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+val releaseSigningFile = rootProject.file("key.properties")
+val releaseSigning = Properties()
+if (releaseSigningFile.exists()) {
+    FileInputStream(releaseSigningFile).use(releaseSigning::load)
+}
+
+fun requiredSigningProperty(name: String): String =
+    releaseSigning.getProperty(name)?.takeIf { it.isNotBlank() }
+        ?: throw GradleException("Missing $name in android/key.properties")
 
 android {
     namespace = "app.scotoma.scotoma"
@@ -15,7 +28,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "app.scotoma.scotoma"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -29,16 +41,41 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (releaseSigningFile.exists()) {
+            create("release") {
+                keyAlias = requiredSigningProperty("keyAlias")
+                keyPassword = requiredSigningProperty("keyPassword")
+                storeFile = file(requiredSigningProperty("storeFile"))
+                storePassword = requiredSigningProperty("storePassword")
+                enableV1Signing = true
+                enableV2Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Never fall back to the public debug identity for a release.
+            signingConfig = signingConfigs.findByName("release")
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 
     sourceSets {
         getByName("main").jniLibs.srcDir("../../build/rust-jni")
+    }
+}
+
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
+    doFirst {
+        if (!releaseSigningFile.exists()) {
+            throw GradleException(
+                "Release signing is mandatory. Create the ignored android/key.properties first.",
+            )
+        }
     }
 }
 

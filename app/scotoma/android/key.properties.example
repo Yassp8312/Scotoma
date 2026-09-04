@@ -1,0 +1,6 @@
+# Copy this file to key.properties. Never commit the real file or keystore.
+# Use forward slashes in the absolute Windows path.
+storeFile=D:/Scotoma-secrets/scotoma-release.jks
+storePassword=replace-locally
+keyPassword=replace-locally
+keyAlias=scotoma

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: scotoma-relay-alpha
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    maxShutdownDelaySeconds: 20
+    autoDeployTrigger: checksPass
+    renderSubdomainPolicy: enabled
+    envVars:
+      - key: SCOTOMA_PUBLIC_LISTEN_ADDR
+        value: 0.0.0.0:10000
+      - key: SCOTOMA_ADMIN_LISTEN_ADDR
+        value: 127.0.0.1:8788
