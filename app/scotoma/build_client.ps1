@@ -78,6 +78,13 @@ try {
             if (-not (Test-Path -LiteralPath 'android\key.properties' -PathType Leaf)) {
                 throw 'Create android/key.properties and the protected release keystore first.'
             }
+            # `flutter pub get` generates a debug-oriented Android registrant that
+            # can include dev-only plugins. Remove that generated file so the
+            # release build recreates it without `integration_test`.
+            $androidRegistrant = 'android\app\src\main\java\io\flutter\plugins\GeneratedPluginRegistrant.java'
+            if (Test-Path -LiteralPath $androidRegistrant) {
+                Remove-Item -LiteralPath $androidRegistrant -Force
+            }
             Invoke-Checked $flutter @(
                 'build', 'apk', '--release', '--target-platform', 'android-arm64',
                 '--split-per-abi', '--no-pub'

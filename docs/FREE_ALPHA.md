@@ -62,13 +62,22 @@ Creating and using an Android signing key is free. The identity must be stable:
 losing it prevents trustworthy upgrades, while leaking it lets another party
 sign malicious updates.
 
-1. Run `app/scotoma/create_release_key.ps1` interactively.
+1. Run `app/scotoma/create_release_key.ps1` interactively, or add
+   `-GeneratePassword` to create a 288-bit random password and the ignored local
+   `android/key.properties` without printing the password.
 2. Back up the keystore and its passwords separately.
-3. Copy `android/key.properties.example` to the ignored
-   `android/key.properties` and fill the real local values.
+3. In interactive mode, copy `android/key.properties.example` to the ignored
+   `android/key.properties` and fill the real local values. Generated-password
+   mode performs this step automatically.
 4. Run `app/scotoma/build_client.ps1 -Mode AndroidRelease`.
 5. Publish the verified APK and its SHA-256 through a GitHub prerelease or
    another static download. The AAB is retained for a future store channel.
+
+The generated password necessarily exists in the ignored local
+`android/key.properties` so Gradle can sign builds. Restrict access to that file,
+copy the password into a protected password manager and keep the keystore backup
+on a different physical device. A second copy on another partition of the same
+disk protects only against accidental deletion, not disk loss.
 
 The first alpha supports ARM64 Android devices. Adding `armeabi-v7a` and
 `x86_64` requires building and packaging the Rust bridge for those targets; it

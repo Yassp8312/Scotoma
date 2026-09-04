@@ -6,7 +6,6 @@ services:
     dockerfilePath: ./deploy/Dockerfile
     dockerContext: .
     healthCheckPath: /health
-    maxShutdownDelaySeconds: 20
     autoDeployTrigger: checksPass
     renderSubdomainPolicy: enabled
     envVars:

@@ -342,7 +342,7 @@ non-Chromium browser matrices remain block-20 gates. See ADR 0030.
 | SCT-034 — Rust SBOM | Complete as an automated baseline | Pinned `cargo-cyclonedx` emits retained CycloneDX JSON for both independent Rust graphs |
 | SCT-035 — Production relay baseline | Implementation complete; external activation pending | Digest-pinned images, mandatory domain, TLS/WSS boundary, container limits, concurrent load profile, graceful shutdown, public verifier and immutable rollback runbook |
 | SCT-036 — Branded application artifacts | Complete for Android/web baseline | Supplied eye concept adapted into master artwork; legacy/round/adaptive Android and PWA icon sets; branded APK installed on TECNO |
-| SCT-037 — Zero-cost alpha release path | Implementation complete; external activation pending | Non-debug Android signing boundary and artifact verifier; free Render relay Blueprint; Cloudflare Pages headers restricted to the compiled WSS origin; documented limits |
+| SCT-037 — Zero-cost alpha release path | Local signing complete; external activation pending | Official non-debug Android identity, signed and verified ARM64 APK/AAB, physical release install; free Render relay Blueprint; Cloudflare Pages headers restricted to the compiled WSS origin; documented limits. Off-device key backup remains a release gate |
 
 The remaining Milestone 5 work includes the complete MASVS review, property and
 concurrency campaigns, platform privacy review, release reproducibility/signing
@@ -374,3 +374,4 @@ approval.
 - Relay production profile: 40 concurrent rooms × 20 one-KiB messages plus ACK/BURN completed in about 0.5 seconds and returned active rooms, connections and pending frames to zero.
 - Caddy 2.11.4: official Windows release checksum verified; the production Caddyfile validates successfully. Docker/Compose remains a CI gate because this host has no Docker daemon.
 - Zero-cost release baseline: Android releases cannot use the debug identity; Render free relay and Cloudflare Pages direct-upload paths are versioned, with cold-start, metadata and availability limits explicitly excluded from production claims.
+- Android release identity: the RSA-4096 certificate fingerprint is `9D6FE2B177F72A89F734B430152077CAB93CEC3CA8943F402487757B042C2B70`; the signed `0.1.0+1` ARM64 APK and AAB pass the release verifier, and the APK is installed and running on the TECNO BF7. The keystore has an ACL-restricted local duplicate, but an off-device copy and password-manager entry remain mandatory before distribution.

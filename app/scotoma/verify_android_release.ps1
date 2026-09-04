@@ -35,7 +35,7 @@ if ($files.Contains('libscotoma_bridge_probe.so')) {
 
 & $signer verify --verbose --print-certs $apk
 if ($LASTEXITCODE -ne 0) { throw 'APK signature verification failed.' }
-$bundleVerification = (& $jarsigner -J-Duser.language=en -J-Duser.country=US -verify $bundle 2>&1) -join "`n"
+$bundleVerification = (& $jarsigner '-J-Duser.language=en' '-J-Duser.country=US' -verify $bundle 2>&1) -join "`n"
 if ($LASTEXITCODE -ne 0 -or $bundleVerification -notmatch 'jar verified') {
     throw 'App Bundle signature verification failed.'
 }

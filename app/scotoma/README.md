@@ -75,11 +75,13 @@ debuggable/backup/cleartext or diagnostic builds and prints SHA-256 hashes. The
 current APK supports `arm64-v8a` only; ARMv7/x86_64 remain later compatibility
 gates.
 
-Current main Android artifact:
+Current signed Android release artifacts:
 
-- `build/app/outputs/flutter-apk/app-debug.apk`: 150,501,860 bytes.
-- SHA-256: `D26464C521B1BCFEF1AAECFA1764D59CDB380308B6308F3AA5F76F89E4CA49DF`.
-- Package: `app.scotoma.scotoma`; native code: `arm64-v8a`.
+- `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`: ARM64 APK.
+- `build/app/outputs/bundle/release/app-release.aab`: future store bundle.
+- Signing certificate SHA-256: `9D6FE2B177F72A89F734B430152077CAB93CEC3CA8943F402487757B042C2B70`.
+- Package: `app.scotoma.scotoma`; version: `0.1.0+1`; native code:
+  `arm64-v8a`.
 
 The Android screenshot flag is only a mitigation and cannot prevent a second
 device from photographing the screen. Browsers do not provide an equivalent
@@ -97,6 +99,12 @@ main window. The branded-icon rebuild was subsequently installed and launched
 on the same device. The two-participant physical message/ACK/BURN run remains pending;
 its equivalent two-session bridge smoke passes on Windows against the real
 relay.
+
+The official signed release replaced the earlier debug-signed installation on
+the TECNO BF7 and launched successfully on 2026-09-04. APK/AAB signature,
+release manifest, ARM64 Rust library and absence of the diagnostic bridge were
+verified. The local keystore duplicate is not a disaster-recovery backup because
+both copies currently reside on the same physical disk.
 
 Block 13 exercises controlled TCP cuts while waiting and while chat is active,
 delayed/lost ACK behavior and BURN/network races against the real relay path.
