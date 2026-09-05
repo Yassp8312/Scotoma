@@ -69,7 +69,8 @@ sign malicious updates.
 3. In interactive mode, copy `android/key.properties.example` to the ignored
    `android/key.properties` and fill the real local values. Generated-password
    mode performs this step automatically.
-4. Run `app/scotoma/build_client.ps1 -Mode AndroidRelease`.
+4. Run `app/scotoma/build_client.ps1 -Mode AndroidRelease -RelayUrl
+   'wss://scotoma-relay-alpha.onrender.com/v2/connect'`.
 5. Publish the verified APK and its SHA-256 through a GitHub prerelease or
    another static download. The AAB is retained for a future store channel.
 
@@ -82,6 +83,17 @@ disk protects only against accidental deletion, not disk loss.
 The first alpha supports ARM64 Android devices. Adding `armeabi-v7a` and
 `x86_64` requires building and packaging the Rust bridge for those targets; it
 is compatibility work, not a paid-service requirement.
+
+## Public-path validation
+
+On 2026-09-05, the signed ARM64 APK on a TECNO BF7 and
+`https://scotoma.pages.dev/` completed two sessions through
+`wss://scotoma-relay-alpha.onrender.com/v2/connect`. The first matched the
+transcript verification code, exchanged one message in each direction and
+processed both authenticated ACKs. The second matched its verification code
+and confirmed that Android BURN reached the browser as authenticated peer-BURN
+while the Android credential form returned empty. This is engineering evidence,
+not an independent security review or a two-human acceptance test.
 
 ## Zero-cost boundary
 

@@ -49,15 +49,20 @@ try {
         }
         Copy-Item -LiteralPath (Join-Path $bridgeRoot 'rust\target\aarch64-linux-android\release\libscotoma_bridge.so') -Destination $jni -Force
     }
-    if ($Mode -in @('Web', 'WebRuntime')) {
+    if ($Mode -in @('AndroidRelease', 'Web', 'WebRuntime')) {
         if ($RelayUrl.Length -gt 2048 -or $RelayUrl.Contains("`r") -or
             $RelayUrl.Contains("`n") -or $RelayUrl.Contains('#') -or
             ($RelayUrl -notmatch '^wss://' -and
              $RelayUrl -notmatch '^ws://(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?/')) {
-            throw 'Web relay must use wss://, except ws:// on an explicit loopback host.'
+            throw 'Release/web relay must use wss://, except ws:// on an explicit loopback host.'
         }
+    }
+    if ($Mode -in @('Web', 'WebRuntime')) {
         & (Join-Path $bridgeRoot 'verify.ps1') -Mode Web -ToolsRoot $ToolsRoot
         if ($LASTEXITCODE -ne 0) { throw 'Rust web build failed.' }
+    }
+    if ($Mode -eq 'AndroidRelease' -and $RelayUrl -notmatch '^wss://') {
+        throw 'Android release builds require an explicit public wss:// relay URL.'
     }
 
     Invoke-Checked $flutter @('pub', 'get', '--enforce-lockfile')
@@ -87,11 +92,12 @@ try {
             }
             Invoke-Checked $flutter @(
                 'build', 'apk', '--release', '--target-platform', 'android-arm64',
-                '--split-per-abi', '--no-pub'
+                '--split-per-abi', '--no-pub',
+                "--dart-define=SCOTOMA_RELAY_URL=$RelayUrl"
             )
             Invoke-Checked $flutter @(
                 'build', 'appbundle', '--release', '--target-platform', 'android-arm64',
-                '--no-pub'
+                '--no-pub', "--dart-define=SCOTOMA_RELAY_URL=$RelayUrl"
             )
             & (Join-Path $PSScriptRoot 'verify_android_release.ps1') -ToolsRoot $ToolsRoot
             if ($LASTEXITCODE -ne 0) { throw 'Android release verification failed.' }

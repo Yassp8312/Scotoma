@@ -1,6 +1,6 @@
 # ADR 0033 — Zero-cost alpha and release identity boundary
 
-Status: Implemented as a release baseline; external alpha activation pending
+Status: Implemented and active for the public Android/web alpha path
 
 Date: 2026-09-04
 
@@ -34,9 +34,12 @@ network metadata. Cloudflare is likewise an additional delivery/metadata
 boundary. Neither service is evidence of anonymity, guaranteed availability or
 high-risk production readiness.
 
-This block does not bypass ADR 0031. Private-rendezvous redesign, independent
-cryptographic review, broader Android ABIs, cross-browser/device privacy
-matrices and a real two-party physical chat remain release gates.
+On 2026-09-05 the signed ARM64 APK and Cloudflare Pages client completed a live
+Render WSS run with matching verification codes, bidirectional text,
+authenticated ACKs and BURN. This does not bypass ADR 0031. Private-rendezvous
+redesign, independent cryptographic review, broader Android ABIs,
+cross-browser/device privacy matrices, off-device signing-key backup and a
+two-human acceptance run remain release gates.
 
 ## References
 

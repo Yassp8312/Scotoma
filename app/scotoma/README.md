@@ -60,7 +60,7 @@ not linked into the app.
 .\build_client.ps1 -Mode Check
 .\build_client.ps1 -Mode Android
 .\build_client.ps1 -Mode AndroidTest -DeviceId '<authorized-device-id>'
-.\build_client.ps1 -Mode AndroidRelease
+.\build_client.ps1 -Mode AndroidRelease -RelayUrl 'wss://relay.example/v2/connect'
 .\build_client.ps1 -Mode Web
 .\build_client.ps1 -Mode Web -RelayUrl 'wss://relay.example/v2/connect'
 .\build_client.ps1 -Mode WebRuntime
@@ -165,8 +165,11 @@ The web supervisor cannot detect every silent browser/process worker loss, and
 runtime quarantine is not physical erasure. The pinned FRB 2.13.0 loader uses
 `new Function`, so the current CSP requires `'unsafe-eval'`; removing that
 allowance is a production hardening gate. Browser compatibility beyond the
-current in-app Chromium run is not yet established. Public WSS and an actual
-Android↔web physical-device run remain pending.
+current in-app Chromium run is not yet established. The signed ARM64 Android
+release and the Cloudflare-hosted web client have completed a physical-device
+run through the Render WSS relay with matching verification codes,
+bidirectional text, authenticated ACKs and BURN. A two-human acceptance run and
+the non-Chromium matrix remain pending.
 The numeric inputs remain strings to preserve leading zeroes and 128-digit
 values. Invalid pastes are rejected as a whole, never silently stripped or
 truncated into different credentials. Short human-selected credentials remain

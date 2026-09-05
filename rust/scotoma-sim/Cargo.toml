@@ -13,6 +13,7 @@ name = "scotoma_client"
 
 [dependencies]
 futures-util.workspace = true
+rustls.workspace = true
 scotoma-protocol = { version = "=0.1.0", path = "../scotoma-protocol" }
 tokio.workspace = true
 tokio-tungstenite.workspace = true

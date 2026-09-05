@@ -496,6 +496,10 @@ pub async fn authenticate_derived(
     config: DerivedClientConfig,
     mut progress: impl FnMut(ClientProgress),
 ) -> Result<AuthenticatedClient, ClientError> {
+    // tokio-tungstenite deliberately leaves rustls' process-wide crypto
+    // provider unselected. Install the ring provider explicitly so
+    // native and Android clients can establish public wss:// connections.
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let DerivedClientConfig {
         relay_url,
         room,

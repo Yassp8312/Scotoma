@@ -58,6 +58,9 @@ $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 & icacls.exe $resolvedParent '/inheritance:r' '/grant:r' `
     "$currentIdentity`:(OI)(CI)F" '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '/T' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Failed to restrict signing-directory permissions: $resolvedParent" }
+& icacls.exe $resolvedKey '/inheritance:r' '/grant:r' `
+    "$currentIdentity`:F" '*S-1-5-18:F' '*S-1-5-32-544:F' | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Failed to restrict keystore permissions: $resolvedKey" }
 if ($GeneratePassword) {
     & icacls.exe $propertiesPath '/inheritance:r' '/grant:r' `
         "$currentIdentity`:F" '*S-1-5-18:F' '*S-1-5-32-544:F' | Out-Null

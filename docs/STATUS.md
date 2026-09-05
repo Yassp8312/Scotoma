@@ -1,6 +1,6 @@
 # Development status
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
 
 ## Milestones
 
@@ -9,7 +9,7 @@ Last updated: 2026-09-04
 | 0 — Foundations and boundaries | Complete |
 | 1 — Rust protocol prototype | Complete for prototype |
 | 2 — Ephemeral relay | Complete for prototype |
-| 3 — Flutter clients (Android and web; iOS deferred) | Complete for local prototype; release matrices pending |
+| 3 — Flutter clients (Android and web; iOS deferred) | Public Android↔web path verified; release matrices pending |
 | 4 — Terminal session reliability | Complete for prototype |
 | 5 — Security hardening | In progress; blocks 18–20 release baselines implemented |
 | 6 — Closed alpha | Not started |
@@ -39,11 +39,11 @@ The ten-ticket first sprint and five-ticket relay-hardening sprint are complete 
 | SCT-022 — Ephemeral numeric entry flow | Complete | Responsive form, 1–128 digit validation, leading-zero preservation and credential clearing tests |
 | SCT-023 — Client platform boundary | Android device path and web runtime validated; iOS pending | Android backup/capture restrictions; isolated web runtime headers and real browser startup; platform memory/capture limits documented |
 | SCT-024 — Rust bridge integration | Complete for Android and web prototype | ADRs 0022–0023 and 0027–0029: bounded ingress, reduced API, Rust-owned Noise/session state and fail-stop WebAssembly lifecycle |
-| SCT-025 — Live session UI | Complete for Android and web prototype; physical two-party chat pending | Current main Android build passes relay wait/cancel on the TECNO; bounded bidirectional UI, authenticated ACK and BURN are covered by native/web integration |
+| SCT-025 — Live session UI | Public Android↔web engineering run complete; two-human acceptance pending | Signed ARM64 build and Cloudflare web exchanged text in both directions through Render WSS, processed authenticated ACKs, matched transcript codes and completed BURN on the TECNO BF7 |
 | SCT-026 — Terminal network and ACK policy | Complete for prototype | A lost relay/socket and a 15-second missing ACK end the session distinctly; no automatic reconnect or message resend |
 | SCT-027 — Adversarial network suite | Complete for prototype | Controlled TCP cuts while waiting/connected, delayed/lost ACK, monotonic deadline and repeated BURN/disconnect race |
 | SCT-028 — Production bridge separation | Complete | App depends on `packages/scotoma_bridge`; diagnostic probe/fault APIs remain isolated under `spikes/` and are absent from the APK library |
-| SCT-029 — Production web runtime | Complete for local prototype | Threaded release Rust/Wasm, scoped worker supervision, quarantine, COOP/COEP, browser chat/ACK/BURN, Rust↔web interoperability and terminal relay-cut evidence |
+| SCT-029 — Production web runtime | Complete for public Chromium alpha path | Threaded release Rust/Wasm, scoped worker supervision, quarantine, COOP/COEP, public WSS Android↔web chat/ACK/BURN, Rust↔web interoperability and terminal relay-cut evidence |
 | SCT-030 — Final prototype frontend | Complete for local prototype | Dark responsive design, scalable supplied-concept mark, semantic status UI, Noise transcript verification code and two-browser/390×844 validation |
 
 Accounts, contacts, persistent history, offline messages, session reconnection,
@@ -294,8 +294,10 @@ cancellation is polled every 50 ms and the 15-second ACK deadline uses monotonic
 deployments must compile a `wss://` relay URL. Two Chromium pages passed
 bidirectional text, ACK and BURN. Windows Rust↔web passed message/ACK/BURN in
 both directions, and killing the relay ended both browser sessions without a
-reconnect. Public WSS, non-Chromium compatibility and a physical Android↔web
-rerun remain gates. See ADR 0029.
+reconnect. Public Render WSS now passes a signed physical Android↔Cloudflare
+web run with matching verification codes, bidirectional text, ACK and BURN.
+Non-Chromium compatibility and a two-human acceptance run remain gates. See
+ADR 0029.
 
 Block 17 applies the final prototype visual system based on the supplied
 SCOTOMA eye concept: a scalable split-violet mark, dark neutral surfaces,
@@ -340,9 +342,9 @@ non-Chromium browser matrices remain block-20 gates. See ADR 0030.
 | SCT-032 — Parser and state fuzzing | Complete as an automated baseline | Pinned `cargo-fuzz`; network/credential decoder target and terminal-state invariant target with seed corpora and bounded CI runs |
 | SCT-033 — Dependency policy and audits | Complete as an automated baseline | Both independent Cargo lockfiles checked by pinned RustSec and `cargo-deny`; license/source policy is versioned |
 | SCT-034 — Rust SBOM | Complete as an automated baseline | Pinned `cargo-cyclonedx` emits retained CycloneDX JSON for both independent Rust graphs |
-| SCT-035 — Production relay baseline | Implementation complete; external activation pending | Digest-pinned images, mandatory domain, TLS/WSS boundary, container limits, concurrent load profile, graceful shutdown, public verifier and immutable rollback runbook |
+| SCT-035 — Production relay baseline | Public alpha activation complete | Digest-pinned images, TLS/WSS boundary, container limits, concurrent load profile, graceful shutdown, public verifier, immutable rollback runbook and live Render WSS validation |
 | SCT-036 — Branded application artifacts | Complete for Android/web baseline | Supplied eye concept adapted into master artwork; legacy/round/adaptive Android and PWA icon sets; branded APK installed on TECNO |
-| SCT-037 — Zero-cost alpha release path | Local signing complete; external activation pending | Official non-debug Android identity, signed and verified ARM64 APK/AAB, physical release install; free Render relay Blueprint; Cloudflare Pages headers restricted to the compiled WSS origin; documented limits. Off-device key backup remains a release gate |
+| SCT-037 — Zero-cost alpha release path | Public Android/web path active; signing backup pending | Official non-debug Android identity, signed and verified ARM64 APK/AAB, physical release install; live free Render relay and Cloudflare Pages client; public Android↔web ACK/BURN validation. Off-device key backup remains a release gate |
 
 The remaining Milestone 5 work includes the complete MASVS review, property and
 concurrency campaigns, platform privacy review, release reproducibility/signing
@@ -354,6 +356,11 @@ approval.
 - Formatting: passing.
 - Clippy with warnings denied: passing.
 - Workspace tests: passing.
+- Public client integration: the signed ARM64 APK and `scotoma.pages.dev`
+  matched verification code `46FB D0BA 2D77`, exchanged one message in each
+  direction with authenticated ACKs through Render WSS, and a second session
+  matched `BD9A F7C0 E297` before Android BURN produced the authenticated
+  peer-BURN terminal state in the browser and empty Android credential fields.
 - Relay integration: packet TTL releases pending capacity, idle TTL notifies both sockets, a third peer is rejected and disconnect purges the room.
 - Authenticated-client integration: two clients complete Noise through the real relay, exchange 100 encrypted messages through a one-frame pending queue with continuous rekeying, validate every ACK and complete authenticated BURN.
 - Reliability integration: a missing ACK reaches a terminal delivery timeout without automatic retransmission, while peer disconnect ends the live loop as connection loss.

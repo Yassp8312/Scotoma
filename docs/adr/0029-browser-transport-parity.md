@@ -1,6 +1,6 @@
 # ADR 0029 — Browser transport parity
 
-Status: Implemented for the local prototype; public WSS and physical Android pairing remain release gates
+Status: Implemented and verified on the public Chromium Android↔web alpha path
 
 Date: 2026-09-04
 
@@ -48,16 +48,22 @@ runtime, isolation and quarantine requirements from ADR 0028 remain mandatory.
   browser's BURN.
 - Killing the real relay while two browser clients were connected placed both
   pages in terminal connection-loss state without reconnecting.
-- Eleven production-bridge Rust tests pass, including the browser relay-URL
-  policy. Flutter analysis, 18 tests and the worker-supervisor test pass.
+- On 2026-09-05, the signed ARM64 APK on a TECNO BF7 and the Cloudflare Pages
+  client paired through the Render WSS endpoint, displayed identical transcript
+  verification codes, exchanged authenticated text and ACKs in both directions,
+  and propagated authenticated Android BURN to the browser.
+- Native WSS uses rustls with the explicitly installed `ring` provider and
+  WebPKI roots; this fixed the fail-closed native build that previously lacked
+  TLS support while leaving the browser on its user-agent TLS stack.
+- Twelve production-bridge Rust tests pass, including the browser relay-URL
+  policy. Flutter analysis, 20 tests and the worker-supervisor test pass.
 
 ## Limits
 
-All network evidence in this block used loopback `ws://` and the local relay.
-Public DNS, certificates, reverse proxying and Internet `wss://` remain block
-19. The browser evidence is Chromium-based; Edge, Firefox and Safari remain
-compatibility gates. Windows Rust↔web proves wire interoperability, but an
-actual Android↔web physical-device rerun is still required.
+The public path has now exercised DNS, managed certificates and Internet
+`wss://` between one physical Android device and the Chromium web client. Edge,
+Firefox and Safari remain compatibility gates, as do broader Android devices,
+network transitions and a two-human acceptance run.
 
 The browser's 15-second timeout uses the same terminal policy covered by the
 controller and native adversarial tests, but this block did not force a live
