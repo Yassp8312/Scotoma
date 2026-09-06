@@ -1,0 +1,10 @@
+{
+  "name": "scotoma-browser-tests",
+  "private": true,
+  "scripts": {
+    "test:public-browsers": "playwright test test/public_browser_matrix.spec.mjs --workers=1 --reporter=line"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

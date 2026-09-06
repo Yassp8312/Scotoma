@@ -9,7 +9,7 @@ Last updated: 2026-09-05
 | 0 — Foundations and boundaries | Complete |
 | 1 — Rust protocol prototype | Complete for prototype |
 | 2 — Ephemeral relay | Complete for prototype |
-| 3 — Flutter clients (Android and web; iOS deferred) | Public Android↔web path verified; release matrices pending |
+| 3 — Flutter clients (Android and web; iOS deferred) | Public Android↔web and Chrome/Edge/Firefox paths verified; remaining release matrices pending |
 | 4 — Terminal session reliability | Complete for prototype |
 | 5 — Security hardening | In progress; blocks 18–20 release baselines implemented |
 | 6 — Closed alpha | Not started |
@@ -37,13 +37,13 @@ The ten-ticket first sprint and five-ticket relay-hardening sprint are complete 
 |---|---|---|
 | SCT-021 — Multiplatform Flutter shell | Complete | `app/scotoma` scaffolds Android, web and iOS; only Flutter widgets and the Flutter Cupertino icon font |
 | SCT-022 — Ephemeral numeric entry flow | Complete | Responsive form, 1–128 digit validation, leading-zero preservation and credential clearing tests |
-| SCT-023 — Client platform boundary | Android device path and web runtime validated; iOS pending | Android backup/capture restrictions; isolated web runtime headers and real browser startup; platform memory/capture limits documented |
+| SCT-023 — Client platform boundary | Android device path and Chrome/Edge/Firefox web runtimes validated; iOS/Safari pending | Android backup/capture restrictions; isolated web runtime headers and public browser matrix; platform memory/capture limits documented |
 | SCT-024 — Rust bridge integration | Complete for Android and web prototype | ADRs 0022–0023 and 0027–0029: bounded ingress, reduced API, Rust-owned Noise/session state and fail-stop WebAssembly lifecycle |
 | SCT-025 — Live session UI | Public Android↔web engineering run complete; two-human acceptance pending | Signed ARM64 build and Cloudflare web exchanged text in both directions through Render WSS, processed authenticated ACKs, matched transcript codes and completed BURN on the TECNO BF7 |
 | SCT-026 — Terminal network and ACK policy | Complete for prototype | A lost relay/socket and a 15-second missing ACK end the session distinctly; no automatic reconnect or message resend |
 | SCT-027 — Adversarial network suite | Complete for prototype | Controlled TCP cuts while waiting/connected, delayed/lost ACK, monotonic deadline and repeated BURN/disconnect race |
 | SCT-028 — Production bridge separation | Complete | App depends on `packages/scotoma_bridge`; diagnostic probe/fault APIs remain isolated under `spikes/` and are absent from the APK library |
-| SCT-029 — Production web runtime | Complete for public Chromium alpha path | Threaded release Rust/Wasm, scoped worker supervision, quarantine, COOP/COEP, public WSS Android↔web chat/ACK/BURN, Rust↔web interoperability and terminal relay-cut evidence |
+| SCT-029 — Production web runtime | Complete for public Chrome/Edge/Firefox alpha path | Threaded release Rust/Wasm, scoped worker supervision, quarantine, COOP/COEP, public WSS browser matrix, Android↔web chat/ACK/BURN, Rust↔web interoperability and terminal relay-cut evidence |
 | SCT-030 — Final prototype frontend | Complete for local prototype | Dark responsive design, scalable supplied-concept mark, semantic status UI, Noise transcript verification code and two-browser/390×844 validation |
 
 Accounts, contacts, persistent history, offline messages, session reconnection,
@@ -296,8 +296,10 @@ bidirectional text, ACK and BURN. Windows Rust↔web passed message/ACK/BURN in
 both directions, and killing the relay ended both browser sessions without a
 reconnect. Public Render WSS now passes a signed physical Android↔Cloudflare
 web run with matching verification codes, bidirectional text, ACK and BURN.
-Non-Chromium compatibility and a two-human acceptance run remain gates. See
-ADR 0029.
+The public matrix now passes Chrome 152, Edge 152 and Firefox 155 with two
+participants, matching transcript codes, bidirectional text, authenticated
+ACKs and BURN. Safari and a two-human acceptance run remain gates. See ADR
+0029.
 
 Block 17 applies the final prototype visual system based on the supplied
 SCOTOMA eye concept: a scalable split-violet mark, dark neutral surfaces,
@@ -311,7 +313,7 @@ bridge Rust tests and 20 Flutter tests. The redesigned ARM64 debug APK now also
 passes the physical main-app relay wait/cancel path on the TECNO BF7, launches
 normally after installation and exposes `FLAG_SECURE` on its Android window.
 Two-party physical chat, background/process-death, keyboard, large-text and
-non-Chromium browser matrices remain block-20 gates. See ADR 0030.
+Safari remain block-20 gates. See ADR 0030.
 
 ## Protocol v2 security block
 
@@ -376,6 +378,11 @@ approval.
 - Test count: 90 passing tests across the workspace and all targets.
 - Production web runtime: Node supervisor isolation, isolated/non-isolated
   startup, two-browser chat and Rust↔web interoperability checks pass.
+- Public desktop browser matrix: Chrome 152.0.7977.82, Edge 152.0.4191.62 and
+  Firefox 155.0 each passed secure/cross-origin-isolated startup, two-party
+  Render WSS pairing, matching transcript code, bidirectional text,
+  authenticated ACK and BURN. Safari is deferred until Mac/iPhone hardware is
+  available.
 - Supply-chain baseline: RustSec loaded 1,239 advisories and found no matching vulnerability across the 126-package relay graph or 156-package bridge graph; cargo-deny passed advisories, bans, licenses and sources for both, with recorded duplicate-version and `allo-isolate` manifest-license warnings.
 - SBOM baseline: reproducible CycloneDX 1.5 JSON contains 124 relay components and 155 bridge components; CI retains both inventories per commit.
 - Relay production profile: 40 concurrent rooms × 20 one-KiB messages plus ACK/BURN completed in about 0.5 seconds and returned active rooms, connections and pending frames to zero.

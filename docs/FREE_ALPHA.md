@@ -95,6 +95,13 @@ and confirmed that Android BURN reached the browser as authenticated peer-BURN
 while the Android credential form returned empty. This is engineering evidence,
 not an independent security review or a two-human acceptance test.
 
+On the same date, an automated desktop matrix ran two independent web clients
+per browser against this exact Cloudflare Pages and Render WSS path. Chrome
+152.0.7977.82, Edge 152.0.4191.62 and Firefox 155.0 each passed secure and
+cross-origin-isolated startup, matching transcript verification codes,
+bidirectional messages, authenticated ACKs and BURN. Safari remains deferred
+until Mac/iPhone hardware is available.
+
 ## Zero-cost boundary
 
 The repository, local builds, signing key, direct APK distribution, Pages site

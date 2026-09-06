@@ -16,3 +16,5 @@ artifacts/release/
 *.log
 .DS_Store
 Thumbs.db
+app/scotoma/node_modules/
+app/scotoma/test-results/

@@ -1,6 +1,6 @@
 # ADR 0029 — Browser transport parity
 
-Status: Implemented and verified on the public Chromium Android↔web alpha path
+Status: Implemented and verified on the public Android↔web and desktop browser alpha paths
 
 Date: 2026-09-04
 
@@ -55,14 +55,21 @@ runtime, isolation and quarantine requirements from ADR 0028 remain mandatory.
 - Native WSS uses rustls with the explicitly installed `ring` provider and
   WebPKI roots; this fixed the fail-closed native build that previously lacked
   TLS support while leaving the browser on its user-agent TLS stack.
+- An automated public-path matrix ran two independent clients in Chrome
+  152.0.7977.82, Edge 152.0.4191.62 and Firefox 155.0. Every browser confirmed
+  secure context and cross-origin isolation, matched the Noise transcript code,
+  exchanged text in both directions, processed authenticated ACKs and
+  propagated BURN. The consolidated run passed all three cases serially in
+  2.3 minutes.
 - Twelve production-bridge Rust tests pass, including the browser relay-URL
   policy. Flutter analysis, 20 tests and the worker-supervisor test pass.
 
 ## Limits
 
 The public path has now exercised DNS, managed certificates and Internet
-`wss://` between one physical Android device and the Chromium web client. Edge,
-Firefox and Safari remain compatibility gates, as do broader Android devices,
+`wss://` between one physical Android device and the web client, plus two-party
+desktop sessions in Chrome, Edge and Firefox. Safari remains a compatibility
+gate until Mac/iPhone hardware is available, as do broader Android devices,
 network transitions and a two-human acceptance run.
 
 The browser's 15-second timeout uses the same terminal policy covered by the

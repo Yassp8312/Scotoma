@@ -67,6 +67,23 @@ not linked into the app.
 & 'D:\Tools\flutter\bin\cache\dart-sdk\bin\dart.exe' run bin\serve_web.dart
 ```
 
+The public desktop-browser matrix uses the deployed Cloudflare client and
+Render WSS relay. Install its pinned Node dependency and Firefox runtime, then
+run it against the locally installed Chrome and Edge binaries:
+
+```powershell
+npm ci --ignore-scripts
+$env:PLAYWRIGHT_BROWSERS_PATH = 'D:\Tools\playwright-browsers'
+npx playwright install firefox
+$env:SCOTOMA_CHROME_PATH = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+$env:SCOTOMA_EDGE_PATH = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+npm run test:public-browsers
+```
+
+The 2026-09-05 consolidated run passed Chrome 152.0.7977.82, Edge
+152.0.4191.62 and Firefox 155.0. Safari is deferred until Mac/iPhone hardware is
+available.
+
 The Android command builds optimized Rust first, copies the ARM64 library into
 an ignored app build directory, then packages the main debug APK. Direct
 `flutter build apk` does not perform that Rust step. `AndroidRelease` requires a
@@ -143,8 +160,8 @@ bridge now passes 12 Rust tests and the app passes 20 Flutter tests. Two local
 Chromium pages displayed the same disposable code, exchanged a message and
 terminated through authenticated BURN. Desktop and 390×844 layouts were
 visually inspected. The code is a transcript comparison aid, not human identity
-authentication; broader physical Android and non-Chromium matrices remain
-release gates. The redesigned ARM64 debug APK compiles and passes the physical
+authentication; broader physical Android and Safari validation remain release
+gates. The redesigned ARM64 debug APK compiles and passes the physical
 main-app wait/cancel integration path. See ADR 0030.
 
 ## Memory and platform limits
@@ -164,12 +181,12 @@ iOS requires macOS/Xcode validation.
 The web supervisor cannot detect every silent browser/process worker loss, and
 runtime quarantine is not physical erasure. The pinned FRB 2.13.0 loader uses
 `new Function`, so the current CSP requires `'unsafe-eval'`; removing that
-allowance is a production hardening gate. Browser compatibility beyond the
-current in-app Chromium run is not yet established. The signed ARM64 Android
+allowance is a production hardening gate. Chrome, Edge and Firefox now pass the
+public two-client matrix; Safari is pending. The signed ARM64 Android
 release and the Cloudflare-hosted web client have completed a physical-device
 run through the Render WSS relay with matching verification codes,
 bidirectional text, authenticated ACKs and BURN. A two-human acceptance run and
-the non-Chromium matrix remain pending.
+Safari validation remain pending.
 The numeric inputs remain strings to preserve leading zeroes and 128-digit
 values. Invalid pastes are rejected as a whole, never silently stripped or
 truncated into different credentials. Short human-selected credentials remain
