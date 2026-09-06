@@ -18,3 +18,4 @@ artifacts/release/
 Thumbs.db
 app/scotoma/node_modules/
 app/scotoma/test-results/
+.wrangler/
