@@ -102,6 +102,16 @@ cross-origin-isolated startup, matching transcript verification codes,
 bidirectional messages, authenticated ACKs and BURN. Safari remains deferred
 until Mac/iPhone hardware is available.
 
+A subsequent physical acceptance block repeated the public path with the signed
+TECNO BF7 client and the Cloudflare web UI. One session visibly delivered
+`android-web-0905` to web and returned the authenticated ACK, then delivered
+`web-android-0905` to Android and returned its authenticated ACK. A separate
+fresh session confirmed Android BURN at web with the explicit authenticated
+peer-BURN terminal state. Both installed and web clients ended on empty
+credential forms. UI-tree inspection was deliberately avoided during the live
+message session because Android lifecycle instrumentation can itself trigger
+SCOTOMA's fail-closed background policy.
+
 ## Zero-cost boundary
 
 The repository, local builds, signing key, direct APK distribution, Pages site

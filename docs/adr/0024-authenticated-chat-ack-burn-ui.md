@@ -1,6 +1,6 @@
 # ADR 0024 — Authenticated chat, ACK and BURN UI
 
-Status: Implemented; physical two-party chat validation pending
+Status: Implemented and physically validated on Android↔web
 
 Date: 2026-09-03
 
@@ -40,15 +40,20 @@ file, analytics, notification or history persistence.
 - Flutter analysis and 15 unit/widget tests pass, including delivery state,
   inbound rendering and explicit destruction.
 - The Android ARM64 debug APK builds with the new secure message symbol.
+- On 2026-09-05, the signed ARM64 app on a TECNO BF7 and the public Cloudflare
+  web client paired through Render WSS. Android text was rendered by web; web
+  text was acknowledged by Android; both authenticated ACK paths cleared their
+  pending-send state. A fresh session then propagated Android BURN to web's
+  explicit authenticated peer-BURN terminal state. Both clients finished with
+  empty credential forms.
 
 ## Remaining limits
 
-The current redesigned Android client has since passed derivation, relay waiting,
-credential removal and cancellation on the physical TECNO BF7. It also launches
-as the ordinary installed app and its main window reports `FLAG_SECURE`. A second
-physical participant is still required to validate message/ACK/BURN end to end.
-Public WSS, network-transition behavior, accessibility/device privacy tests,
-iOS and production signing remain gates.
+The current signed Android client passes derivation, relay waiting, credential
+removal, bidirectional message/ACK and BURN against the physical TECNO BF7 and
+the public web participant. Its main window reports `FLAG_SECURE`. An
+independent two-person usability run, broader network transitions,
+accessibility/device privacy tests, iOS and Safari remain gates.
 
 ## References
 

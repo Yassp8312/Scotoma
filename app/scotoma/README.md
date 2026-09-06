@@ -113,9 +113,12 @@ The current redesigned main APK also passed that same physical wait/cancel path
 on the TECNO BF7 on 2026-09-04. It was then installed as the ordinary launcher
 application, started successfully, and Android reported `FLAG_SECURE` on its
 main window. The branded-icon rebuild was subsequently installed and launched
-on the same device. The two-participant physical message/ACK/BURN run remains pending;
-its equivalent two-session bridge smoke passes on Windows against the real
-relay.
+on the same device. On 2026-09-05 the signed TECNO client and the public
+Cloudflare web client completed the physical two-endpoint acceptance block
+through Render WSS: matching transcript codes, messages in both directions,
+authenticated ACKs and authenticated Android BURN observed by web. Both clients
+returned to empty credential forms. An independent two-person usability run
+remains part of the closed-alpha work rather than this engineering gate.
 
 The official signed release replaced the earlier debug-signed installation on
 the TECNO BF7 and launched successfully on 2026-09-04. APK/AAB signature,
