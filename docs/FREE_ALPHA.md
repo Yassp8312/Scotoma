@@ -80,9 +80,11 @@ copy the password into a protected password manager and keep the keystore backup
 on a different physical device. A second copy on another partition of the same
 disk protects only against accidental deletion, not disk loss.
 
-The first alpha supports ARM64 Android devices. Adding `armeabi-v7a` and
-`x86_64` requires building and packaging the Rust bridge for those targets; it
-is compatibility work, not a paid-service requirement.
+The release build now emits signed split APKs for `armeabi-v7a`, `arm64-v8a`
+and `x86_64`, plus an AAB containing all three production Rust bridges. ARM64
+has passed the physical public path. ARMv7 and x86_64 compile, package and
+verify but still require runtime validation on suitable hardware/emulation.
+This is compatibility work, not a paid-service requirement.
 
 ## Public-path validation
 

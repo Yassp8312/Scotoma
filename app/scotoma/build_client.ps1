@@ -39,15 +39,31 @@ try {
         throw 'Supply -DeviceId for the authorized Android device.'
     }
     if ($Mode -in @('Android', 'AndroidTest', 'AndroidRelease')) {
-        & (Join-Path $bridgeRoot 'verify.ps1') -Mode Android -ToolsRoot $ToolsRoot -Release
-        if ($LASTEXITCODE -ne 0) { throw 'Rust Android build failed.' }
-        $jni = Join-Path $PSScriptRoot 'build\rust-jni\arm64-v8a'
-        New-Item -ItemType Directory -Path $jni -Force | Out-Null
-        $legacyLibrary = Join-Path $jni 'libscotoma_bridge_probe.so'
-        if (Test-Path -LiteralPath $legacyLibrary) {
-            Remove-Item -LiteralPath $legacyLibrary -Force
+        $androidTargets = @(
+            @{ Rust = 'aarch64-linux-android'; Abi = 'arm64-v8a'; Flutter = 'android-arm64' }
+        )
+        if ($Mode -eq 'AndroidRelease') {
+            $androidTargets += @(
+                @{ Rust = 'armv7-linux-androideabi'; Abi = 'armeabi-v7a'; Flutter = 'android-arm' },
+                @{ Rust = 'x86_64-linux-android'; Abi = 'x86_64'; Flutter = 'android-x64' }
+            )
         }
-        Copy-Item -LiteralPath (Join-Path $bridgeRoot 'rust\target\aarch64-linux-android\release\libscotoma_bridge.so') -Destination $jni -Force
+        & (Join-Path $bridgeRoot 'verify.ps1') -Mode Android -ToolsRoot $ToolsRoot -Release `
+            -AndroidTargets @($androidTargets | ForEach-Object { $_.Rust })
+        if ($LASTEXITCODE -ne 0) { throw 'Rust Android build failed.' }
+        foreach ($abi in @('arm64-v8a', 'armeabi-v7a', 'x86_64')) {
+            foreach ($libraryName in @('libscotoma_bridge.so', 'libscotoma_bridge_probe.so')) {
+                $oldLibrary = Join-Path $PSScriptRoot "build\rust-jni\$abi\$libraryName"
+                if (Test-Path -LiteralPath $oldLibrary -PathType Leaf) {
+                    Remove-Item -LiteralPath $oldLibrary -Force
+                }
+            }
+        }
+        foreach ($target in $androidTargets) {
+            $jni = Join-Path $PSScriptRoot "build\rust-jni\$($target.Abi)"
+            New-Item -ItemType Directory -Path $jni -Force | Out-Null
+            Copy-Item -LiteralPath (Join-Path $bridgeRoot "rust\target\$($target.Rust)\release\libscotoma_bridge.so") -Destination $jni -Force
+        }
     }
     if ($Mode -in @('AndroidRelease', 'Web', 'WebRuntime')) {
         if ($RelayUrl.Length -gt 2048 -or $RelayUrl.Contains("`r") -or
@@ -90,13 +106,14 @@ try {
             if (Test-Path -LiteralPath $androidRegistrant) {
                 Remove-Item -LiteralPath $androidRegistrant -Force
             }
+            $flutterPlatforms = ($androidTargets | ForEach-Object { $_.Flutter }) -join ','
             Invoke-Checked $flutter @(
-                'build', 'apk', '--release', '--target-platform', 'android-arm64',
+                'build', 'apk', '--release', '--target-platform', $flutterPlatforms,
                 '--split-per-abi', '--no-pub',
                 "--dart-define=SCOTOMA_RELAY_URL=$RelayUrl"
             )
             Invoke-Checked $flutter @(
-                'build', 'appbundle', '--release', '--target-platform', 'android-arm64',
+                'build', 'appbundle', '--release', '--target-platform', $flutterPlatforms,
                 '--no-pub', "--dart-define=SCOTOMA_RELAY_URL=$RelayUrl"
             )
             & (Join-Path $PSScriptRoot 'verify_android_release.ps1') -ToolsRoot $ToolsRoot

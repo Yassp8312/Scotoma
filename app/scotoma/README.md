@@ -84,21 +84,31 @@ The 2026-09-05 consolidated run passed Chrome 152.0.7977.82, Edge
 152.0.4191.62 and Firefox 155.0. Safari is deferred until Mac/iPhone hardware is
 available.
 
-The Android command builds optimized Rust first, copies the ARM64 library into
-an ignored app build directory, then packages the main debug APK. Direct
+The Android command builds optimized Rust first, copies the required libraries
+into an ignored app build directory, then packages the app. Debug/device-test
+modes remain ARM64-only for speed; release mode builds ARMv7, ARM64 and x86_64.
+Direct
 `flutter build apk` does not perform that Rust step. `AndroidRelease` requires a
 private local signing configuration, emits a signed split APK and AAB, rejects
 debuggable/backup/cleartext or diagnostic builds and prints SHA-256 hashes. The
-current APK supports `arm64-v8a` only; ARMv7/x86_64 remain later compatibility
-gates.
+verifier checks the expected production Rust library in each split and all
+three libraries in the AAB. ARMv7/x86_64 runtime execution remains a
+compatibility gate even though their artifacts now compile and verify.
 
 Current signed Android release artifacts:
 
+- `build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk`: ARMv7 APK.
 - `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`: ARM64 APK.
+- `build/app/outputs/flutter-apk/app-x86_64-release.apk`: x86_64 APK.
 - `build/app/outputs/bundle/release/app-release.aab`: future store bundle.
 - Signing certificate SHA-256: `9D6FE2B177F72A89F734B430152077CAB93CEC3CA8943F402487757B042C2B70`.
-- Package: `app.scotoma.scotoma`; version: `0.1.0+1`; native code:
-  `arm64-v8a`.
+- Package: `app.scotoma.scotoma`; version: `0.1.0+1`; release native code:
+  `armeabi-v7a`, `arm64-v8a` and `x86_64`.
+
+The exact 2026-09-06 sizes, hashes, mapping and verification boundary are in
+ADR 0034. ARM64 has physical runtime evidence. ARMv7 awaits suitable hardware;
+the x86_64 emulator image download did not complete, so packaging must not be
+described as a runtime pass.
 
 The Android screenshot flag is only a mitigation and cannot prevent a second
 device from photographing the screen. Browsers do not provide an equivalent
@@ -106,8 +116,9 @@ reliable control.
 
 The real main-app integration test passed on the connected TECNO BF7 over
 `adb reverse tcp:8787 tcp:8787`: the app reached the local relay, entered the
-waiting state, cancelled, and returned to an empty form. This does not validate
-public WSS/TLS or a two-phone handshake.
+waiting state, cancelled, and returned to an empty form. Public WSS/TLS was
+subsequently validated through Render with the signed Android client and the
+Cloudflare Pages web client. A two-phone handshake remains untested.
 
 The current redesigned main APK also passed that same physical wait/cancel path
 on the TECNO BF7 on 2026-09-04. It was then installed as the ordinary launcher
@@ -180,7 +191,8 @@ opt-out and disabled keyboard personalization hints.
 
 The widget tests recreate the app, simulate lifecycle transitions and verify
 terminal cleanup; this is not yet a physical-device process-death/forensic test.
-iOS requires macOS/Xcode validation.
+iOS and Safari are documented in `../../docs/ROADMAP_RESTANTE.md` and deferred
+until macOS/Xcode and suitable test conditions are available.
 The web supervisor cannot detect every silent browser/process worker loss, and
 runtime quarantine is not physical erasure. The pinned FRB 2.13.0 loader uses
 `new Function`, so the current CSP requires `'unsafe-eval'`; removing that

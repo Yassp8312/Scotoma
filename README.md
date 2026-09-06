@@ -6,9 +6,21 @@ Two participants who enter the same numeric room and numeric password can rendez
 
 > SCOTOMA is an early research prototype. It is not ready for sensitive or high-risk communications.
 
+SCOTOMA exists to investigate whether two people can hold a short encrypted
+conversation without creating an account, contact graph, mailbox or persistent
+product history. Its motivation and limits are explained in
+[Why SCOTOMA exists](docs/POR_QUE_SCOTOMA.md).
+
 ## Current status
 
-The repository is in **Milestone 5: security and release hardening**. It contains:
+The repository is in **Milestone 5: security and release hardening**. The signed
+multi-ABI Android release, the Cloudflare Pages web client and the Render relay have
+completed the public Android↔web flow with matching channel codes,
+bidirectional messages, authenticated ACKs and authenticated BURN. Chrome,
+Edge and Firefox have also passed the public two-web-client matrix. This is
+integration evidence, not an independent security review.
+
+It contains:
 
 - the product and security boundaries;
 - a Rust workspace for the protocol core, relay and simulator;
@@ -23,7 +35,7 @@ The repository is in **Milestone 5: security and release hardening**. It contain
 - redacted fixed-schema operational events and aggregate in-memory metrics;
 - adversarial relay coverage and a 100-message authenticated/rekeyed integration path;
 - separate public and administrative listeners plus a containerized WSS/TLS edge;
-- tests and continuous integration.
+- tests and continuous integration;
 - an Android Flutter client with numeric credential validation, one-shot
   form-to-Rust ownership, local key derivation, live relay rendezvous and Noise
   confirmation with no local persistence; the web client now provides the same
@@ -49,6 +61,13 @@ The repository is in **Milestone 5: security and release hardening**. It contain
 - branded Android/web application icons, a non-debug Android signing boundary,
   release artifact verification and a documented zero-cost alpha path using
   provider subdomains rather than a purchased domain.
+
+iOS and Safari are intentionally deferred until suitable hardware and tooling
+are available. Android ARMv7, ARM64 and x86_64 release artifacts now build and
+verify; only ARM64 has physical runtime evidence. The active order is finishing
+Android runtime/signing recovery, security and reliability hardening,
+private-rendezvous redesign and review, then a closed alpha. See the
+[remaining roadmap](docs/ROADMAP_RESTANTE.md).
 
 The Rust protocol and ephemeral-relay milestones are complete for the prototype. Two CLI clients authenticate, exchange ordered ciphertext and ACKs through the relay, then finish with an authenticated BURN that destroys both transport states and purges the room. Pending ciphertext exists only in bounded, zeroizing relay memory until ACK, packet TTL, BURN, disconnect or relay restart. ADR 0007 still blocks production approval on independent implementation review and secure-memory gaps.
 
@@ -104,7 +123,11 @@ production boundary for high-risk communications.
 - [Data lifecycle](docs/DATA_LIFECYCLE.md)
 - [Protocol boundaries](docs/PROTOCOL.md)
 - [Privacy claims](docs/PRIVACY_CLAIMS.md)
+- [Current security risks](docs/RIESGOS_ACTUALES.md)
 - [Development status](docs/STATUS.md)
+- [Development history](docs/HISTORIAL_DESARROLLO.md)
+- [Remaining roadmap](docs/ROADMAP_RESTANTE.md)
+- [Why SCOTOMA exists](docs/POR_QUE_SCOTOMA.md)
 - [Zero-cost alpha](docs/FREE_ALPHA.md)
 - [Security policy](SECURITY.md)
 

@@ -1,6 +1,6 @@
 # ADR 0023 — Live Rust relay and Noise session
 
-Status: Implemented for Android debug; production transport pending
+Status: Implemented for Android and web; public alpha transport validated
 
 Date: 2026-09-03
 
@@ -56,4 +56,4 @@ release gates.
 
 - [Main-form Rust ownership](0022-main-form-rust-session-ownership.md)
 - [Ephemeral WebSocket relay](0006-ephemeral-websocket-relay.md)
-- [Noise selection](0007-noise-nnpsk0-prototype.md)
+- [Noise selection](0007-noise-nnpsk0-handshake.md)

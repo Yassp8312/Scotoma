@@ -1,6 +1,6 @@
 # Development status
 
-Last updated: 2026-09-05
+Last updated: 2026-09-06
 
 ## Milestones
 
@@ -9,10 +9,15 @@ Last updated: 2026-09-05
 | 0 — Foundations and boundaries | Complete |
 | 1 — Rust protocol prototype | Complete for prototype |
 | 2 — Ephemeral relay | Complete for prototype |
-| 3 — Flutter clients (Android and web; iOS deferred) | Public Android↔web and Chrome/Edge/Firefox paths verified; remaining release matrices pending |
+| 3 — Flutter clients (Android and web; iOS deferred) | Public ARM64 Android↔web and Chrome/Edge/Firefox paths verified; ARMv7/x86_64 artifacts verified but runtime matrices pending |
 | 4 — Terminal session reliability | Complete for prototype |
 | 5 — Security hardening | In progress; blocks 18–20 release baselines implemented |
 | 6 — Closed alpha | Not started |
+
+The active remaining sequence is Android architecture/signing recovery,
+security and reliability hardening, private-rendezvous redesign plus
+independent review, and closed alpha. iOS and Safari are documented but
+explicitly deferred. See `docs/ROADMAP_RESTANTE.md`.
 
 ## First sprint
 
@@ -62,8 +67,8 @@ The main Flutter JavaScript release now loads the production Rust/Wasm runtime
 under mandatory secure-context and cross-origin-isolation checks and enables the
 same local-prototype session UI as Android. Flutter Dart/Wasm remains
 incompatible with FRB 2.13.0's recorded JS-interop check.
-Formatting and locked dependencies pass. The current
-main Android APK is 150,501,860 bytes and contains the optimized ARM64 Rust
+Formatting and locked dependencies pass. At this earlier debug-validation
+stage, the main Android APK was 150,501,860 bytes and contained the optimized ARM64 Rust
 library plus secure ingress symbol. Inspection confirms backup is disabled and
 cleartext is debug-only. The APK is at
 `app/scotoma/build/app/outputs/flutter-apk/app-debug.apk`, with SHA-256
@@ -74,9 +79,10 @@ was installed as the ordinary launcher app and started successfully. Android
 reported `FLAG_SECURE` on its main window. The local
 Gradle loopback error was bypassed with a process-local short `TEMP`/`TMP` on D:;
 switching JDK alone did not resolve it. Flutter currently uses the existing
-Android Studio JDK 21 on D:. Broader physical-device privacy/lifecycle behavior,
-production signing and public transport validation are still pending; this is
-not completion of the full client milestone.
+Android Studio JDK 21 on D:. Production signing and public transport were
+subsequently completed by SCT-037; broader physical-device privacy/lifecycle
+behavior is still pending, so this was not completion of the full client
+milestone.
 
 The production bridge at `packages/scotoma_bridge` passes Rust formatting,
 Clippy with warnings denied, 12 Rust tests, Dart formatting/analysis and a
@@ -347,6 +353,7 @@ Safari remain block-20 gates. See ADR 0030.
 | SCT-035 — Production relay baseline | Public alpha activation complete | Digest-pinned images, TLS/WSS boundary, container limits, concurrent load profile, graceful shutdown, public verifier, immutable rollback runbook and live Render WSS validation |
 | SCT-036 — Branded application artifacts | Complete for Android/web baseline | Supplied eye concept adapted into master artwork; legacy/round/adaptive Android and PWA icon sets; branded APK installed on TECNO |
 | SCT-037 — Zero-cost alpha release path | Public Android/web path active; signing backup pending | Official non-debug Android identity, signed and verified ARM64 APK/AAB, physical release install; live free Render relay and Cloudflare Pages client; public Android↔web ACK/BURN validation. Off-device key backup remains a release gate |
+| SCT-038 — Android multi-ABI release | Packaging complete; additional runtime validation pending | Signed split APKs for ARMv7, ARM64 and x86_64 plus a three-ABI AAB pass manifest, ABI, diagnostic-absence and signature verification; ARM64 has physical evidence, ARMv7/x86_64 do not |
 
 The remaining Milestone 5 work includes the complete MASVS review, property and
 concurrency campaigns, platform privacy review, release reproducibility/signing

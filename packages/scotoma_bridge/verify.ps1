@@ -2,6 +2,8 @@ param(
     [ValidateSet('Generate', 'Native', 'Wasm', 'Web', 'Android')]
     [string]$Mode = 'Native',
     [string]$ToolsRoot = 'D:\Tools',
+    [ValidateSet('aarch64-linux-android', 'armv7-linux-androideabi', 'x86_64-linux-android')]
+    [string[]]$AndroidTargets = @('aarch64-linux-android'),
     [switch]$Release
 )
 
@@ -11,7 +13,11 @@ $names = @(
     'TEMP', 'TMP', 'RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_TARGET_DIR',
     'CC_x86_64_pc_windows_gnu', 'AR_x86_64_pc_windows_gnu',
     'CC_aarch64_linux_android', 'AR_aarch64_linux_android',
+    'CC_armv7_linux_androideabi', 'AR_armv7_linux_androideabi',
+    'CC_x86_64_linux_android', 'AR_x86_64_linux_android',
     'CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER',
+    'CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER',
+    'CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER',
     'RUSTC_WRAPPER', 'WASM_PACK_CACHE', 'CARGO_BUILD_JOBS'
 )
 $saved = @{}
@@ -121,10 +127,37 @@ try {
         }
         'Android' {
             $env:RUSTC_WRAPPER = Join-Path $PSScriptRoot 'host_rustc.cmd'
-            $env:CC_aarch64_linux_android = Join-Path $ndk 'aarch64-linux-android24-clang.cmd'
-            $env:AR_aarch64_linux_android = Join-Path $ndk 'llvm-ar.exe'
-            $env:CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER = $env:CC_aarch64_linux_android
-            Invoke-Checked 'cargo' (@('build', '--manifest-path', 'rust/Cargo.toml', '--locked', '--target', 'aarch64-linux-android', '-j', '4') + $profileArgs)
+            $androidTargetConfig = @{
+                'aarch64-linux-android' = @{
+                    Cc = 'aarch64-linux-android24-clang.cmd'
+                    CcVariable = 'CC_aarch64_linux_android'
+                    ArVariable = 'AR_aarch64_linux_android'
+                    LinkerVariable = 'CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER'
+                }
+                'armv7-linux-androideabi' = @{
+                    Cc = 'armv7a-linux-androideabi24-clang.cmd'
+                    CcVariable = 'CC_armv7_linux_androideabi'
+                    ArVariable = 'AR_armv7_linux_androideabi'
+                    LinkerVariable = 'CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER'
+                }
+                'x86_64-linux-android' = @{
+                    Cc = 'x86_64-linux-android24-clang.cmd'
+                    CcVariable = 'CC_x86_64_linux_android'
+                    ArVariable = 'AR_x86_64_linux_android'
+                    LinkerVariable = 'CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER'
+                }
+            }
+            foreach ($target in $AndroidTargets) {
+                $config = $androidTargetConfig[$target]
+                $compiler = Join-Path $ndk $config.Cc
+                if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) {
+                    throw "Missing Android NDK compiler for ${target}: $compiler"
+                }
+                [Environment]::SetEnvironmentVariable($config.CcVariable, $compiler, 'Process')
+                [Environment]::SetEnvironmentVariable($config.ArVariable, (Join-Path $ndk 'llvm-ar.exe'), 'Process')
+                [Environment]::SetEnvironmentVariable($config.LinkerVariable, $compiler, 'Process')
+                Invoke-Checked 'cargo' (@('build', '--manifest-path', 'rust/Cargo.toml', '--locked', '--target', $target, '-j', '4') + $profileArgs)
+            }
         }
     }
 } finally {

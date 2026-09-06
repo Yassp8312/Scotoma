@@ -384,9 +384,15 @@ Total razonable para una alpha Android+web: **8–13 semanas a tiempo completo**
 4. **Bloque 16 — Paridad Android/web (completado para el prototipo local):** formulario, chat, ACK, timeout y BURN interoperables; la validación pública WSS queda en el bloque 19.
 5. **Bloque 17 — Frontend final (completado para el prototipo local):** identidad visual oscura, accesibilidad base, código de verificación derivado del transcript Noise y validación responsive/de dos navegadores; las matrices físicas y cross-browser quedan como gates del bloque 20.
 6. **Bloque 18 — Criptografía y supply chain (completado):** v2 queda limitado al prototipo; ADR 0031 exige un encuentro privado versionado y revisión externa antes del alpha cerrado. Fuzzing acotado, RustSec, política de licencias/fuentes y SBOM CycloneDX quedan automatizados y versionados.
-7. **Bloque 19 — Relay de producción (implementación completada; activación externa pendiente):** imágenes por digest, dominio obligatorio, TLS/WSS, límites de proceso/relay, perfil de carga concurrente, métricas privadas, apagado controlado, verificación pública y rollback inmutable. Faltan el dominio/host reales, ACME y los controles DDoS del proveedor.
-8. **Bloque 20 — Release candidate Android+web (firma local completada; activación y gates pendientes):** identidad visual empaquetada, clave Android oficial creada, APK/AAB firmados y verificados, instalación física release, firma sin fallback de debug, headers web ligados al WSS y ruta alpha gratuita Render + Cloudflare Pages. Faltan copiar la clave fuera del disco físico actual y guardar la contraseña en un gestor protegido, activar los servicios, completar las matrices físicas/cross-browser, resolver y revisar el encuentro privado y ejecutar la alpha cerrada.
-9. **Después — iPhone:** XCFramework Rust, ciclo de vida, pruebas físicas, firma y TestFlight.
+7. **Bloque 19 — Relay de producción (baseline implementada; alpha pública activa):** imágenes por digest, TLS/WSS, límites de proceso/relay, perfil de carga concurrente, métricas privadas, apagado controlado, verificación pública y rollback inmutable. La ruta Render está validada; un dominio/host de producción, ACME propio y controles DDoS efectivos continúan pendientes.
+8. **Bloque 20 — Release candidate Android+web (baseline pública completada):** identidad visual empaquetada, clave Android oficial, APK/AAB ARM64 firmados y verificados, instalación física release, firma sin fallback debug, headers web ligados al WSS, Render + Cloudflare Pages, Android↔web y Chrome/Edge/Firefox con chat, ACK y BURN. Faltan respaldo externo de firma, arquitecturas y dispositivos Android adicionales, hardening, encuentro privado revisado y alpha cerrada; iOS/Safari se aplazan.
+9. **Siguiente secuencia acordada:** ampliar Android y asegurar el respaldo de
+   firma; aplazar iOS/Safari; completar hardening; resolver y revisar el
+   encuentro privado; ejecutar la alpha cerrada. El desglose vigente está en
+   [docs/ROADMAP_RESTANTE.md](docs/ROADMAP_RESTANTE.md).
+10. **Después — iPhone/Safari (aplazado):** XCFramework Rust, ciclo de vida,
+    pruebas físicas, firma, Safari real y canal de distribución. Este trabajo no
+    se iniciará hasta disponer de macOS/Xcode y condiciones de prueba adecuadas.
 
 ---
 

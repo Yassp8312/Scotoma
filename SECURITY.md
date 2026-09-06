@@ -4,6 +4,9 @@
 
 SCOTOMA is an experimental alpha under active development. It must not be relied upon for sensitive, operational or high-risk communication.
 
+The maintained risk register is available in
+[`docs/RIESGOS_ACTUALES.md`](docs/RIESGOS_ACTUALES.md).
+
 The prototype implements its version-2 Noise-based end-to-end transport,
 authenticated ACK/BURN controls and an ephemeral relay, but the composition and
 implementation have not received the independent review required for production.
@@ -21,9 +24,10 @@ fuzzing run as automated controls. They reduce known supply-chain and robustness
 risk; they are not a cryptographic audit or evidence that no vulnerability exists.
 
 The production web runtime has fail-stop worker supervision, requires a secure,
-cross-origin-isolated page and now supports the local live transport prototype.
-Public WSS, broader browser coverage and physical Android↔web validation remain
-release gates. Its pinned FRB loader currently requires CSP `'unsafe-eval'`, and
+cross-origin-isolated page and supports the live transport. Public Render WSS,
+physical signed Android↔web validation and the Chrome/Edge/Firefox matrix have
+passed. Safari is deferred, and broader platform/lifecycle coverage remains a
+release gate. The pinned FRB loader currently requires CSP `'unsafe-eval'`, and
 neither worker quarantine nor page reload proves physical memory erasure.
 
 ## Reporting a vulnerability
