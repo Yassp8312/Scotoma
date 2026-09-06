@@ -27,6 +27,8 @@ The main Android client now provides:
 - terminal close semantics that reject a late derivation result;
 - Android backup exclusion and screenshot-blocking configuration, with
   `FLAG_SECURE` observed on the physical TECNO window;
+- Android 12+ cloud-backup/device-transfer exclusion, Android 13+ recent-task
+  screenshot suppression and obscured-window touch filtering;
 - release-only TLS enforcement on Android, with cleartext allowed only in the
   debug manifest for the local development relay.
 - a responsive dark/cool visual system with a scalable SCOTOMA mark, semantic
@@ -64,6 +66,7 @@ not linked into the app.
 .\build_client.ps1 -Mode Web
 .\build_client.ps1 -Mode Web -RelayUrl 'wss://relay.example/v2/connect'
 .\build_client.ps1 -Mode WebRuntime
+& 'D:\Tools\flutter\bin\cache\dart-sdk\bin\dart.exe' run tool\verify_source_security.dart
 & 'D:\Tools\flutter\bin\cache\dart-sdk\bin\dart.exe' run bin\serve_web.dart
 ```
 
@@ -92,8 +95,8 @@ Direct
 private local signing configuration, emits a signed split APK and AAB, rejects
 debuggable/backup/cleartext or diagnostic builds and prints SHA-256 hashes. The
 verifier checks the expected production Rust library in each split and all
-three libraries in the AAB. ARMv7/x86_64 runtime execution remains a
-compatibility gate even though their artifacts now compile and verify.
+three libraries in the AAB. ARMv7 chat and x86_64 runtime execution remain
+compatibility gates even though their artifacts compile and verify.
 
 Current signed Android release artifacts:
 
@@ -102,13 +105,23 @@ Current signed Android release artifacts:
 - `build/app/outputs/flutter-apk/app-x86_64-release.apk`: x86_64 APK.
 - `build/app/outputs/bundle/release/app-release.aab`: future store bundle.
 - Signing certificate SHA-256: `9D6FE2B177F72A89F734B430152077CAB93CEC3CA8943F402487757B042C2B70`.
-- Package: `app.scotoma.scotoma`; version: `0.1.0+1`; release native code:
+- Package: `app.scotoma.scotoma`; version: `0.1.0-alpha.1+2`; release native code:
   `armeabi-v7a`, `arm64-v8a` and `x86_64`.
 
 The exact 2026-09-06 sizes, hashes, mapping and verification boundary are in
-ADR 0034. ARM64 has physical runtime evidence. ARMv7 awaits suitable hardware;
-the x86_64 emulator image download did not complete, so packaging must not be
-described as a runtime pass.
+ADR 0034. ARM64 has complete physical integration evidence. The ARMv7 APK
+started on the TECNO BF7 using its 32-bit ABI and loaded the Rust bridge, but
+still needs chat/ACK/BURN. The x86_64 emulator image download did not complete,
+so its packaging must not be described as a runtime pass.
+
+ADR 0035 adds the first Android MASVS-aligned hardening baseline. Release
+verification now rejects unexpected permissions, BROWSABLE entrypoints,
+weakened backup/cleartext/task settings and common secret/config filenames in
+every APK. The source baseline also rejects selected persistence, telemetry,
+logging, clipboard-write and remote-script regressions. The first physical
+Android 12 review also confirmed terminal background behavior, empty state
+after force-stop, absence of synthetic credentials in process-scoped logcat and
+blocked ADB capture. These checks do not replace the remaining platform review.
 
 The Android screenshot flag is only a mitigation and cannot prevent a second
 device from photographing the screen. Browsers do not provide an equivalent
@@ -190,7 +203,8 @@ managers remain outside the application's control despite explicit autofill
 opt-out and disabled keyboard personalization hints.
 
 The widget tests recreate the app, simulate lifecycle transitions and verify
-terminal cleanup; this is not yet a physical-device process-death/forensic test.
+terminal cleanup. A physical force-stop now confirms that unsent form state is
+not restored, but this is not a forensic proof of physical erasure.
 iOS and Safari are documented in `../../docs/ROADMAP_RESTANTE.md` and deferred
 until macOS/Xcode and suitable test conditions are available.
 The web supervisor cannot detect every silent browser/process worker loss, and

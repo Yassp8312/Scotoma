@@ -43,6 +43,12 @@ struct PendingFrame {
     inserted_at: Instant,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct PendingUsage {
+    frames: usize,
+    bytes: usize,
+}
+
 impl std::fmt::Debug for PendingFrame {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -85,35 +91,33 @@ impl Room {
         }
     }
 
-    fn purge_expired_frames(&mut self, now: Instant, config: RelayConfig) -> usize {
-        let mut removed = 0_usize;
+    fn purge_expired_frames(&mut self, now: Instant, config: RelayConfig) -> PendingUsage {
+        let mut removed = PendingUsage::default();
         while self.pending.front().is_some_and(|pending| {
             now.saturating_duration_since(pending.inserted_at) >= config.pending_frame_ttl
         }) {
             let Some(expired) = self.pending.pop_front() else {
                 break;
             };
-            self.pending_bytes = self.pending_bytes.saturating_sub(expired.encoded.len());
-            removed = removed.saturating_add(1);
+            let expired_bytes = expired.encoded.len();
+            self.pending_bytes = self.pending_bytes.saturating_sub(expired_bytes);
+            removed.frames = removed.frames.saturating_add(1);
+            removed.bytes = removed.bytes.saturating_add(expired_bytes);
         }
         removed
     }
 
-    fn acknowledge_oldest_from_peer(&mut self, sender_id: PeerId) -> bool {
-        let Some(index) = self
+    fn acknowledge_oldest_from_peer(&mut self, sender_id: PeerId) -> Option<usize> {
+        let index = self
             .pending
             .iter()
-            .position(|pending| pending.sender_id != sender_id)
-        else {
-            return false;
-        };
+            .position(|pending| pending.sender_id != sender_id)?;
         if let Some(acknowledged) = self.pending.remove(index) {
-            self.pending_bytes = self
-                .pending_bytes
-                .saturating_sub(acknowledged.encoded.len());
-            return true;
+            let acknowledged_bytes = acknowledged.encoded.len();
+            self.pending_bytes = self.pending_bytes.saturating_sub(acknowledged_bytes);
+            return Some(acknowledged_bytes);
         }
-        false
+        None
     }
 }
 
@@ -243,7 +247,8 @@ impl RelayHub {
             return Err(HubError::RateLimited);
         }
         let expired = room.purge_expired_frames(now, self.config);
-        self.observability.pending_removed(expired);
+        self.observability
+            .pending_removed(expired.frames, expired.bytes);
         room.last_activity = now;
         if matches!(
             frame.kind(),
@@ -296,17 +301,18 @@ impl RelayHub {
 
         match frame.kind() {
             FrameKind::Ciphertext => {
-                room.pending_bytes += encoded.len();
+                let encoded_len = encoded.len();
+                room.pending_bytes += encoded_len;
                 room.pending.push_back(PendingFrame {
                     sender_id,
                     encoded: Zeroizing::new(encoded),
                     inserted_at: now,
                 });
-                self.observability.pending_added();
+                self.observability.pending_added(encoded_len);
             }
             FrameKind::Ack => {
-                if room.acknowledge_oldest_from_peer(sender_id) {
-                    self.observability.pending_removed(1);
+                if let Some(acknowledged_bytes) = room.acknowledge_oldest_from_peer(sender_id) {
+                    self.observability.pending_removed(1, acknowledged_bytes);
                 }
             }
             FrameKind::Handshake | FrameKind::Burn | FrameKind::Error => {}
@@ -321,7 +327,8 @@ impl RelayHub {
             return true;
         };
         let expired = room.purge_expired_frames(now, self.config);
-        self.observability.pending_removed(expired);
+        self.observability
+            .pending_removed(expired.frames, expired.bytes);
         let waiting_expired = room.peers.len() < 2
             && now.saturating_duration_since(room.created_at) >= self.config.pairing_timeout;
         let handshake_expired = room.peers.len() == 2
@@ -378,7 +385,8 @@ impl RelayHub {
 
     fn observe_room_closed(&self, room: &Room, event: OperationalEvent) {
         self.observability.record(event);
-        self.observability.room_closed(room.pending.len());
+        self.observability
+            .room_closed(room.pending.len(), room.pending_bytes);
     }
 }
 
@@ -486,6 +494,7 @@ mod tests {
         let mut second_receiver = second.receiver;
         let _ = first_receiver.recv().await;
         let (ciphertext, encoded_ciphertext) = encoded_frame(FrameKind::Ciphertext, 0);
+        let encoded_ciphertext_len = encoded_ciphertext.len();
 
         hub.process_frame(&room_tag, first.id, &ciphertext, encoded_ciphertext.clone())
             .await
@@ -501,6 +510,9 @@ mod tests {
                 .render()
                 .contains("scotoma_relay_pending_frames 1\n")
         );
+        assert!(observability.snapshot().render().contains(&format!(
+            "scotoma_relay_pending_bytes {encoded_ciphertext_len}\n"
+        )));
 
         let (ack, encoded_ack) = encoded_frame(FrameKind::Ack, 0);
         hub.process_frame(&room_tag, second.id, &ack, encoded_ack)
@@ -513,6 +525,12 @@ mod tests {
                 .snapshot()
                 .render()
                 .contains("scotoma_relay_pending_frames 0\n")
+        );
+        assert!(
+            observability
+                .snapshot()
+                .render()
+                .contains("scotoma_relay_pending_bytes 0\n")
         );
     }
 

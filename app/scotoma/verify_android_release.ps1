@@ -70,5 +70,9 @@ if ($bundleFiles.Contains('libscotoma_bridge_probe.so')) {
     throw 'Release App Bundle contains the diagnostic bridge.'
 }
 
+& (Join-Path $PSScriptRoot 'verify_android_security.ps1') `
+    -ToolsRoot $ToolsRoot -ApkPaths $ApkPaths
+if ($LASTEXITCODE -ne 0) { throw 'Android security baseline verification failed.' }
+
 Get-FileHash -Algorithm SHA256 -LiteralPath (@($apks) + @($bundle)) |
     Select-Object Algorithm, Hash, Path

@@ -151,6 +151,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const _AlphaNotice(),
+                const SizedBox(height: 20),
                 Text(
                   'Entrar a un canal',
                   style: Theme.of(context).textTheme.headlineSmall,
@@ -317,6 +319,49 @@ class _FeatureChip extends StatelessWidget {
         const SizedBox(width: 7),
         Text(label),
       ],
+    ),
+  );
+}
+
+class _AlphaNotice extends StatelessWidget {
+  const _AlphaNotice();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: 'Alpha experimental',
+    child: Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: ScotomaColors.danger.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ScotomaColors.danger.withValues(alpha: 0.55)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.science_outlined, size: 20, color: ScotomaColors.danger),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ALPHA EXPERIMENTAL',
+                  style: TextStyle(
+                    color: ScotomaColors.danger,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Solo para pruebas. No uses información sensible o de alto riesgo.',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }

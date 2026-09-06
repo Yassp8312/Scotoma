@@ -9,7 +9,7 @@ Last updated: 2026-09-06
 | 0 — Foundations and boundaries | Complete |
 | 1 — Rust protocol prototype | Complete for prototype |
 | 2 — Ephemeral relay | Complete for prototype |
-| 3 — Flutter clients (Android and web; iOS deferred) | Public ARM64 Android↔web and Chrome/Edge/Firefox paths verified; ARMv7/x86_64 artifacts verified but runtime matrices pending |
+| 3 — Flutter clients (Android and web; iOS deferred) | Public ARM64 Android↔web and Chrome/Edge/Firefox paths verified; ARMv7 startup verified; ARMv7 full chat and x86_64 runtime pending |
 | 4 — Terminal session reliability | Complete for prototype |
 | 5 — Security hardening | In progress; blocks 18–20 release baselines implemented |
 | 6 — Closed alpha | Not started |
@@ -60,8 +60,9 @@ The Flutter client currently passes `flutter analyze` and 20 unit/widget tests.
 These tests cover ASCII-only input, 39/128-digit bounds, invalid paste rejection,
 leading zeroes, autofill configuration, empty recreated app state, compact
 layout, one-shot launch ownership, background close, late completion and
-drained disposal. They do not certify physical erasure or mobile process-death
-behavior. Flutter CI has been added but has not yet run on GitHub. See ADR 0022.
+drained disposal. A physical Android force-stop additionally confirmed that an
+unsent room value is not restored, but neither result certifies physical
+erasure. Flutter CI has been added but has not yet run on GitHub. See ADR 0022.
 
 The main Flutter JavaScript release now loads the production Rust/Wasm runtime
 under mandatory secure-context and cross-origin-isolation checks and enables the
@@ -353,10 +354,13 @@ Safari remain block-20 gates. See ADR 0030.
 | SCT-035 — Production relay baseline | Public alpha activation complete | Digest-pinned images, TLS/WSS boundary, container limits, concurrent load profile, graceful shutdown, public verifier, immutable rollback runbook and live Render WSS validation |
 | SCT-036 — Branded application artifacts | Complete for Android/web baseline | Supplied eye concept adapted into master artwork; legacy/round/adaptive Android and PWA icon sets; branded APK installed on TECNO |
 | SCT-037 — Zero-cost alpha release path | Public Android/web path active; signing backup pending | Official non-debug Android identity, signed and verified ARM64 APK/AAB, physical release install; live free Render relay and Cloudflare Pages client; public Android↔web ACK/BURN validation. Off-device key backup remains a release gate |
-| SCT-038 — Android multi-ABI release | Packaging complete; additional runtime validation pending | Signed split APKs for ARMv7, ARM64 and x86_64 plus a three-ABI AAB pass manifest, ABI, diagnostic-absence and signature verification; ARM64 has physical evidence, ARMv7/x86_64 do not |
+| SCT-038 — Android multi-ABI release | Packaging complete; additional runtime validation pending | All three signed splits and AAB verify; ARM64 completed integration and ARMv7 physically selected its 32-bit ABI, initialized Rust and rendered the form; ARMv7 chat and x86_64 runtime remain pending |
+| SCT-039 — Android MASVS storage/platform baseline | Automated and initial physical baseline complete; broader matrix pending | Backup/transfer exclusion, secure recents and obscured touches; exact source/APK checks; Android 12 background/force-stop/logcat/capture evidence |
+| SCT-040 — Relay concurrent churn baseline | Complete as a bounded regression baseline | 40 normal simultaneous rooms plus 6×24 pending-frame disconnect rooms; room, connection, frame and encoded-byte gauges return to zero after every round and created/closed totals match |
+| SCT-041 — Physical Android network-loss baseline | Complete for waiting-state relay and LTE loss | Local relay cut and real LTE loss both made the TECNO client terminal and cleared synthetic credentials; recovery caused no reconnect; LTE and signed ARM64 release were restored |
 
-The remaining Milestone 5 work includes the complete MASVS review, property and
-concurrency campaigns, platform privacy review, release reproducibility/signing
+The remaining Milestone 5 work includes the complete MASVS review, prolonged
+property/race/memory campaigns, platform privacy review, release reproducibility/signing
 and independent cryptographic review. A clean automated scan is not production
 approval.
 
@@ -382,7 +386,7 @@ approval.
 - Adversarial integration: noncanonical joins and malformed frames fail closed; text and oversized WebSocket messages close the room; teardown releases the rendezvous tag; a fresh relay process inherits no room state.
 - Deployment-boundary integration: public `/metrics` and administrative public routes return 404 while both listeners share the live aggregate state.
 - Deployment validation: Caddy 2.11.4 accepted the configuration locally using its verified official binary; Compose and image builds are CI gates because Docker is unavailable in the current local environment.
-- Test count: 90 passing tests across the workspace and all targets.
+- Test count: 91 passing tests across the workspace and all targets.
 - Production web runtime: Node supervisor isolation, isolated/non-isolated
   startup, two-browser chat and Rust↔web interoperability checks pass.
 - Public desktop browser matrix: Chrome 152.0.7977.82, Edge 152.0.4191.62 and
@@ -392,7 +396,9 @@ approval.
   available.
 - Supply-chain baseline: RustSec loaded 1,239 advisories and found no matching vulnerability across the 126-package relay graph or 156-package bridge graph; cargo-deny passed advisories, bans, licenses and sources for both, with recorded duplicate-version and `allo-isolate` manifest-license warnings.
 - SBOM baseline: reproducible CycloneDX 1.5 JSON contains 124 relay components and 155 bridge components; CI retains both inventories per commit.
-- Relay production profile: 40 concurrent rooms × 20 one-KiB messages plus ACK/BURN completed in about 0.5 seconds and returned active rooms, connections and pending frames to zero.
+- Relay production profiles: 40 concurrent rooms × 20 one-KiB messages plus ACK/BURN, followed by 6 rounds × 24 rooms disconnecting with a pending 16-KiB ciphertext. Every round returned active rooms, connections, pending frames and encoded bytes to zero; created/closed totals matched.
+- Physical Android network loss: the TECNO BF7 reached the waiting state through an ADB-reversed real relay; terminating that relay displayed `Conexión interrumpida`, removed both synthetic credentials and remained terminal after a fresh relay reported zero accepted upgrades. The signed ARM64 release was then restored and verified as `arm64-v8a` with `FLAG_SECURE`.
+- Physical LTE loss: with Wi-Fi already disabled, the signed release reached waiting through public WSS over LTE. Disabling mobile data made the session terminal and cleared both synthetic credentials. Mobile data was restored in a guaranteed cleanup path; LTE returned, the client stayed terminal without reconnecting, and the empty entry form was restored manually.
 - Caddy 2.11.4: official Windows release checksum verified; the production Caddyfile validates successfully. Docker/Compose remains a CI gate because this host has no Docker daemon.
 - Zero-cost release baseline: Android releases cannot use the debug identity; Render free relay and Cloudflare Pages direct-upload paths are versioned, with cold-start, metadata and availability limits explicitly excluded from production claims.
-- Android release identity: the RSA-4096 certificate fingerprint is `9D6FE2B177F72A89F734B430152077CAB93CEC3CA8943F402487757B042C2B70`; the signed `0.1.0+1` ARM64 APK and AAB pass the release verifier, and the APK is installed and running on the TECNO BF7. The keystore has an ACL-restricted local duplicate, but an off-device copy and password-manager entry remain mandatory before distribution.
+- Android release identity: the RSA-4096 certificate fingerprint is `9D6FE2B177F72A89F734B430152077CAB93CEC3CA8943F402487757B042C2B70`; the signed `0.1.0-alpha.1+2` ARM64 APK and AAB pass the release verifier, and the APK is installed and running on the TECNO BF7. The keystore has an ACL-restricted dated copy under `D:\Backups`, but an off-device copy and password-manager entry remain mandatory before broader distribution.

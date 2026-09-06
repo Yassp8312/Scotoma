@@ -22,6 +22,13 @@ void _resumeApp(WidgetTester tester) {
   tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
 }
 
+Future<void> _tapContinue(WidgetTester tester) async {
+  final button = find.byKey(const Key('continue-button'));
+  await tester.ensureVisible(button);
+  await tester.pumpAndSettle();
+  await tester.tap(button);
+}
+
 Future<void> _openImmediateSession(
   WidgetTester tester,
   _FakeBackend backend,
@@ -29,7 +36,7 @@ Future<void> _openImmediateSession(
   await tester.pumpWidget(_app(backend));
   await tester.enterText(find.byKey(const Key('room-field')), '000013');
   await tester.enterText(find.byKey(const Key('password-field')), '1370');
-  await tester.tap(find.byKey(const Key('continue-button')));
+  await _tapContinue(tester);
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));
 }
@@ -39,6 +46,13 @@ void main() {
     await tester.pumpWidget(_app());
 
     expect(find.text('SCOTOMA'), findsOneWidget);
+    expect(find.text('ALPHA EXPERIMENTAL'), findsOneWidget);
+    expect(
+      find.text(
+        'Solo para pruebas. No uses información sensible o de alto riesgo.',
+      ),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('room-field')), findsOneWidget);
     expect(find.byKey(const Key('password-field')), findsOneWidget);
     expect(find.text('Continuar'), findsOneWidget);
@@ -46,7 +60,7 @@ void main() {
 
   testWidgets('requires both credentials', (tester) async {
     await tester.pumpWidget(_app());
-    await tester.tap(find.byKey(const Key('continue-button')));
+    await _tapContinue(tester);
     await tester.pump();
 
     expect(find.text('Introduce la room.'), findsOneWidget);
@@ -256,7 +270,7 @@ void main() {
     await tester.pumpWidget(_app(backend));
     await tester.enterText(find.byKey(const Key('room-field')), '13');
     await tester.enterText(find.byKey(const Key('password-field')), '1370');
-    await tester.tap(find.byKey(const Key('continue-button')));
+    await _tapContinue(tester);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     expect(find.text('Derivando clave local'), findsOneWidget);
@@ -279,7 +293,7 @@ void main() {
     await tester.pumpWidget(_app(backend));
     await tester.enterText(find.byKey(const Key('room-field')), '13');
     await tester.enterText(find.byKey(const Key('password-field')), '1370');
-    await tester.tap(find.byKey(const Key('continue-button')));
+    await _tapContinue(tester);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 

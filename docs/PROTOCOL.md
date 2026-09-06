@@ -90,7 +90,7 @@ Operational events are a closed enum rendered as one-line JSON with exactly two 
 
 Emission uses a bounded, non-blocking process-local channel. A full or disconnected sink drops the event and increments `scotoma_relay_events_dropped_total`; socket tasks never wait for stderr. Setting event-channel capacity to zero disables the sink. The default capacity is 256.
 
-`GET /metrics` exposes only fixed-name numeric process aggregates: accepted upgrades, active connections and rooms, room lifecycle totals, forwarded frames, pending-frame gauge, rejected joins, protocol/capacity/rate violations, timeouts, BURN and dropped events. No labels are accepted, preventing high-cardinality identifiers from entering the metric model. Metrics are served by a separate administrative router, defaulting to `127.0.0.1:8788`; the public router has no metrics route. Both routers share the same process state.
+`GET /metrics` exposes only fixed-name numeric process aggregates: accepted upgrades, active connections and rooms, room lifecycle totals, forwarded frames, pending-frame and pending-byte gauges, rejected joins, protocol/capacity/rate violations, timeouts, BURN and dropped events. No labels are accepted, preventing high-cardinality identifiers from entering the metric model. Metrics are served by a separate administrative router, defaulting to `127.0.0.1:8788`; the public router has no metrics route. Both routers share the same process state.
 
 ## WSS deployment boundary
 

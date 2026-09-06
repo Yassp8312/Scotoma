@@ -82,8 +82,9 @@ disk protects only against accidental deletion, not disk loss.
 
 The release build now emits signed split APKs for `armeabi-v7a`, `arm64-v8a`
 and `x86_64`, plus an AAB containing all three production Rust bridges. ARM64
-has passed the physical public path. ARMv7 and x86_64 compile, package and
-verify but still require runtime validation on suitable hardware/emulation.
+has passed the physical public path. ARMv7 has physical startup/bridge evidence
+but not a complete chat; x86_64 has packaging evidence only. The first alpha
+therefore distributes only the ARM64 APK.
 This is compatibility work, not a paid-service requirement.
 
 ## Public-path validation

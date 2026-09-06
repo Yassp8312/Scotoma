@@ -20,8 +20,8 @@ sensibles.
 
 ## Bloque 1 — Compatibilidad y recuperación Android
 
-Estado: implementación multiarquitectura completada; ejecución adicional y
-respaldo externo pendientes.
+Estado: implementación multiarquitectura y arranque ARMv7 completados;
+ejecución adicional y respaldo externo pendientes.
 
 Objetivo: ampliar la alpha más allá de ARM64 y proteger su identidad de firma.
 
@@ -29,9 +29,10 @@ Objetivo: ampliar la alpha más allá de ARM64 y proteger su identidad de firma.
   `x86_64`, además de ARM64.
 - Completado: verificar firma, manifest, ABI exacta, APK/AAB y ausencia del
   bridge de diagnóstico.
-- Ejecutar pruebas en un dispositivo ARMv7, si se consigue, y en un emulador
-  x86_64.
-- Repetir chat, ACK, timeout y BURN en las nuevas arquitecturas.
+- Completado parcialmente: el APK ARMv7 se ejecutó realmente en el TECNO BF7
+  usando `armeabi-v7a`, inicializó el bridge Rust y mostró el formulario.
+- Ejecutar el artefacto x86_64 en un emulador o equipo compatible.
+- Repetir chat, ACK, timeout y BURN en ARMv7 y x86_64.
 - Copiar el keystore Android a un medio físico diferente y guardar sus secretos
   en un gestor protegido.
 - Completado: documentar hashes y reproducción de los artefactos firmados en
@@ -70,15 +71,28 @@ Trabajo futuro:
 
 ## Bloque 4 — Endurecimiento y matriz de fiabilidad
 
+Estado: en progreso. La matriz MASVS Android, la baseline automatizada de
+storage/plataforma, la revisión física inicial del ciclo de vida y una campaña
+acotada de churn concurrente están implementadas; la matriz amplia sigue
+pendiente.
+
 Objetivo: convertir la evidencia de prototipo en una línea base de alpha
 repetible.
 
-- Completar la revisión OWASP MASVS para almacenamiento, criptografía, red,
-  plataforma, código y privacidad.
-- Ampliar pruebas de propiedades, concurrencia, carreras y consumo máximo de
-  memoria.
-- Probar cambios de Wi-Fi/datos, suspensión, cierre forzado, muerte de proceso,
-  teclado, portapapeles, texto grande y accesibilidad.
+- En progreso: completar la revisión OWASP MASVS para almacenamiento,
+  criptografía, red, plataforma, código y privacidad. La matriz inicial está en
+  `docs/MASVS_ANDROID_REVIEW.md`.
+- Completado como baseline acotada: 40 salas normales simultáneas y seis rondas
+  de 24 desconexiones con ciphertext pendiente liberan salas, conexiones y
+  frames/bytes tras cada ronda. Faltan soak, propiedades, carreras y memoria
+  residente máxima.
+- Completado parcialmente en Android 12 físico: background, cierre terminal,
+  `force-stop`, no restauración del formulario, revisión de logcat y bloqueo de
+  captura. Cortar/restaurar el relay y perder/restaurar la única conexión LTE
+  durante espera confirmaron cierre sin reconexión; datos móviles quedaron
+  restaurados. Faltan handoff Wi-Fi↔datos, pérdida durante handshake/chat,
+  grabación, overlay, teclado, portapapeles, texto grande, accesibilidad y
+  Android 13+.
 - Revisar que logs, fallos, builds y dependencias no introducen secretos.
 - Eliminar la necesidad web de CSP `'unsafe-eval'` o documentar y aislar una
   sustitución revisada.

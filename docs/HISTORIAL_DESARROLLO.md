@@ -109,7 +109,8 @@ Se creó una identidad de firma Android que nunca cae silenciosamente en la
 firma debug. La primera entrega ARM64 fue firmada, inspeccionada e instalada en
 un TECNO BF7. Después, el build de release se amplió a APK separados ARMv7,
 ARM64 y x86_64 y a un AAB con las tres bibliotecas Rust; todos verifican con la
-misma identidad. ARMv7 y x86_64 aún carecen de ejecución real. El keystore tiene
+misma identidad. ARMv7 arrancó físicamente usando el ABI de 32 bits del TECNO y
+el bridge Rust cargó correctamente; su chat completo y x86_64 siguen pendientes. El keystore tiene
 copias locales, pero todavía necesita respaldo en otro dispositivo físico y la
 contraseña en un gestor.
 
@@ -132,9 +133,20 @@ seguridad criptográfica total ni el anonimato de red.
 ## 10. Situación actual
 
 El prototipo Rust, el relay efímero y la ruta Android ARM64/web están
-funcionales. El proyecto se encuentra en endurecimiento de seguridad. Faltan
-ejecución ARMv7/x86_64, recuperación de firma, revisión MASVS y de plataforma,
-campañas más amplias de concurrencia/propiedades, encuentro privado
+funcionales. El proyecto se encuentra en endurecimiento de seguridad. La
+primera baseline Android alineada con MASVS añade exclusión moderna de backup y
+transferencia, protección de recientes/overlays y verificadores automáticos de
+fuente, permisos y secretos empaquetados. En Android 12 físico se verificaron
+background terminal, `force-stop` sin restauración, logcat sin credenciales
+sintéticas y bloqueo de captura. El relay también libera todos sus recursos en
+seis rondas de 24 desconexiones simultáneas con mensajes pendientes, incluyendo
+el nuevo contador agregado de bytes. Un corte físico del relay durante la espera
+de Android produjo cierre terminal, limpieza y cero reconexiones tras recuperar
+el servicio. La release firmada repitió ese comportamiento al perder y recuperar
+su única interfaz LTE contra el WSS público; la conectividad quedó restaurada y
+la app volvió al formulario vacío. Faltan chat ARMv7, ejecución x86_64,
+recuperación de firma, revisión MASVS ampliada,
+campañas de propiedades/carreras/memoria, encuentro privado
 versionado, revisión criptográfica independiente y alpha cerrada.
 
 iOS y Safari quedan aplazados. La secuencia vigente está en

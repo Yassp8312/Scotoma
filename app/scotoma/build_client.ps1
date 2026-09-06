@@ -84,10 +84,11 @@ try {
     Invoke-Checked $flutter @('pub', 'get', '--enforce-lockfile')
     switch ($Mode) {
         'Check' {
-            Invoke-Checked $dart @('format', '--output=none', '--set-exit-if-changed', 'lib', 'test', 'integration_test', 'bin')
+            Invoke-Checked $dart @('format', '--output=none', '--set-exit-if-changed', 'lib', 'test', 'integration_test', 'bin', 'tool')
             Invoke-Checked $flutter @('analyze', '--no-pub')
             Invoke-Checked $flutter @('test', '--no-pub', '--reporter', 'expanded')
             Invoke-Checked 'node' @('test/runtime_supervisor_test.mjs')
+            Invoke-Checked $dart @('run', 'tool/verify_source_security.dart')
         }
         'Android' {
             Invoke-Checked $flutter @('build', 'apk', '--debug', '--target-platform', 'android-arm64', '--no-pub')

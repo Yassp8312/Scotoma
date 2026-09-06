@@ -410,6 +410,7 @@ async fn metrics_endpoint_exposes_only_aggregate_process_state() -> TestResult {
     assert!(active.contains("scotoma_relay_active_connections 1\n"));
     assert!(active.contains("scotoma_relay_active_rooms 1\n"));
     assert!(active.contains("scotoma_relay_pending_frames 0\n"));
+    assert!(active.contains("scotoma_relay_pending_bytes 0\n"));
     assert!(!active.contains("rendezvous"));
     assert!(!active.contains("payload"));
     assert!(!active.contains("75757575"));

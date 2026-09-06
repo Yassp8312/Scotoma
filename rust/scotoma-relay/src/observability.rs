@@ -63,6 +63,7 @@ struct Metrics {
     rooms_closed_total: AtomicU64,
     frames_forwarded_total: AtomicU64,
     pending_frames: AtomicU64,
+    pending_bytes: AtomicU64,
     rejected_joins_total: AtomicU64,
     rate_limit_violations_total: AtomicU64,
     timeouts_total: AtomicU64,
@@ -167,12 +168,12 @@ impl Observability {
         self.metrics.active_rooms.fetch_add(1, Ordering::Relaxed);
     }
 
-    pub fn room_closed(&self, pending_removed: usize) {
+    pub fn room_closed(&self, pending_frames_removed: usize, pending_bytes_removed: usize) {
         self.metrics
             .rooms_closed_total
             .fetch_add(1, Ordering::Relaxed);
         saturating_decrement(&self.metrics.active_rooms, 1);
-        self.pending_removed(pending_removed);
+        self.pending_removed(pending_frames_removed, pending_bytes_removed);
     }
 
     pub fn frame_forwarded(&self) {
@@ -181,13 +182,16 @@ impl Observability {
             .fetch_add(1, Ordering::Relaxed);
     }
 
-    pub fn pending_added(&self) {
+    pub fn pending_added(&self, bytes: usize) {
         self.metrics.pending_frames.fetch_add(1, Ordering::Relaxed);
+        self.metrics
+            .pending_bytes
+            .fetch_add(usize_to_u64(bytes), Ordering::Relaxed);
     }
 
-    pub fn pending_removed(&self, count: usize) {
-        let count = u64::try_from(count).unwrap_or(u64::MAX);
-        saturating_decrement(&self.metrics.pending_frames, count);
+    pub fn pending_removed(&self, frames: usize, bytes: usize) {
+        saturating_decrement(&self.metrics.pending_frames, usize_to_u64(frames));
+        saturating_decrement(&self.metrics.pending_bytes, usize_to_u64(bytes));
     }
 
     pub fn snapshot(&self) -> MetricsSnapshot {
@@ -199,6 +203,7 @@ impl Observability {
             rooms_closed_total: self.metrics.rooms_closed_total.load(Ordering::Relaxed),
             frames_forwarded_total: self.metrics.frames_forwarded_total.load(Ordering::Relaxed),
             pending_frames: self.metrics.pending_frames.load(Ordering::Relaxed),
+            pending_bytes: self.metrics.pending_bytes.load(Ordering::Relaxed),
             rejected_joins_total: self.metrics.rejected_joins_total.load(Ordering::Relaxed),
             rate_limit_violations_total: self
                 .metrics
@@ -237,6 +242,7 @@ pub(crate) struct MetricsSnapshot {
     rooms_closed_total: u64,
     frames_forwarded_total: u64,
     pending_frames: u64,
+    pending_bytes: u64,
     rejected_joins_total: u64,
     rate_limit_violations_total: u64,
     timeouts_total: u64,
@@ -257,6 +263,7 @@ impl MetricsSnapshot {
                 "scotoma_relay_rooms_closed_total {}\n",
                 "scotoma_relay_frames_forwarded_total {}\n",
                 "scotoma_relay_pending_frames {}\n",
+                "scotoma_relay_pending_bytes {}\n",
                 "scotoma_relay_rejected_joins_total {}\n",
                 "scotoma_relay_rate_limit_violations_total {}\n",
                 "scotoma_relay_timeouts_total {}\n",
@@ -272,6 +279,7 @@ impl MetricsSnapshot {
             self.rooms_closed_total,
             self.frames_forwarded_total,
             self.pending_frames,
+            self.pending_bytes,
             self.rejected_joins_total,
             self.rate_limit_violations_total,
             self.timeouts_total,
@@ -287,6 +295,10 @@ fn saturating_decrement(value: &AtomicU64, amount: u64) {
     let _ = value.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
         Some(current.saturating_sub(amount))
     });
+}
+
+fn usize_to_u64(value: usize) -> u64 {
+    u64::try_from(value).unwrap_or(u64::MAX)
 }
 
 #[cfg(test)]
@@ -327,17 +339,18 @@ mod tests {
     fn metrics_are_aggregate_and_gauges_saturate() {
         let observability = Observability::default();
         observability.connection_closed();
-        observability.room_closed(10);
+        observability.room_closed(10, 1_024);
         observability.connection_opened();
         observability.room_opened();
         observability.frame_forwarded();
-        observability.pending_added();
+        observability.pending_added(512);
         observability.record(OperationalEvent::RoomBurned);
         let rendered = observability.snapshot().render();
 
         assert!(rendered.contains("scotoma_relay_active_connections 1\n"));
         assert!(rendered.contains("scotoma_relay_active_rooms 1\n"));
         assert!(rendered.contains("scotoma_relay_pending_frames 1\n"));
+        assert!(rendered.contains("scotoma_relay_pending_bytes 512\n"));
         assert!(rendered.contains("scotoma_relay_burns_total 1\n"));
         assert!(!rendered.contains('{'));
         assert!(!rendered.contains("tag"));

@@ -6,6 +6,9 @@ SCOTOMA is an experimental alpha under active development. It must not be relied
 
 The maintained risk register is available in
 [`docs/RIESGOS_ACTUALES.md`](docs/RIESGOS_ACTUALES.md).
+The initial Android evidence matrix is in
+[`docs/MASVS_ANDROID_REVIEW.md`](docs/MASVS_ANDROID_REVIEW.md); it is an internal
+baseline, not an OWASP certification or independent audit.
 
 The prototype implements its version-2 Noise-based end-to-end transport,
 authenticated ACK/BURN controls and an ephemeral relay, but the composition and
@@ -26,8 +29,9 @@ risk; they are not a cryptographic audit or evidence that no vulnerability exist
 The production web runtime has fail-stop worker supervision, requires a secure,
 cross-origin-isolated page and supports the live transport. Public Render WSS,
 physical signed Android↔web validation and the Chrome/Edge/Firefox matrix have
-passed. Safari is deferred, and broader platform/lifecycle coverage remains a
-release gate. The pinned FRB loader currently requires CSP `'unsafe-eval'`, and
+passed. An initial Android 12 lifecycle review also passed background/force-stop,
+process-scoped log and secure-capture checks. Safari is deferred, and broader
+platform/lifecycle coverage remains a release gate. The pinned FRB loader currently requires CSP `'unsafe-eval'`, and
 neither worker quarantine nor page reload proves physical memory erasure.
 
 ## Reporting a vulnerability

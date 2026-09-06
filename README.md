@@ -6,6 +6,10 @@ Two participants who enter the same numeric room and numeric password can rendez
 
 > SCOTOMA is an early research prototype. It is not ready for sensitive or high-risk communications.
 
+The current closed-alpha candidate is `0.1.0-alpha.1`. It displays an explicit
+experimental-use warning and distributes only the physically validated ARM64
+Android path. See the [alpha release notes](docs/releases/0.1.0-alpha.1.md).
+
 SCOTOMA exists to investigate whether two people can hold a short encrypted
 conversation without creating an account, contact graph, mailbox or persistent
 product history. Its motivation and limits are explained in
@@ -64,8 +68,8 @@ It contains:
 
 iOS and Safari are intentionally deferred until suitable hardware and tooling
 are available. Android ARMv7, ARM64 and x86_64 release artifacts now build and
-verify; only ARM64 has physical runtime evidence. The active order is finishing
-Android runtime/signing recovery, security and reliability hardening,
+verify; ARM64 has complete physical integration evidence and ARMv7 has physical
+startup/bridge evidence. The active order is finishing Android runtime/signing recovery, security and reliability hardening,
 private-rendezvous redesign and review, then a closed alpha. See the
 [remaining roadmap](docs/ROADMAP_RESTANTE.md).
 
@@ -124,11 +128,13 @@ production boundary for high-risk communications.
 - [Protocol boundaries](docs/PROTOCOL.md)
 - [Privacy claims](docs/PRIVACY_CLAIMS.md)
 - [Current security risks](docs/RIESGOS_ACTUALES.md)
+- [Android MASVS review](docs/MASVS_ANDROID_REVIEW.md)
 - [Development status](docs/STATUS.md)
 - [Development history](docs/HISTORIAL_DESARROLLO.md)
 - [Remaining roadmap](docs/ROADMAP_RESTANTE.md)
 - [Why SCOTOMA exists](docs/POR_QUE_SCOTOMA.md)
 - [Zero-cost alpha](docs/FREE_ALPHA.md)
+- [Alpha 0.1.0-alpha.1 release notes](docs/releases/0.1.0-alpha.1.md)
 - [Security policy](SECURITY.md)
 
 ## License
