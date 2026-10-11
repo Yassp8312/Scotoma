@@ -4,20 +4,22 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use futures_util::{SinkExt as _, StreamExt as _};
 use scotoma_client::{
     ClientConfig, ClientError, ClientProgress, DerivedClientConfig, LiveCommand, LiveEvent,
     LiveExit, authenticate, authenticate_derived,
 };
 use scotoma_protocol::{
-    NumericPassword, PasswordKdfParams, PeerRole, ProtocolLimits, RoomCode, derive_session_secret,
+    JoinRequest, NumericPassword, PasswordKdfParams, PeerRole, ProtocolLimits, RelayEvent,
+    RoomCode, derive_rendezvous_tag, derive_session_secret,
 };
-use scotoma_relay::{RelayConfig, serve};
+use scotoma_relay::{RelayConfig, serve, serve_with_admin};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{Barrier, mpsc, watch};
 use tokio::task::{JoinHandle, JoinSet};
 use zeroize::Zeroizing;
 
-type TestResult = Result<(), Box<dyn Error>>;
+type TestResult<T = ()> = Result<T, Box<dyn Error>>;
 
 async fn start_cuttable_proxy(
     target: SocketAddr,
@@ -355,10 +357,110 @@ async fn network_cut_while_waiting_for_peer_is_terminal() -> TestResult {
 }
 
 #[tokio::test]
-async fn network_cut_during_live_chat_is_terminal() -> TestResult {
+async fn peer_cut_during_noise_handshake_is_terminal_and_requires_a_fresh_session() -> TestResult {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     let address = listener.local_addr()?;
     let server = tokio::spawn(async move { serve(listener, RelayConfig::default()).await });
+    let relay_url = format!("ws://{address}/v2/connect");
+    let room = RoomCode::parse("610")?;
+    let password = NumericPassword::parse("620")?;
+    let secret = derive_session_secret(&room, &password, PasswordKdfParams::default())?;
+    let tag = derive_rendezvous_tag(&room, &secret)?;
+    let (progress_tx, mut progress_rx) = mpsc::unbounded_channel();
+    let attempt = tokio::spawn(authenticate_derived(
+        DerivedClientConfig {
+            relay_url: relay_url.clone(),
+            room: room.clone(),
+            secret,
+            operation_timeout: Duration::from_secs(2),
+        },
+        move |progress| {
+            let _ = progress_tx.send(progress);
+        },
+    ));
+
+    loop {
+        let progress = tokio::time::timeout(Duration::from_secs(2), progress_rx.recv()).await?;
+        if progress == Some(ClientProgress::WaitingForPeer) {
+            break;
+        }
+    }
+
+    let (mut peer, _) = tokio_tungstenite::connect_async(&relay_url).await?;
+    peer.send(tokio_tungstenite::tungstenite::Message::Binary(
+        JoinRequest { tag }.encode().into(),
+    ))
+    .await?;
+    let ready = tokio::time::timeout(Duration::from_secs(2), peer.next())
+        .await?
+        .ok_or_else(|| io::Error::new(io::ErrorKind::UnexpectedEof, "peer was closed"))??;
+    let ready = match ready {
+        tokio_tungstenite::tungstenite::Message::Binary(packet) => packet,
+        other => {
+            return Err(io::Error::other(format!("expected peer-ready, got {other:?}")).into());
+        }
+    };
+    assert_eq!(
+        RelayEvent::decode(&ready)?,
+        RelayEvent::PeerReady(PeerRole::Responder)
+    );
+
+    // Receiving the initiator's first Noise frame proves the cut happens after
+    // pairing and during authentication, rather than during WebSocket setup.
+    let first_handshake = tokio::time::timeout(Duration::from_secs(2), peer.next())
+        .await?
+        .ok_or_else(|| {
+            io::Error::new(io::ErrorKind::UnexpectedEof, "handshake peer was closed")
+        })??;
+    assert!(matches!(
+        first_handshake,
+        tokio_tungstenite::tungstenite::Message::Binary(_)
+    ));
+    peer.close(None).await?;
+
+    let result = tokio::time::timeout(Duration::from_secs(1), attempt)
+        .await?
+        .expect("authentication task must not panic");
+    assert!(matches!(
+        result,
+        Err(ClientError::Connection | ClientError::RelayRejected)
+    ));
+    while let Ok(progress) = progress_rx.try_recv() {
+        assert_ne!(progress, ClientProgress::Connected);
+    }
+
+    // Recovery is an explicit new session; the failed handshake cannot be
+    // resumed and must not leave the room occupied.
+    let first = authenticate(ClientConfig {
+        relay_url: relay_url.clone(),
+        room: room.clone(),
+        password: NumericPassword::parse("620")?,
+        operation_timeout: Duration::from_secs(2),
+    });
+    let second = authenticate(ClientConfig {
+        relay_url,
+        room,
+        password: NumericPassword::parse("620")?,
+        operation_timeout: Duration::from_secs(2),
+    });
+    let (first, second) = tokio::try_join!(first, second)?;
+    first.close().await?;
+    let _ = second.close().await;
+
+    server.abort();
+    let _ = server.await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn network_cut_during_live_chat_is_terminal() -> TestResult {
+    let listener = TcpListener::bind("127.0.0.1:0").await?;
+    let address = listener.local_addr()?;
+    let admin_listener = TcpListener::bind("127.0.0.1:0").await?;
+    let admin_address = admin_listener.local_addr()?;
+    let server = tokio::spawn(async move {
+        serve_with_admin(listener, admin_listener, RelayConfig::default()).await
+    });
     let (proxy_address, cut, proxy) = start_cuttable_proxy(address).await?;
     let relay_url = format!("ws://{proxy_address}/v2/connect");
     let room = RoomCode::parse("700")?;
@@ -383,7 +485,7 @@ async fn network_cut_during_live_chat_is_terminal() -> TestResult {
             b"pending during cut".to_vec(),
         )))
         .await?;
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    wait_for_metric(admin_address, "scotoma_relay_pending_frames", 1).await?;
     cut.send(true)?;
     tokio::time::timeout(Duration::from_secs(1), proxy).await???;
     let result = tokio::time::timeout(Duration::from_secs(1), task)
@@ -393,9 +495,56 @@ async fn network_cut_during_live_chat_is_terminal() -> TestResult {
         result,
         Err(ClientError::Connection | ClientError::RelayRejected)
     ));
+    assert!(commands.send(LiveCommand::Burn).await.is_err());
     drop(second);
+    wait_for_metric(admin_address, "scotoma_relay_pending_frames", 0).await?;
+    wait_for_metric(admin_address, "scotoma_relay_active_rooms", 0).await?;
     server.abort();
     let _ = server.await;
+    Ok(())
+}
+
+async fn get_metrics(address: SocketAddr) -> TestResult<String> {
+    Ok(tokio::task::spawn_blocking(move || -> io::Result<String> {
+        use std::io::{Read as _, Write as _};
+
+        let mut stream = std::net::TcpStream::connect(address)?;
+        stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+        stream
+            .write_all(b"GET /metrics HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")?;
+        let mut response = String::new();
+        stream.read_to_string(&mut response)?;
+        let (_, body) = response
+            .split_once("\r\n\r\n")
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "missing metrics body"))?;
+        Ok(body.to_owned())
+    })
+    .await??)
+}
+
+async fn wait_for_metric(address: SocketAddr, name: &str, expected: u64) -> TestResult {
+    tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            let metrics = get_metrics(address).await?;
+            let value = metrics.lines().find_map(|line| {
+                let (candidate, value) = line.split_once(' ')?;
+                (candidate == name)
+                    .then(|| value.parse::<u64>().ok())
+                    .flatten()
+            });
+            if value == Some(expected) {
+                return Ok::<(), Box<dyn Error>>(());
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::TimedOut,
+            format!("{name} did not reach {expected}"),
+        )
+    })??;
     Ok(())
 }
 

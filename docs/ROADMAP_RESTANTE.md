@@ -1,6 +1,6 @@
 # Hoja de ruta restante
 
-Última actualización: 2026-09-06
+Última actualización: 2026-10-07
 
 Este documento fija el orden acordado después de completar la ruta pública
 Android ARM64 ↔ web. iOS y Safari quedan documentados, pero fuera del trabajo
@@ -71,10 +71,13 @@ Trabajo futuro:
 
 ## Bloque 4 — Endurecimiento y matriz de fiabilidad
 
-Estado: en progreso. La matriz MASVS Android, la baseline automatizada de
-storage/plataforma, la revisión física inicial del ciclo de vida y una campaña
-acotada de churn concurrente están implementadas; la matriz amplia sigue
-pendiente.
+Estado: en progreso. Los sprints locales 4.1–4.5 están implementados; la matriz
+física Android, campañas prolongadas y confirmación en CI siguen pendientes.
+
+La numeración del bloque 4 termina en el sprint 4.5. Los controles de abuso,
+reproducibilidad y demás comprobaciones que continúan abiertas son trabajo
+residual del bloque: no constituyen sprints 4.6 o posteriores y se gestionarán
+en su cola correspondiente.
 
 Objetivo: convertir la evidencia de prototipo en una línea base de alpha
 repetible.
@@ -82,10 +85,13 @@ repetible.
 - En progreso: completar la revisión OWASP MASVS para almacenamiento,
   criptografía, red, plataforma, código y privacidad. La matriz inicial está en
   `docs/MASVS_ANDROID_REVIEW.md`.
-- Completado como baseline acotada: 40 salas normales simultáneas y seis rondas
-  de 24 desconexiones con ciphertext pendiente liberan salas, conexiones y
-  frames/bytes tras cada ronda. Faltan soak, propiedades, carreras y memoria
-  residente máxima.
+- Completado como baseline automatizada: 40 salas normales simultáneas, seis
+  rondas de 24 desconexiones con ciphertext pendiente y un soak configurable.
+  La campaña local 4.3 recorrió 8.000 salas mixtas en 500 rondas, devolvió todos
+  los gauges a cero después de cada ronda y alcanzó 21,32 MiB de working set.
+  CI ejecutará un smoke del soak y fuzzing de las cuatro etapas Noise. Faltan
+  campañas de varios hosts/días, model checking o análisis de carreras donde
+  aplique y la primera evidencia del nuevo target con sanitizer en CI Linux.
 - Completado parcialmente en Android 12 físico: background, cierre terminal,
   `force-stop`, no restauración del formulario, revisión de logcat y bloqueo de
   captura. Cortar/restaurar el relay y perder/restaurar la única conexión LTE
@@ -93,9 +99,32 @@ repetible.
   restaurados. Faltan handoff Wi-Fi↔datos, pérdida durante handshake/chat,
   grabación, overlay, teclado, portapapeles, texto grande, accesibilidad y
   Android 13+.
-- Revisar que logs, fallos, builds y dependencias no introducen secretos.
-- Eliminar la necesidad web de CSP `'unsafe-eval'` o documentar y aislar una
-  sustitución revisada.
+- Completada la fase local del sprint 4.1: un corte después del primer frame
+  Noise termina el handshake y exige una sesión nueva; un corte con ciphertext
+  confirmado como pendiente purga frame y sala; Flutter limpia su estado desde
+  `handshaking`. La repetición de estos casos sobre red física queda aplazada.
+- Completada la fase local del sprint 4.2: bloqueo explícito de overlays en
+  Android 12+, exclusión del árbol de autofill/content capture, `FLAG_SECURE`
+  antes del primer frame y eliminación de `PROCESS_TEXT`. El APK debug compila
+  y su manifest fusionado fue inspeccionado; firma release y matriz física
+  quedan pendientes.
+- Completada la fase local del sprint 4.3: runner reproducible de soak con logs
+  y límite de RAM, campaña de 8.000 salas, smoke acotado en CI y nuevo target de
+  fuzzing para Noise/confirmación. El host Windows GNU no soporta el sanitizer
+  de libFuzzer; la ejecución autoritativa del nuevo target queda pendiente del
+  job Ubuntu.
+- Completada la fase local del sprint 4.4: logging dinámico prohibido en las
+  superficies de producto, esquema de eventos del relay fijado a componente y
+  categoría sin datos, y contexto Docker protegido contra keystores, `.env`,
+  claves privadas y configuraciones de servicios. La nueva puerta corre en CI;
+  falta ejecutarla allí y escanear los artefactos finales firmados/imagen.
+- Completada la fase local del sprint 4.5: las copias fijadas de FRB 2.13.0 para
+  Rust y Dart eliminan `js_sys::eval` y el constructor `Function`; el build
+  falla si reaparece código dinámico. La CSP conserva únicamente
+  `'wasm-unsafe-eval'`, necesaria para compilar WebAssembly. Chrome 154, Edge
+  154 y Firefox 155 pasaron inicio aislado y chat de dos clientes con WSS,
+  código coincidente, ACK y BURN. Falta desplegar este artefacto en Cloudflare
+  Pages y repetir la comprobación sobre la URL pública.
 - Reforzar controles de abuso y DDoS en el borde sin crear perfiles persistentes
   de usuarios.
 - Consolidar builds, hashes, SBOM, auditorías y rollback reproducibles.
@@ -103,22 +132,136 @@ repetible.
 Criterio de salida: checklist verificable, ejecución repetible y ningún defecto
 crítico conocido. Esto todavía no sustituye una auditoría independiente.
 
+### Trabajo temporal sin dispositivo ADB
+
+La ausencia temporal de un teléfono no detiene la implementación. Cada cambio
+se cerrará primero con análisis, pruebas automatizadas, compilación y revisión
+del artefacto. Toda conducta que dependa de Android real quedará explícitamente
+pendiente y se ejecutará después como una fase física agrupada. Compilar un APK
+no cuenta como validación en dispositivo ni elimina una puerta de release.
+
+La cola, el formato de evidencia y los casos acumulados se mantienen en
+`docs/ANDROID_PHYSICAL_TEST_BACKLOG.md`.
+
 ## Bloque 5 — Encuentro privado y revisión criptográfica
 
 Objetivo: sustituir el protocolo v2 experimental por un diseño que responda al
 modelo de sala + contraseña sin entregar al relay un comprobador barato.
 
-- Especificar la amenaza de enumeración de salas y adivinación de contraseñas.
-- Diseñar y versionar un encuentro privado; no inventar primitivas
-  criptográficas nuevas.
-- Resolver explícitamente por qué un PAKE aislado no basta para emparejar dos
-  participantes con la misma contraseña y separar otras contraseñas dentro de
-  la misma sala.
-- Benchmarkear el coste acordado de derivación y admisión en las plataformas
+### Sprint 5.1 — Requisitos y modelo de amenaza del encuentro
+
+Estado: completado localmente el 2026-10-07 en
+`docs/PRIVATE_RENDEZVOUS_REQUIREMENTS.md` y ADR 0043.
+
+- Fijar propiedades verificables para sala + contraseña, varias contraseñas en
+  una misma sala y credenciales señuelo u honeypot.
+- Describir enumeración, adivinación online/offline, relay malicioso, correlación
+  y denegación de servicio.
+- Separar lo que debe ocultarse al relay de lo que inevitablemente revela la
+  red, y definir afirmaciones que el producto no podrá hacer.
+
+Cierre: especificación de requisitos, invariantes, casos adversariales y
+criterios objetivos para aceptar o rechazar un diseño.
+
+### Sprint 5.2 — Viabilidad y selección de construcción mantenida
+
+Estado: completado como `no-go` acotado el 2026-10-07. La evaluación y matriz
+PR-001–PR-020 están en `docs/PRIVATE_RENDEZVOUS_FEASIBILITY.md` y ADR 0044. No se
+seleccionó ni añadió una dependencia criptográfica.
+
+- Evaluar protocolos y bibliotecas mantenidas para descubrimiento privado,
+  OPRF/PSI cuando corresponda y PAKE simétrico; no inventar primitivas.
+- Resolver explícitamente por qué un PAKE aislado no selecciona por sí solo a
+  dos participantes con la misma contraseña entre otras contraseñas de la sala.
+- Preparar prototipos mínimos y un ADR de decisión con un punto de salida
+  `go/no-go`. Si ninguna opción satisface los requisitos, se detiene el diseño
+  antes de integrarlo en SCOTOMA.
+
+Cierre: construcción candidata justificable o decisión documentada de que el
+modelo solicitado no es viable bajo las restricciones actuales.
+
+### Sprint 5.3 — Especificación del protocolo v3 y revisión de diseño
+
+Estado: completado como especificación candidata condicionada. Se documentó una
+arquitectura TOPRF multioperador con separación HKDF hacia etiqueta de encuentro
+y PSK para la suite Noise existente. El diseño continúa en `no-go` para usuarios
+reales mientras no exista una construcción TOPRF seleccionada y validada. El
+brief y los borradores de consulta permanecen en `docs/review/`; no se contactó a
+terceros.
+
+- Versionar mensajes, dominios, estados, errores, límites, timeouts y reglas de
+  emparejamiento/honeypot.
+- Componer el encuentro seleccionado con Noise, confirmación, contadores, ACK y
+  BURN sin reutilizar secretos entre capas.
+- Producir vectores y pruebas negativas independientes de la implementación.
+- Solicitar revisión comunitaria o pro bono del diseño antes de consolidar el
+  código de producción.
+
+Cierre: especificación reproducible y revisable, con los hallazgos de diseño
+críticos resueltos antes de continuar.
+
+### Sprint 5.4 — Implementación, migración y pruebas adversariales
+
+Estado: trabajo local cerrado como spike aislado con decisión `NO-GO` para
+integración. El modelo fail-closed pasó 38/38 pruebas,
+formato y Clippy; la suite Noise actual pasó 46/46 pruebas del protocolo, el
+bridge nativo pasó 12/12 y el bridge compiló para Web/Wasm. El spike no pertenece
+al workspace ni aparece en dependencias productivas. La regresión completa pasó
+Clippy, 92 pruebas Rust, análisis y 23 pruebas Flutter, supervisor de runtime y
+baseline de seguridad. Un probe separado confirmó que el cliente TACEO 0.10.8
+compila en Windows y Wasm sin arrastrar blockchain ni base de datos, pero la
+suite y operación siguen sin aprobar. El probe ya pasa 21 pruebas de VOPRF,
+umbral sintético 2-de-3, DKG/reshare honesto, compromisos, HKDF y Noise; una
+verificación independiente rechazó el hash-to-field inicial por diferir de RFC
+9380 y un reemplazo RustCrypto reproduce el vector normativo en Rust, Node,
+Chrome, Edge y Firefox 155. Un arnés de ceremonia simula red autenticada,
+replay, corrupción, timeout, DKG y rotación 7→8. Congelación de suite, ceremonia
+PedPoP real, firmas/autenticación, relay entre procesos, revisión
+independiente y usuarios continúan bloqueados.
+La matriz F01–F10/A01–A16 ya tiene cobertura trazable: 21 casos verificados
+localmente, 3 parciales y 2 riesgos documentados. Esto cierra el subbloque de
+trazabilidad, no la aprobación criptográfica ni el sprint completo.
+El subbloque de endurecimiento añade una campaña determinista de 20.000
+operaciones de relay y 2.000 sesiones, dos targets libFuzzer v3, auditoría de
+los tres lockfiles aislados en CI y un benchmark release reproducible. En el
+host Windows la campaña determinista y 39 pruebas del modelo pasan; libFuzzer y
+sanitizers esperan su primera ejecución en el job Linux.
+RustSec no encontró vulnerabilidades en los lockfiles v3, pero señaló dos crates
+transitivos no mantenidos (`derivative` y `paste`) que deben resolverse o
+aceptarse explícitamente antes de seleccionar la biblioteca.
+El verificador final inspeccionó manifiestos, el grafo Cargo productivo y 23
+artefactos Android/Web presentes sin encontrar marcadores del spike. La salida
+formal queda en 2 criterios cumplidos, 4 parciales y 1 bloqueado; v2 permanece
+sin cambios.
+
+- Implementar el protocolo v3 en Rust y mantener v2 claramente separado como
+  experimental durante la migración, sin negociación ambigua ni downgrade.
+- Integrar relay, bridge Flutter, Android y web sin mover secretos a capas de
+  presentación.
+- Añadir vectores, propiedades, fuzzing, fallos de red, replay, manipulación,
+  credenciales erróneas y pruebas de separación entre contraseñas de una sala.
+- Benchmarkear derivación, encuentro, admisión, CPU y memoria en las plataformas
   activas.
-- Obtener revisión independiente de la composición completa: derivación,
-  encuentro, Noise, confirmación, contadores, ACK, BURN y errores.
-- Corregir hallazgos y publicar el alcance exacto de la revisión.
+
+Cierre: implementación fail-closed interoperable y evidencia automatizada para
+los casos normales y adversariales definidos en 5.1.
+
+### Sprint 5.5 — Revisión independiente y corrección de hallazgos
+
+Estado: en curso. El primer bloque congeló 18 archivos de diseño/código/vectores
+por SHA-256 y convirtió R01–R12 en un ledger verificable con acción y condición
+de salida. CI invalida el paquete si cambia cualquier byte. No se ha contactado
+a terceros y el paquete aún carece de enlaces a un commit público estable.
+
+- Someter especificación, composición e implementación completas a revisión
+  independiente comunitaria o pro bono.
+- Corregir hallazgos, repetir vectores, fuzzing, benchmarks y matrices de
+  interoperabilidad después de cada cambio material.
+- Publicar el alcance exacto, versión/commit revisado, exclusiones y riesgos que
+  permanezcan; una revisión parcial no se presentará como auditoría completa.
+
+Cierre: hallazgos críticos resueltos y evidencia externa suficiente para tomar
+una decisión explícita sobre el paso a la alpha cerrada.
 
 Criterio de salida: protocolo nuevo documentado, vectores y pruebas negativas,
 hallazgos críticos resueltos y revisión externa. Mientras no ocurra, SCOTOMA

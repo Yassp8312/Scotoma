@@ -85,6 +85,34 @@ void main() {
     );
   });
 
+  testWidgets('password semantics remain obscured while hidden', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(_app());
+    await tester.enterText(find.byKey(const Key('password-field')), '1370');
+
+    final node = tester.getSemantics(find.byKey(const Key('password-field')));
+    expect(node.flagsCollection.isObscured, isTrue);
+    expect(node.value, isNot(contains('1370')));
+    semantics.dispose();
+  });
+
+  testWidgets('message composer opts out of text-learning services', (
+    tester,
+  ) async {
+    final backend = _FakeBackend.immediate();
+    await _openImmediateSession(tester, backend);
+
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('message-field')),
+    );
+    expect(field.autofillHints, isNull);
+    expect(field.enableIMEPersonalizedLearning, isFalse);
+    expect(field.autocorrect, isFalse);
+    expect(field.enableSuggestions, isFalse);
+  });
+
   testWidgets('a fresh app instance has no credentials to restore', (
     tester,
   ) async {

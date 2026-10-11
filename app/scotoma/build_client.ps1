@@ -126,6 +126,18 @@ try {
                 "--dart-define=SCOTOMA_RELAY_URL=$RelayUrl"
             )
             Copy-Item -LiteralPath (Join-Path $bridgeRoot 'build\frb-web\pkg') -Destination 'build\web' -Recurse -Force
+            $dynamicCodePatterns = @(
+                @{ Name = 'eval'; Pattern = '(?<![A-Za-z0-9_$])eval\s*\(' },
+                @{ Name = 'Function constructor'; Pattern = '\bnew\s+Function\s*\(' }
+            )
+            foreach ($script in Get-ChildItem 'build\web' -Filter '*.js' -Recurse) {
+                $scriptBody = Get-Content -LiteralPath $script.FullName -Raw
+                foreach ($dynamicCode in $dynamicCodePatterns) {
+                    if ($scriptBody -match $dynamicCode.Pattern) {
+                        throw "Web release contains forbidden $($dynamicCode.Name): $($script.FullName)"
+                    }
+                }
+            }
             $relayUri = [Uri]$RelayUrl
             $relayAuthority = "$($relayUri.Scheme)://$($relayUri.Host)"
             if (-not $relayUri.IsDefaultPort) {
@@ -141,7 +153,7 @@ try {
                 '  X-Content-Type-Options: nosniff',
                 '  Referrer-Policy: no-referrer',
                 '  Permissions-Policy: camera=(), microphone=(), geolocation=()',
-                "  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; connect-src 'self' $relayAuthority; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; manifest-src 'self'"
+                "  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; connect-src 'self' $relayAuthority; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; worker-src 'self' blob:; manifest-src 'self'"
             )
             [IO.File]::WriteAllLines(
                 (Join-Path $PSScriptRoot 'build\web\_headers'),

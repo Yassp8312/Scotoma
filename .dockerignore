@@ -1,5 +1,6 @@
 .git
 .github
+.wrangler
 target
 **/target
 app
@@ -9,5 +10,16 @@ fuzz
 packages
 spikes
 *.log
+**/.env
+**/.env.*
+**/key.properties
+**/*.jks
+**/*.keystore
+**/*.p12
+**/*.pfx
+**/*.pem
+**/*.key
+**/google-services.json
+**/*service-account*.json
 .idea
 .vscode

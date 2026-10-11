@@ -1,6 +1,15 @@
 // Production worker quarantine for the pinned FRB 2.13.0 runtime.
 // It handles no credential/message values and never inspects worker errors.
 (() => {
+  const baseUrl = globalThis.document?.baseURI ??
+    globalThis.location?.href ?? 'http://127.0.0.1/';
+  const bridgeScriptUrl = new URL('pkg/scotoma_bridge.js', baseUrl).href;
+  Object.defineProperty(globalThis, '__SCOTOMA_FRB_SCRIPT_URL__', {
+    value: bridgeScriptUrl,
+    writable: false,
+    configurable: false,
+  });
+
   let installed = false;
   let poisoned = false;
   let onFault = null;

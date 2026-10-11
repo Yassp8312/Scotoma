@@ -2,7 +2,10 @@
 
 ## Status
 
-This document describes the intended MVP. The current code is not yet a secure messaging implementation.
+This document describes the intended product boundary. Protocol v2 remains an
+experimental messaging implementation, not an approved secure rendezvous.
+Sprint 5.1 freezes the protocol-v3 rendezvous requirements in
+`PRIVATE_RENDEZVOUS_REQUIREMENTS.md` and ADR 0043.
 
 ## Assets
 
@@ -12,6 +15,8 @@ This document describes the intended MVP. The current code is not yet a secure m
 - cryptographic state;
 - pending ciphertext;
 - the fact that two relay connections share a rendezvous tag;
+- whether two attempts use equal credentials and any link between a normal and
+  decoy credential;
 - network metadata such as IP, timing and traffic volume.
 
 ## Trust boundaries
@@ -40,6 +45,9 @@ This document describes the intended MVP. The current code is not yet a secure m
 4. A third client attempting to join an occupied rendezvous.
 5. An attacker who later learns the numeric password or a current session key.
 6. A person with a lost device after its session has ended.
+7. A malicious relay actively simulating peers or guessing passwords.
+8. Multiple operators colluding below or at a future threshold.
+9. An attacker mixing protocol versions, roles or deployment contexts.
 
 ## Security goals
 
@@ -51,6 +59,11 @@ This document describes the intended MVP. The current code is not yet a secure m
 - Secrets and plaintext never enter production logs.
 - The client avoids persistent storage in Ghost Mode.
 - Public claims remain no stronger than automated tests and independent review support.
+- Different passwords in the same room remain cryptographically isolated.
+- A decoy password is indistinguishable from an ordinary valid password inside
+  the protocol; no honeypot marker, log or response exists.
+- Passive transcripts do not become password verifiers in protocol v3 within
+  its explicitly declared server-compromise assumptions.
 
 ## Non-goals
 
@@ -61,6 +74,11 @@ This document describes the intended MVP. The current code is not yet a secure m
 - Guaranteeing availability under censorship or denial of service.
 - Proving physical erasure from flash storage or third-party backups.
 - Post-compromise security until a reviewed ratcheting implementation is integrated.
+- Guaranteeing that a honeypot notifies an offline peer. Without storage,
+  accounts or notifications, both peers must use the decoy in an overlapping
+  online window.
+- Hiding which credential was typed from malware, coercion or an observer of the
+  endpoint.
 
 ## Principal abuse cases
 
@@ -90,6 +108,10 @@ The authenticated end-to-end test sends 100 ordered messages through a one-frame
 - No cryptographic protocol moves to production without maintained-library review and test vectors.
 - The `snow`-based Noise construction in ADR 0007 is approved only for the CLI prototype. Closed alpha requires review of the exact composition and a resolution for non-zeroized library state.
 - Human-chosen passwords are converted to a domain-separated session secret with Argon2id and are never used directly as a Noise PSK. This does not remove offline guessing. ADR 0031 records why a PAKE alone does not solve private matching and makes a separately versioned, independently reviewed replacement a closed-alpha gate.
+- Protocol-v3 candidates are evaluated against PR-001 through PR-020 and the
+  adversarial cases in `PRIVATE_RENDEZVOUS_REQUIREMENTS.md`. Failure may produce
+  an explicit `no-go`; it must not be hidden by weakening a requirement during
+  implementation.
 - No public high-risk recommendation occurs without independent security review.
 - Any new persistence, notification or telemetry requires a threat-model and data-lifecycle update.
 - Process-local rate limits are not DDoS protection; public hosting requires independently configured edge and network controls that do not weaken the privacy boundary.

@@ -1,0 +1,32 @@
+[package]
+name = "scotoma-private-rendezvous-v3-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+resolver = "3"
+
+[dependencies]
+libfuzzer-sys = "=0.4.10"
+scotoma-private-rendezvous-v3-model = { path = ".." }
+scotoma-taceo-client-compile-probe = { path = "../taceo_probe" }
+snow = "=0.10.0"
+taceo-ark-babyjubjub = "=0.6.0"
+
+[[bin]]
+name = "v3_state_relay"
+path = "fuzz_targets/v3_state_relay.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "v3_credential_noise"
+path = "fuzz_targets/v3_credential_noise.rs"
+test = false
+doc = false
+bench = false

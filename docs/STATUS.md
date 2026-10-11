@@ -1,6 +1,12 @@
 # Development status
 
-Last updated: 2026-09-06
+Last updated: 2026-10-07
+
+Desde 2026-10-02, el desarrollo puede continuar temporalmente sin un teléfono
+ADB. Las verificaciones locales y automatizadas se separan de la evidencia en
+dispositivo; todos los casos físicos aplazados se registran en
+`docs/ANDROID_PHYSICAL_TEST_BACKLOG.md` y no se marcan como aprobados hasta su
+ejecución posterior sobre el artefacto identificado por hash.
 
 ## Milestones
 
@@ -56,7 +62,7 @@ files, calls, notifications and groups are permanent product exclusions, not a
 later backlog. Web is part of the Android-to-production roadmap; iPhone follows
 after the Android+web release candidate.
 
-The Flutter client currently passes `flutter analyze` and 20 unit/widget tests.
+The Flutter client currently passes `flutter analyze` and 23 unit/widget tests.
 These tests cover ASCII-only input, 39/128-digit bounds, invalid paste rejection,
 leading zeroes, autofill configuration, empty recreated app state, compact
 layout, one-shot launch ownership, background close, late completion and
@@ -285,8 +291,8 @@ Secure context and cross-origin isolation are mandatory. An actual browser run
 completed public-fixture staging and Argon2id with `WEB_RUNTIME_OK`; the same
 build without COOP/COEP stopped with
 `WEB_RUNTIME_WEB_ISOLATION_REQUIRED`. At that checkpoint the main UI still hid
-credential fields pending block 16. The pinned loader currently requires CSP
-`'unsafe-eval'`, worker loss can be
+credential fields pending block 16. At that checkpoint the pinned loader
+required CSP `'unsafe-eval'` (resolved locally in ADR 0042), worker loss could be
 silent in cases the browser does not report, and quarantine is not physical
 erasure. See ADR 0028.
 
@@ -358,11 +364,21 @@ Safari remain block-20 gates. See ADR 0030.
 | SCT-039 — Android MASVS storage/platform baseline | Automated and initial physical baseline complete; broader matrix pending | Backup/transfer exclusion, secure recents and obscured touches; exact source/APK checks; Android 12 background/force-stop/logcat/capture evidence |
 | SCT-040 — Relay concurrent churn baseline | Complete as a bounded regression baseline | 40 normal simultaneous rooms plus 6×24 pending-frame disconnect rooms; room, connection, frame and encoded-byte gauges return to zero after every round and created/closed totals match |
 | SCT-041 — Physical Android network-loss baseline | Complete for waiting-state relay and LTE loss | Local relay cut and real LTE loss both made the TECNO client terminal and cleared synthetic credentials; recovery caused no reconnect; LTE and signed ARM64 release were restored |
+| SCT-042 — Active-session network-loss matrix | Local phase complete; physical matrix queued | Deterministic cut after the first Noise frame, metric-confirmed pending-ACK cut and Flutter handshake cleanup pass; Wi-Fi/LTE handoff and physical handshake/chat cuts remain in the ADB backlog |
+| SCT-043 — Android privacy-surface hardening | Local/debug artifact complete; signed release and physical matrix queued | Pre-frame secure window, Android 12+ overlay hiding, autofill/content-capture exclusion, no PROCESS_TEXT query, stricter source/APK policy and password-semantics tests |
+| SCT-044 — Prolonged relay soak and handshake fuzzing | Local soak complete; sanitizer CI pending | Configurable 500×16 mixed-room campaign returned every gauge to zero, peaked at 21.32 MiB over 66.21 s, and added a four-stage Noise/confirmation fuzz target plus bounded CI smoke |
+| SCT-045 — Secret-bearing logs and build context | Local source boundary complete; artifact/CI confirmation pending | Product logging bans, fixed data-free relay event schema, Docker exclusions for keys/configuration, repository filename gate, 23 Flutter tests and 12 bridge tests |
+| SCT-046 — Strict web CSP without dynamic JavaScript | Local implementation and browser matrix complete; public deployment pending | Vendored FRB 2.13.0 Rust/Dart patches remove `eval` and `new Function`; final-JS gate and fail-closed wrapper transform; Chrome 154, Edge 154 and Firefox 155 passed two-client WSS code/ACK/BURN with CSP lacking `'unsafe-eval'` |
+| SCT-047 — Private-rendezvous threat model | Sprint 5.1 complete as a requirements baseline; no protocol selected | Frozen room/password/honeypot semantics, 12 adversary classes, 20 normative gates, 16 adversarial cases, explicit metadata/non-goals and `go/no-go` rules for sprint 5.2 |
+| SCT-048 — Private-rendezvous feasibility | Sprint 5.2 complete as a bounded `no-go`; product/trust decision required | Eight architecture families compared against PR-001–PR-020; single-relay PAKE/OPAQUE/VOPRF/PSI/TEE options rejected for concrete scope or trust violations; threshold multioperator path remains unimplemented research |
+| SCT-049 — Private-rendezvous specification package | Sprint 5.3 complete as a conditional research design; production remains blocked | English review brief plus a versioned TOPRF→HKDF→Noise-PSK candidate, assumptions, rejected shortcuts, internal findings and outreach drafts; no third party contacted and no production protocol changed |
+| SCT-050 — Isolated v3 rendezvous model | Sprint 5.4 local research closed NO-GO; production integration prohibited | Conditional TOPRF→HKDF→tag/Noise-PSK composition, 39 model/hardening tests and 21 TACEO/RustCrypto tests; matrix has 21 locally verified, 3 partial and 2 documented risks; final gate score 2 complete/4 partial/1 blocked; isolation verifier found no v3 marker in 8 production inputs, 3 Cargo packages or 23 existing Android/Web artifacts; v2 unchanged |
+| SCT-051 — Frozen v3 review package | Sprint 5.5 in progress; local package complete, no external review performed | Machine-verified SHA-256 snapshot of 18 design/code/vector files plus R01–R12 ledger with severity, status, action and exit condition; decision remains NO-GO and stable public commit links are still required before outreach |
 
-The remaining Milestone 5 work includes the complete MASVS review, prolonged
-property/race/memory campaigns, platform privacy review, release reproducibility/signing
-and independent cryptographic review. A clean automated scan is not production
-approval.
+The remaining Milestone 5 work includes the complete MASVS review, longer and
+multi-host property/race/sanitizer campaigns, platform privacy review, release
+reproducibility/signing and independent cryptographic review. A clean automated
+scan or a bounded soak is not production approval.
 
 ## Verification
 
@@ -386,7 +402,8 @@ approval.
 - Adversarial integration: noncanonical joins and malformed frames fail closed; text and oversized WebSocket messages close the room; teardown releases the rendezvous tag; a fresh relay process inherits no room state.
 - Deployment-boundary integration: public `/metrics` and administrative public routes return 404 while both listeners share the live aggregate state.
 - Deployment validation: Caddy 2.11.4 accepted the configuration locally using its verified official binary; Compose and image builds are CI gates because Docker is unavailable in the current local environment.
-- Test count: 91 passing tests across the workspace and all targets.
+- Test count: 92 ordinary tests pass across the workspace and all targets; one
+  ignored configurable soak passes when invoked explicitly.
 - Production web runtime: Node supervisor isolation, isolated/non-isolated
   startup, two-browser chat and Rust↔web interoperability checks pass.
 - Public desktop browser matrix: Chrome 152.0.7977.82, Edge 152.0.4191.62 and
@@ -397,6 +414,14 @@ approval.
 - Supply-chain baseline: RustSec loaded 1,239 advisories and found no matching vulnerability across the 126-package relay graph or 156-package bridge graph; cargo-deny passed advisories, bans, licenses and sources for both, with recorded duplicate-version and `allo-isolate` manifest-license warnings.
 - SBOM baseline: reproducible CycloneDX 1.5 JSON contains 124 relay components and 155 bridge components; CI retains both inventories per commit.
 - Relay production profiles: 40 concurrent rooms × 20 one-KiB messages plus ACK/BURN, followed by 6 rounds × 24 rooms disconnecting with a pending 16-KiB ciphertext. Every round returned active rooms, connections, pending frames and encoded bytes to zero; created/closed totals matched.
+- Relay prolonged profile: 500 rounds × 16 mixed normal/pending-disconnect rooms
+  completed 8,000 room lifecycles in 66.21 s. Every round returned all resource
+  gauges to zero; the Windows debug test process peaked at 21.32 MiB against a
+  384 MiB guardrail. This is a dated baseline, not proof that leaks are absent.
+- Secret boundary: repository/Docker inputs and Rust logging policy pass the
+  new verifier; Flutter source verification, 23 client tests, 12 bridge tests,
+  panic containment and the native credential-boundary smoke pass. A freshly
+  signed APK and container image were not produced in this environment.
 - Physical Android network loss: the TECNO BF7 reached the waiting state through an ADB-reversed real relay; terminating that relay displayed `Conexión interrumpida`, removed both synthetic credentials and remained terminal after a fresh relay reported zero accepted upgrades. The signed ARM64 release was then restored and verified as `arm64-v8a` with `FLAG_SECURE`.
 - Physical LTE loss: with Wi-Fi already disabled, the signed release reached waiting through public WSS over LTE. Disabling mobile data made the session terminal and cleared both synthetic credentials. Mobile data was restored in a guaranteed cleanup path; LTE returned, the client stayed terminal without reconnecting, and the empty entry form was restored manually.
 - Caddy 2.11.4: official Windows release checksum verified; the production Caddyfile validates successfully. Docker/Compose remains a CI gate because this host has no Docker daemon.

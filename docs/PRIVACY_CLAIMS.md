@@ -22,8 +22,15 @@ Each claim must link to implementation evidence and tests before release.
 - “Impossible to hack.”
 - “The server knows nothing.”
 - “A matching code proves who the other person is.”
+- “The honeypot automatically alerts the other person.”
+- “Using a decoy password proves coercion.”
 
 The TLS edge and relay necessarily observe a connection and can observe limited routing and traffic metadata. Claims must distinguish content confidentiality from metadata privacy; end-to-end encryption does not hide IP addresses, timing or traffic volume from the deployment edge.
+
+A decoy password is an out-of-band human convention, not a special SCOTOMA
+feature. With no account, notification or offline inbox, both participants must
+enter that same decoy during an overlapping online window. The protocol must not
+label it or behave differently from an ordinary password.
 
 ## Alpha wording
 

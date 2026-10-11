@@ -4,6 +4,7 @@ fuzz/artifacts/
 fuzz/coverage/
 artifacts/sbom/
 artifacts/release/
+artifacts/soak/
 **/key.properties
 **/*.jks
 **/*.keystore

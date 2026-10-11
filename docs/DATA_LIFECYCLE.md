@@ -88,6 +88,12 @@ Rate-limit state consists only of process-local token counts and monotonic times
 
 Operational events have no dynamic client fields. They still reveal that an event occurred at approximately the log timestamp, so production stderr retention and access must be short and restricted. Metrics have no labels but reveal aggregate current activity; `/metrics` exists only on the separate administrative listener and must not be published. The prototype event queue holds at most 256 fixed enum values and drops excess events rather than blocking relay work.
 
+The fixed event schema and product logging bans are enforced by
+`deploy/verify-secret-boundary.ps1`. The same gate requires Docker-context
+exclusions for signing material, environment files, private keys and external
+service configuration. This is a regression control, not a general content
+secret scanner; final artifacts and provider retention still require review.
+
 The WSS edge necessarily handles client IP addresses, connection timing and traffic volume while terminating TLS. The prototype Caddy configuration does not enable access logs and removes forwarding headers before contacting the relay. Caddy process/error logs and persistent ACME/certificate data remain infrastructure metadata subject to restricted access and retention; they do not contain SCOTOMA room labels, invite secrets or WebSocket payloads by design.
 
 ## Lifecycle events

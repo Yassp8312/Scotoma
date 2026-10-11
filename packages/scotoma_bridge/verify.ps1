@@ -124,6 +124,17 @@ try {
                 '--cargo-build-args=-Z', '--cargo-build-args=host-config',
                 '--cargo-build-args=--locked'
             )
+            # wasm-pack's no-modules target declares a top-level lexical `let`.
+            # Dart's static JS interop resolves global object properties, so expose
+            # the reviewed binding explicitly without using eval/new Function.
+            $bindgenScript = Join-Path $PSScriptRoot 'build\frb-web\pkg\scotoma_bridge.js'
+            $bindgenBody = [IO.File]::ReadAllText($bindgenScript)
+            $bindgenPrefix = 'let wasm_bindgen ='
+            if (-not $bindgenBody.StartsWith($bindgenPrefix)) {
+                throw 'Unexpected wasm-bindgen wrapper; review the CSP compatibility patch.'
+            }
+            $bindgenBody = 'globalThis.wasm_bindgen =' + $bindgenBody.Substring($bindgenPrefix.Length)
+            [IO.File]::WriteAllText($bindgenScript, $bindgenBody, [Text.UTF8Encoding]::new($false))
         }
         'Android' {
             $env:RUSTC_WRAPPER = Join-Path $PSScriptRoot 'host_rustc.cmd'

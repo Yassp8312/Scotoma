@@ -61,7 +61,10 @@ It contains:
   semantic status cues and a short Rust-derived Noise transcript code for
   out-of-band channel comparison;
 - a private-rendezvous production gate plus version-pinned RustSec, dependency
-  policy, CycloneDX SBOM and bounded parser/state fuzzing automation;
+  policy, CycloneDX SBOM, bounded parser/state/Noise fuzzing and a reproducible
+  relay soak with resource-gauge and working-set checks;
+- automated bans on product logging and data-bearing relay events, plus Docker
+  context exclusions for signing material, environment files and private keys;
 - branded Android/web application icons, a non-debug Android signing boundary,
   release artifact verification and a documented zero-cost alpha path using
   provider subdomains rather than a purchased domain.
@@ -124,11 +127,15 @@ production boundary for high-risk communications.
 - [Development plan](PLAN_DESARROLLO.md)
 - [Product scope](docs/PRODUCT.md)
 - [Threat model](docs/THREAT_MODEL.md)
+- [Private-rendezvous v3 requirements](docs/PRIVATE_RENDEZVOUS_REQUIREMENTS.md)
+- [Private-rendezvous feasibility decision](docs/PRIVATE_RENDEZVOUS_FEASIBILITY.md)
+- [Private-rendezvous external review brief](docs/review/PRIVATE_RENDEZVOUS_REVIEW_REQUEST.md)
 - [Data lifecycle](docs/DATA_LIFECYCLE.md)
 - [Protocol boundaries](docs/PROTOCOL.md)
 - [Privacy claims](docs/PRIVACY_CLAIMS.md)
 - [Current security risks](docs/RIESGOS_ACTUALES.md)
 - [Android MASVS review](docs/MASVS_ANDROID_REVIEW.md)
+- [Android physical-test backlog](docs/ANDROID_PHYSICAL_TEST_BACKLOG.md)
 - [Development status](docs/STATUS.md)
 - [Development history](docs/HISTORIAL_DESARROLLO.md)
 - [Remaining roadmap](docs/ROADMAP_RESTANTE.md)

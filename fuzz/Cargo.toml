@@ -27,3 +27,10 @@ path = "fuzz_targets/session_state.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "noise_handshake"
+path = "fuzz_targets/noise_handshake.rs"
+test = false
+doc = false
+bench = false

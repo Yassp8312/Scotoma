@@ -9,6 +9,16 @@ The Flutter application has a third locked graph in `app/scotoma/pubspec.lock`.
 All three lockfiles are release inputs and must change only in a dependency-focused
 review.
 
+SCOTOMA also vendors the MIT-licensed `flutter_rust_bridge` 2.13.0 Rust and
+Dart packages under `vendor/`. These are minimal, version-fixed compatibility
+patches that remove dynamic JavaScript evaluation from the web loader. Their
+upstream license and a `SCOTOMA_PATCH.md` rationale are retained in each copy.
+The bridge lockfiles resolve those local paths, and the web build fails if the
+expected wasm-bindgen wrapper changes or if final JavaScript contains direct
+`eval()`/`new Function()`. Updating FRB requires reviewing and rebasing both
+copies together, regenerating both lockfiles, and rerunning the strict-CSP
+browser matrix; replacing one copy independently is prohibited.
+
 `rust-toolchain.toml` pins Rust 1.96.0 for normal builds and `.flutter-version`
 records Flutter 3.47.2 / Dart 3.13.2. The fuzz workflow separately pins nightly
 2026-09-01 because libFuzzer requires nightly compiler support.
@@ -43,12 +53,22 @@ Fuzzing uses Rust nightly because `cargo-fuzz` is built on libFuzzer:
 ```powershell
 cargo +nightly fuzz run wire_decoders -- -max_total_time=60 -max_len=16400
 cargo +nightly fuzz run session_state -- -max_total_time=60 -max_len=256
+cargo +nightly fuzz run noise_handshake -- -max_total_time=60 -max_len=16400
 ```
 
 On Windows this requires the MSVC Rust target and a compatible LLVM/Visual C++
-toolchain. The project's local Rust installation is GNU-only, so the authoritative
-bounded smoke run is the Ubuntu CI job. Ordinary deterministic tests still run
-locally.
+toolchain. The project's local Rust installation is GNU-only: AddressSanitizer
+is unsupported for that target and `libfuzzer-sys` cannot use its Windows MSVC
+shim. Therefore the authoritative bounded smoke run is the Ubuntu CI job.
+Ordinary deterministic tests and the relay soak still run locally.
+
+The reproducible Windows soak command is:
+
+```powershell
+.\rust\scotoma-relay\run_soak.ps1 -Rounds 500 -RoomsPerRound 16 -MaxPeakWorkingSetMiB 384
+```
+
+It stores unversioned logs and a JSON summary under `artifacts/soak/`.
 
 The security workflow generates two CycloneDX JSON artifacts, one for each Rust
 graph, and retains them with the workflow run. An SBOM must always be associated

@@ -23,6 +23,10 @@ const PAYLOAD_BYTES: usize = 1_024;
 const CHURN_ROUNDS: usize = 6;
 const CHURN_ROOMS_PER_ROUND: usize = 24;
 const CHURN_PAYLOAD_BYTES: usize = 16 * 1_024;
+const DEFAULT_SOAK_ROUNDS: usize = 50;
+const DEFAULT_SOAK_ROOMS_PER_ROUND: usize = 16;
+const MAX_SOAK_ROUNDS: usize = 10_000;
+const MAX_SOAK_ROOMS_PER_ROUND: usize = 128;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn production_profile_handles_bounded_concurrent_rooms_and_returns_to_zero() -> TestResult {
@@ -118,6 +122,87 @@ async fn repeated_pending_disconnect_churn_releases_every_resource() -> TestResu
         Some(expected_rooms)
     );
 
+    server.abort();
+    let _ = server.await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "configurable prolonged soak; run through rust/scotoma-relay/run_soak.ps1"]
+async fn prolonged_mixed_cleanup_soak_returns_every_gauge_to_zero() -> TestResult {
+    let rounds = bounded_env_usize("SCOTOMA_SOAK_ROUNDS", DEFAULT_SOAK_ROUNDS, MAX_SOAK_ROUNDS)?;
+    let rooms_per_round = bounded_env_usize(
+        "SCOTOMA_SOAK_ROOMS_PER_ROUND",
+        DEFAULT_SOAK_ROOMS_PER_ROUND,
+        MAX_SOAK_ROOMS_PER_ROUND,
+    )?;
+    let public_listener = TcpListener::bind("127.0.0.1:0").await?;
+    let public_address = public_listener.local_addr()?;
+    let admin_listener = TcpListener::bind("127.0.0.1:0").await?;
+    let admin_address = admin_listener.local_addr()?;
+    let config = RelayConfig {
+        listen_addr: public_address,
+        max_rooms: rooms_per_round,
+        handshake_timeout: Duration::from_secs(5),
+        pairing_timeout: Duration::from_secs(5),
+        // Admission pressure and its puzzle path have dedicated tests. This
+        // campaign isolates lifecycle stability across many sequential rooms.
+        max_unchallenged_upgrades_per_second: u32::MAX,
+        unchallenged_upgrade_burst: u32::MAX,
+        max_websocket_upgrades_per_second: u32::MAX,
+        websocket_upgrade_burst: u32::MAX,
+        event_channel_capacity: 0,
+        ..RelayConfig::default()
+    };
+    let server =
+        tokio::spawn(
+            async move { serve_with_admin(public_listener, admin_listener, config).await },
+        );
+    let url = format!("ws://{public_address}/v2/connect");
+    let total_rooms = rounds
+        .checked_mul(rooms_per_round)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "soak room count overflow"))?;
+    let timeout_seconds = u64::try_from(rounds)?.saturating_mul(3).saturating_add(30);
+
+    timeout(Duration::from_secs(timeout_seconds), async {
+        for round in 0..rounds {
+            let first_index = round * rooms_per_round;
+            stream::iter((0..rooms_per_round).map(|offset| {
+                let room_url = url.clone();
+                async move {
+                    let index = first_index + offset;
+                    if (round + offset) % 3 == 0 {
+                        exercise_room(room_url, index).await
+                    } else {
+                        exercise_pending_disconnect(room_url, index).await
+                    }
+                }
+            }))
+            .buffer_unordered(rooms_per_round)
+            .for_each(|result| async move {
+                result.expect("each soak room path must succeed");
+            })
+            .await;
+
+            let metrics = wait_for_zero_resource_gauges(admin_address)
+                .await
+                .expect("every soak round must release all resource gauges");
+            let expected_closed = u64::try_from((round + 1) * rooms_per_round)
+                .expect("bounded soak room count fits u64");
+            assert_eq!(
+                metric_value(&metrics, "scotoma_relay_rooms_created_total"),
+                Some(expected_closed)
+            );
+            assert_eq!(
+                metric_value(&metrics, "scotoma_relay_rooms_closed_total"),
+                Some(expected_closed)
+            );
+        }
+    })
+    .await
+    .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "mixed soak timed out"))?;
+
+    println!("SCOTOMA_SOAK_OK rounds={rounds} rooms={total_rooms}");
     server.abort();
     let _ = server.await;
     Ok(())
@@ -299,4 +384,25 @@ fn metric_value(metrics: &str, name: &str) -> Option<u64> {
         let (candidate, value) = line.split_once(' ')?;
         (candidate == name).then(|| value.parse().ok()).flatten()
     })
+}
+
+fn bounded_env_usize(name: &str, default: usize, maximum: usize) -> TestResult<usize> {
+    let value = match std::env::var(name) {
+        Ok(raw) => raw.parse::<usize>().map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("{name} must be a positive integer"),
+            )
+        })?,
+        Err(std::env::VarError::NotPresent) => default,
+        Err(error) => return Err(error.into()),
+    };
+    if value == 0 || value > maximum {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("{name} must be between 1 and {maximum}"),
+        )
+        .into());
+    }
+    Ok(value)
 }

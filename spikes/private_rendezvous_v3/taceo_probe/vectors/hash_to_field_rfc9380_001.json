@@ -1,0 +1,21 @@
+{
+  "schema": "scotoma-private-rendezvous-vector-v1",
+  "id": "hash-to-field-rfc9380-001",
+  "classification": "TEST-ONLY",
+  "credential": {
+    "room": "13",
+    "password": "1370",
+    "encoding_hex": "53434f544f4d412d43524544454e5449414c2d76330231330431333730"
+  },
+  "hash_to_field": {
+    "suite": "XMD:SHA-256",
+    "dst": "SCOTOMA-v3-TACEO-TWOHASHDH-BABYJUBJUB-POSEIDON2_XMD:SHA-256_H2F",
+    "security_parameter_bits": 128,
+    "field_element_bytes": 48,
+    "field_modulus_decimal": "21888242871839275222246405745257275088548364400416034343698204186575808495617"
+  },
+  "expected": {
+    "query_big_endian_hex": "128dc49bd8c64080931c01150ffeceeb749f723708bf5c0c31f58abca4f3c39e",
+    "rejected_arkworks_060_hex": "16ff8c5d388563c0325e60b0276f36aca2c09e687374cae3361cabff31d555da"
+  }
+}

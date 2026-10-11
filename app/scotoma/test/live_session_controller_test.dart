@@ -54,6 +54,30 @@ void main() {
     expect(controller.verificationCode, isNull);
     expect(port.closeCalls, 1);
   });
+
+  test('network loss during handshake is terminal and clears state', () async {
+    final port = _ControllerPort(initialPhase: TransportPhase.handshaking);
+    final controller = LiveSessionController(
+      launch: _ControllerLaunch(port),
+      derivationDeadline: const Duration(seconds: 1),
+      pairingDeadline: const Duration(seconds: 1),
+    );
+    addTearDown(controller.dispose);
+
+    controller.start();
+    await _waitFor(() => controller.phase == LiveSessionPhase.handshaking);
+    expect(controller.verificationCode, isNull);
+    expect(controller.messages, isEmpty);
+
+    port.finish(TransportOutcome.connectionLost, TransportPhase.connectionLost);
+    await _waitFor(() => controller.phase == LiveSessionPhase.connectionLost);
+
+    expect(controller.verificationCode, isNull);
+    expect(controller.messages, isEmpty);
+    expect(controller.sendPending, isFalse);
+    expect(port.closeCalls, 1);
+    expect(port.disposeCalls, 1);
+  });
 }
 
 Future<void> _waitFor(bool Function() condition) async {
@@ -87,11 +111,14 @@ final class _ControllerLaunch implements SessionLaunch {
 }
 
 final class _ControllerPort implements AppSessionPort {
-  _ControllerPort({this.code = '0123 ABCD EF45'});
+  _ControllerPort({
+    this.code = '0123 ABCD EF45',
+    TransportPhase initialPhase = TransportPhase.connected,
+  }) : _phase = initialPhase;
 
   final String? code;
   final _transport = Completer<TransportOutcome>();
-  TransportPhase _phase = TransportPhase.connected;
+  TransportPhase _phase;
   int closeCalls = 0;
   int disposeCalls = 0;
 

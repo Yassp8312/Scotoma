@@ -35,7 +35,7 @@ Future<void> _serve(
           "frame-ancestors 'none'; connect-src 'self' ws: wss:; "
           "img-src 'self' data: blob:; font-src 'self' data:; "
           "style-src 'self' 'unsafe-inline'; script-src 'self' "
-          "'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; "
+          "'unsafe-inline' 'wasm-unsafe-eval'; "
           "worker-src 'self' blob:; "
           "manifest-src 'self'",
     );

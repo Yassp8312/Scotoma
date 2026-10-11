@@ -8,4 +8,5 @@ environment:
 
 dependencies:
   ffi: 2.2.0
-  flutter_rust_bridge: 2.13.0
+  flutter_rust_bridge:
+    path: ../../vendor/flutter_rust_bridge_dart

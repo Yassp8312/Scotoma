@@ -20,7 +20,9 @@ La sala y la contraseña no representan una identidad. Son datos efímeros que
 los participantes vuelven a introducir cada vez. Una misma sala puede contener
 contraseñas distintas y, por tanto, encuentros distintos. Esto permite acordar
 señales alternativas —incluido un posible honeypot humano— sin mantener una
-agenda o perfil en SCOTOMA.
+agenda o perfil en SCOTOMA. No crea un buzón o alarma: sin persistencia ni
+notificaciones, ambos participantes deben usar la misma señal durante una
+ventana en línea coincidente.
 
 El relay sirve para acercar dos conexiones y transportar paquetes cifrados,
 pero el diseño intenta evitar que reciba la sala, la contraseña, las claves de

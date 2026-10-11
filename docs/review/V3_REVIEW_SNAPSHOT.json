@@ -1,0 +1,27 @@
+{
+  "schema": "scotoma-v3-review-snapshot-v1",
+  "created": "2026-10-11",
+  "git_base": "f24d7c797bf899a8a38e7a6cd2eacfdfdc9142a3",
+  "working_tree": "dirty-intentional",
+  "warning": "Review these exact bytes. This snapshot is not a release, audit, endorsement, or production protocol.",
+  "files": [
+    { "path": "docs/PRIVATE_RENDEZVOUS_REQUIREMENTS.md", "sha256": "4bfd13e4a8144702652a2a566f5d03dcf7978eb326b575be842a2172e9445f1a" },
+    { "path": "docs/PRIVATE_RENDEZVOUS_V3_CANDIDATE.md", "sha256": "2d5fe5326edabeef5563a53c035dc95b0656c11fc19f499574c8e69641ee50c7" },
+    { "path": "docs/V3_TOPRF_NOISE_COMPOSITION.md", "sha256": "e3817bb2d14228faae34365ed9ffeb71b98b7231d0fb8f56113b1fa3a5bdd3ad" },
+    { "path": "docs/V3_OPERATOR_AND_ABUSE_MODEL.md", "sha256": "37de3138c6c350c607e2d7f1ad6ab72ae05cf52431fe6960ca8a56864e0e70f1" },
+    { "path": "docs/V3_MANIFEST_AND_COLLISION_POLICY.md", "sha256": "23b6f57d3ec254e5d356028a9be95b7431c1bbf41d8b9a019bbf6fc1ed57894d" },
+    { "path": "docs/INTERNAL_V3_SECURITY_REVIEW.md", "sha256": "73d06c5d04007d9fc80133fe6b2c9c638f8734119fd563c8ef27aa107254b9b3" },
+    { "path": "docs/PRIVATE_RENDEZVOUS_V3_TEST_PLAN.md", "sha256": "2b71c6aec01d1532ce3c9db506382dbf465e44fcd24127e4222c76e1aeb72b18" },
+    { "path": "spikes/private_rendezvous_v3/Cargo.toml", "sha256": "1033ee82ddd770588e36a17228e213878bb9749511ea69ab28e66176dd63b15c" },
+    { "path": "spikes/private_rendezvous_v3/Cargo.lock", "sha256": "0a5e4dac2fe41c5f475668239b7dd03218d179089b2477b97c98459e340a19c1" },
+    { "path": "spikes/private_rendezvous_v3/src/lib.rs", "sha256": "87d071296fdd99e2518a825f542a56d99cafb81279f0fc528d0c882465bd14d3" },
+    { "path": "spikes/private_rendezvous_v3/src/ceremony.rs", "sha256": "e56f1a9af2b64a7b4df18c5a0e5aff0dfd7fa05373145ed312ccbddbed34c89d" },
+    { "path": "spikes/private_rendezvous_v3/src/relay.rs", "sha256": "a56c395fe9bf89d2b1c7185813af451526e609f2238d79094139ac3871b6c302" },
+    { "path": "spikes/private_rendezvous_v3/tests/hardening.rs", "sha256": "f829370ef2ddff052c40236c4b0211831d3f4c8173158859a3fa52719bcdb25e" },
+    { "path": "spikes/private_rendezvous_v3/taceo_probe/Cargo.toml", "sha256": "38bbbf02a58ebc761e5fd029e02c50b7715ec6b45db7cb3079292f5499fb48ef" },
+    { "path": "spikes/private_rendezvous_v3/taceo_probe/Cargo.lock", "sha256": "ca3e9a32dbc90260551873a36274586cefac0a453bb9595a12e970f6909a978d" },
+    { "path": "spikes/private_rendezvous_v3/taceo_probe/src/lib.rs", "sha256": "10f88e1f6f43990e80cae9742f178babcb43bb90c87f41196eebdfbeca0591af" },
+    { "path": "spikes/private_rendezvous_v3/taceo_probe/vectors/hash_to_field_rfc9380_001.json", "sha256": "2ea4a05ef847f14ea9795f5c87acce1200bc305ad30fbedf1a9627fd8d4110a2" },
+    { "path": "spikes/private_rendezvous_v3/taceo_probe/vectors/v3_matrix_coverage.json", "sha256": "f7355a82dfea05a6cb5f659a0496be8d907eafcc9969a543c857bef616333dfc" }
+  ]
+}

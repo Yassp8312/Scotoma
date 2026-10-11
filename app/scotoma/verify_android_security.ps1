@@ -16,6 +16,7 @@ if (-not (Test-Path -LiteralPath $analyzer -PathType Leaf)) {
 $packageName = 'app.scotoma.scotoma'
 $allowedPermissions = @(
     'android.permission.INTERNET',
+    'android.permission.HIDE_OVERLAY_WINDOWS',
     "$packageName.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
 )
 $forbiddenPackagedNames = @(

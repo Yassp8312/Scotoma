@@ -1,0 +1,19 @@
+{
+  "schema": "scotoma-v3-findings-ledger-v1",
+  "updated": "2026-10-11",
+  "decision": "NO-GO",
+  "findings": [
+    { "id": "V3-R01", "severity": "critical", "status": "blocked", "action": "Obtain a construction-specific composition argument for TOPRF output, HKDF context, Noise PSK, roles and confirmation.", "exit_condition": "Independent review accepts the exact frozen composition or findings are corrected and re-reviewed." },
+    { "id": "V3-R02", "severity": "critical", "status": "blocked", "action": "Define and exercise genuinely independent operators, PedPoP DKG, rotation, recovery and compromise response.", "exit_condition": "At least two independent administrative domains run an authenticated malicious-secure ceremony." },
+    { "id": "V3-R03", "severity": "high", "status": "partial", "action": "Measure online guessing, NAT false positives, global admission and distributed evasion.", "exit_condition": "Published measurements justify bounded defaults without claiming protection for weak PINs." },
+    { "id": "V3-R04", "severity": "high", "status": "partial", "action": "Specify canonical signed manifests, trust anchors, continuity, rollback and threshold-change UX.", "exit_condition": "Cross-platform negative tests reject forged, stale, downgraded and ambiguously encoded manifests." },
+    { "id": "V3-R05", "severity": "high", "status": "open", "action": "Bound epoch linkability and analyze sub-tag or epoch-overlap choices.", "exit_condition": "A reviewed policy states exact relay-visible correlation and passes boundary tests." },
+    { "id": "V3-R06", "severity": "high", "status": "documented_risk", "action": "Keep IP/time correlation outside anonymity claims and evaluate padding/jitter separately.", "exit_condition": "Public claims and deployment measurements accurately state remaining metadata." },
+    { "id": "V3-R07", "severity": "high", "status": "partial", "action": "Validate fail-all collision behavior under independent processes, races and a malicious relay.", "exit_condition": "No three-client schedule confirms an ambiguous pair; denial-of-service remains explicit." },
+    { "id": "V3-R08", "severity": "medium", "status": "open", "action": "Define authenticated epoch overlap, terminal failure and rollback behavior.", "exit_condition": "Rotation/partition tests show no mixed-epoch session or silent threshold reduction." },
+    { "id": "V3-R09", "severity": "medium", "status": "documented_risk", "action": "Minimize managed-runtime copies and avoid physical-erasure claims.", "exit_condition": "Android/Web lifecycle tests and public wording match controllable-state cleanup only." },
+    { "id": "V3-R10", "severity": "medium", "status": "documented_risk", "action": "Keep honeypot meaning entirely out of band and avoid alarm claims.", "exit_condition": "Protocol and UX contain no decoy marker or unauthenticated coercion signal." },
+    { "id": "V3-R11", "severity": "high", "status": "partial", "action": "Freeze and independently reproduce the RFC 9380 field mapping inside the exact TOPRF suite.", "exit_condition": "Android and Web reproduce complete TOPRF/HKDF/transcript vectors under a signed manifest." },
+    { "id": "V3-R12", "severity": "high", "status": "blocked", "action": "Use a complete authenticated PedPoP ceremony with commitment, proof and complaint verification.", "exit_condition": "Malicious-dealer tests cannot create accepted inconsistent shares or public keys." }
+  ]
+}

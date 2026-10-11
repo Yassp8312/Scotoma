@@ -75,8 +75,9 @@ network transitions and a two-human acceptance run.
 The browser's 15-second timeout uses the same terminal policy covered by the
 controller and native adversarial tests, but this block did not force a live
 browser peer to suppress only its ACK. Browser memory, JavaScript packet copies
-and network stacks cannot provide physical-erasure guarantees. The FRB
-`'unsafe-eval'`, silent-worker and quarantine limitations from ADR 0028 remain.
+and network stacks cannot provide physical-erasure guarantees. ADR 0042 later
+resolved the FRB `'unsafe-eval'` limitation locally; silent-worker and
+quarantine limitations from ADR 0028 remain.
 
 ## References
 

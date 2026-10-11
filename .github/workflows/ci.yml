@@ -29,6 +29,59 @@ jobs:
       - name: Run tests
         run: cargo test --workspace --all-targets
 
+      - name: Run bounded mixed-cleanup soak smoke
+        env:
+          SCOTOMA_SOAK_ROUNDS: "5"
+          SCOTOMA_SOAK_ROOMS_PER_ROUND: "12"
+        run: >-
+          cargo test -p scotoma-relay --test production_load
+          prolonged_mixed_cleanup_soak_returns_every_gauge_to_zero --
+          --ignored --exact --nocapture --test-threads=1
+
+  v3-research:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install pinned Rust with Wasm support
+        run: >-
+          rustup toolchain install 1.96.0 --profile minimal
+          --component clippy,rustfmt --target wasm32-unknown-unknown
+
+      - name: Select pinned Rust
+        run: rustup default 1.96.0
+
+      - name: Verify isolated v3 state model
+        run: |
+          cargo fmt --manifest-path spikes/private_rendezvous_v3/Cargo.toml --all -- --check
+          cargo clippy --manifest-path spikes/private_rendezvous_v3/Cargo.toml --all-targets -- -D warnings
+          cargo test --manifest-path spikes/private_rendezvous_v3/Cargo.toml --all-targets
+
+      - name: Verify isolated v3 cryptographic probe
+        run: |
+          cargo fmt --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml --all -- --check
+          cargo clippy --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml --all-targets -- -D warnings
+          cargo clippy --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml --target wasm32-unknown-unknown --lib -- -D warnings
+          cargo test --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml --all-targets
+
+      - name: Record bounded v3 performance smoke
+        env:
+          SCOTOMA_V3_MAPPING_ITERATIONS: "200"
+          SCOTOMA_V3_NOISE_ITERATIONS: "20"
+        run: >-
+          cargo run --release
+          --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml
+          --example v3_benchmark
+
+      - name: Prove v3 remains outside production graphs and artifacts
+        shell: pwsh
+        run: ./spikes/private_rendezvous_v3/verify_isolation.ps1
+
+      - name: Verify frozen v3 review snapshot and findings ledger
+        shell: pwsh
+        run: ./spikes/private_rendezvous_v3/verify_review_snapshot.ps1
+
   fuzz-smoke:
     runs-on: ubuntu-latest
     steps:
@@ -51,6 +104,23 @@ jobs:
           cargo +nightly-2026-09-01 fuzz run session_state --
           -max_total_time=30 -max_len=256
 
+      - name: Fuzz Noise and mutual-confirmation stages
+        run: >-
+          cargo +nightly-2026-09-01 fuzz run noise_handshake --
+          -max_total_time=30 -max_len=16400
+
+      - name: Fuzz v3 state and opaque relay invariants
+        working-directory: spikes/private_rendezvous_v3/fuzz
+        run: >-
+          cargo +nightly-2026-09-01 fuzz run v3_state_relay --
+          -max_total_time=30 -max_len=4096
+
+      - name: Fuzz v3 credential mapping and Noise frames
+        working-directory: spikes/private_rendezvous_v3/fuzz
+        run: >-
+          cargo +nightly-2026-09-01 fuzz run v3_credential_noise --
+          -max_total_time=30 -max_len=512
+
   supply-chain:
     runs-on: ubuntu-latest
     steps:
@@ -69,15 +139,21 @@ jobs:
           cargo install cargo-deny --version 0.20.2 --locked
           cargo install cargo-cyclonedx --version 0.5.9 --locked
 
-      - name: Audit both independent Rust lockfiles
+      - name: Audit production and isolated v3 Rust lockfiles
         run: |
           cargo audit --file Cargo.lock
           cargo audit --file packages/scotoma_bridge/rust/Cargo.lock
+          cargo audit --file spikes/private_rendezvous_v3/Cargo.lock
+          cargo audit --file spikes/private_rendezvous_v3/taceo_probe/Cargo.lock
+          cargo audit --file spikes/private_rendezvous_v3/fuzz/Cargo.lock
 
       - name: Enforce advisory, license and source policy
         run: |
           cargo deny check
           cargo deny --manifest-path packages/scotoma_bridge/rust/Cargo.toml check
+          cargo deny --manifest-path spikes/private_rendezvous_v3/Cargo.toml check
+          cargo deny --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml check
+          cargo deny --manifest-path spikes/private_rendezvous_v3/fuzz/Cargo.toml check
 
       - name: Fix SBOM timestamp to the audited commit
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
@@ -102,6 +178,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+
+      - name: Verify logs, repository inputs and Docker secret boundary
+        shell: pwsh
+        run: ./deploy/verify-secret-boundary.ps1
 
       - name: Validate Compose model
         env:

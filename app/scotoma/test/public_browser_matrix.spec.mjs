@@ -1,6 +1,6 @@
 import { test, expect, chromium, firefox } from 'playwright/test';
 
-const publicUrl = 'https://scotoma.pages.dev/';
+const publicUrl = process.env.SCOTOMA_PUBLIC_URL || 'https://scotoma.pages.dev/';
 
 const browsers = [
   {
@@ -146,17 +146,17 @@ for (const [index, target] of browsers.entries()) {
     // Enter credentials through Flutter's canvas before enabling its
     // accessibility mirror. Chromium otherwise edits only the mirror's
     // obscured input and leaves Flutter's password controller unchanged.
-    await enterDigits(first, { x: 990, y: 239 }, room);
-    await enterDigits(first, { x: 990, y: 323 }, password);
-    await first.mouse.click(990, 509);
+    await enterDigits(first, { x: 990, y: 300 }, room);
+    await enterDigits(first, { x: 990, y: 384 }, password);
+    await first.mouse.click(990, 570);
     await first
       .getByRole('button', { name: 'Enable accessibility' })
       .evaluate((element) => element.click());
     await first.waitForTimeout(500);
 
-    await enterDigits(second, { x: 990, y: 239 }, room);
-    await enterDigits(second, { x: 990, y: 323 }, password);
-    await second.mouse.click(990, 509);
+    await enterDigits(second, { x: 990, y: 300 }, room);
+    await enterDigits(second, { x: 990, y: 384 }, password);
+    await second.mouse.click(990, 570);
     await second
       .getByRole('button', { name: 'Enable accessibility' })
       .evaluate((element) => element.click());

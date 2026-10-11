@@ -177,6 +177,10 @@ ADR 0007 records the prototype handshake answers and ADR 0031 records the
 private-rendezvous decision. The complete composition must be revisited before
 closed-alpha or production approval:
 
+Sprint 5.2 evaluated the available construction families and recorded a bounded
+`no-go` in ADR 0044. The questions below remain gates, not implementation work
+already approved.
+
 1. Which maintained library implements the chosen PAKE/AKE?
 2. Does it provide explicit mutual key confirmation?
 3. How are initiator/responder roles bound into the transcript?
@@ -187,6 +191,14 @@ closed-alpha or production approval:
 8. What license and external-use guarantees apply?
 9. Which published test vectors can be reproduced?
 10. What independent review exists?
+11. Can a passive transcript validate a password candidate without a new online
+    interaction with the required honest party or quorum?
+12. How are different passwords in the same room isolated, and what information
+    about their equality or relationship reaches each server?
+13. Does a decoy credential have exactly the same wire behavior, errors, cost
+    and lifecycle as an ordinary credential?
+14. What precise security property is lost when one server, the threshold, or
+    all servers are compromised?
 
 ## Prohibited shortcuts
 

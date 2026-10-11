@@ -191,6 +191,25 @@ authentication; broader physical Android and Safari validation remain release
 gates. The redesigned ARM64 debug APK compiles and passes the physical
 main-app wait/cancel integration path. See ADR 0030.
 
+Sprint 4.1 extends the local reliability matrix without claiming new physical
+Android evidence. A deterministic peer disconnects after receiving the first
+Noise frame; authentication ends terminally, never reports `Connected` and the
+released room accepts only a fresh explicit session. The pending-ACK cut waits
+for the relay's private gauge to confirm one retained frame, then requires the
+command channel, pending frame and active room to close. Flutter also verifies
+terminal cleanup directly from `handshaking`. Current app coverage is 21
+Flutter tests; the corresponding ADB cases are queued in
+`../../docs/ANDROID_PHYSICAL_TEST_BACKLOG.md`. See ADR 0038.
+
+Sprint 4.2 hardens the Android window before Flutter draws: Android 12+ hides
+application overlays, Android 8+ excludes the root from autofill, Android 11+
+excludes content capture and Android 13+ keeps recent-task screenshots off.
+The obsolete `PROCESS_TEXT` query is removed and source/APK checks pin the
+expanded permission and native privacy surface. The app now passes 23 Flutter
+tests, including hidden password semantics and message-composer text-learning
+opt-out. The ARM64 debug APK compiles and its merged manifest passes inspection;
+the signed release and physical behavior remain pending. See ADR 0039.
+
 ## Memory and platform limits
 
 Credentials are kept as text in Flutter controllers while editing. On submit,
@@ -208,10 +227,12 @@ not restored, but this is not a forensic proof of physical erasure.
 iOS and Safari are documented in `../../docs/ROADMAP_RESTANTE.md` and deferred
 until macOS/Xcode and suitable test conditions are available.
 The web supervisor cannot detect every silent browser/process worker loss, and
-runtime quarantine is not physical erasure. The pinned FRB 2.13.0 loader uses
-`new Function`, so the current CSP requires `'unsafe-eval'`; removing that
-allowance is a production hardening gate. Chrome, Edge and Firefox now pass the
-public two-client matrix; Safari is pending. The signed ARM64 Android
+runtime quarantine is not physical erasure. SCOTOMA carries reviewed local
+patches over FRB 2.13.0 that replace `eval`/`new Function` with static bindings;
+the build rejects their reappearance and the CSP no longer permits
+`'unsafe-eval'`. It still permits `'wasm-unsafe-eval'` for WebAssembly
+compilation. Chrome, Edge and Firefox pass the strict-CSP two-client matrix;
+Safari is pending. The signed ARM64 Android
 release and the Cloudflare-hosted web client have completed a physical-device
 run through the Render WSS relay with matching verification codes,
 bidirectional text, authenticated ACKs and BURN. A two-human acceptance run and

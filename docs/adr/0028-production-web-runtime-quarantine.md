@@ -62,6 +62,10 @@ Dart/Wasm dry run still emits the recorded FRB JS-interop incompatibility.
 Shared-memory Wasm also depends on browser support for cross-origin isolation,
 and the Rust atomics target remains a nightly-toolchain feature.
 
+ADR 0042 later resolved the `unsafe-eval` debt and the dry-run incompatibility
+for the local alpha build. The preceding paragraph records this ADR's original
+state and is not the current build policy.
+
 This block provides no live browser chat and proves no Android↔web
 interoperability. Those are block-16 exit criteria.
 
