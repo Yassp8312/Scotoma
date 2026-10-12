@@ -107,6 +107,34 @@ completar la confirmación mutua y vincular prologue y transcript completos.
 | V3-A15 | buffers truncados, enormes o duplicados | rechazo acotado sin pánico ni retención |
 | V3-A16 | RNG falla | fallo cerrado antes de emitir material reutilizable |
 
+### Matriz de rotación añadida en 5.5.5.1
+
+| Caso | Estímulo | Resultado obligatorio |
+|---|---|---|
+| V3-E01 | época o secuencia no consecutiva | transición rechazada sin mover el checkpoint |
+| V3-E02 | hash anterior incorrecto | transición rechazada |
+| V3-E03 | hueco o solapamiento mayor de 300 s | transición rechazada |
+| V3-E04 | intento provisional cruza `valid_from` | terminal; sin migración ni fallback |
+| V3-E05 | sesión confirmada cruza `valid_from` | conserva época antigua hasta su `valid_until` |
+| V3-E06 | operador nuevo falla durante el solapamiento | terminal; reintento manual continúa en época nueva |
+| V3-E07 | reinicio recibe cuerpo anterior al checkpoint | restauración rechazada |
+| V3-E08 | respuesta mezcla hash o época | terminal antes de confirmar |
+
+### Matriz de relay adversario añadida en 5.5.5.2
+
+Cada caso se ejecuta en un proceso separado para las seis permutaciones de tres
+participantes. El resultado oculto/retrasado es un contraejemplo esperado y
+mantiene `NO-GO`; no se interpreta como prueba superada de una garantía mayor.
+
+| Caso | Política del relay | Resultado observado/obligatorio |
+|---|---|---|
+| V3-C01 | colisión visible antes de confirmar | cero confirmados; tres terminales |
+| V3-C02 | señal de colisión duplicada | cero confirmados; duplicados no reactivan estado |
+| V3-C03 | confirmación/frame antes de `Paired` | cero confirmados; fallo de orden terminal |
+| V3-C04 | colisión oculta al primer par | contraejemplo: dos confirman y uno termina |
+| V3-C05 | colisión retrasada hasta después de confirmar | contraejemplo: dos permanecen confirmados |
+| V3-C06 | modo, orden o participantes inválidos | proceso falla sin reporte aceptable |
+
 ## 5. Vectores interoperables
 
 Cada vector futuro debe ser JSON canónico e incluir:
@@ -121,6 +149,33 @@ Cada vector futuro debe ser JSON canónico e incluir:
 
 Los vectores con secretos fijados llevan la marca `TEST-ONLY` y nunca pueden
 cargarse desde builds de aplicación.
+
+### Campañas fuzz/sanitizer 5.5.5.3
+
+El runner Linux fijado ejecuta cuatro targets libFuzzer:
+
+- `v3_state_relay`: transiciones, relay opaco y límites de tablas;
+- `v3_credential_noise`: credenciales, mapeo y frames Noise truncados/mutados;
+- `v3_manifest_epoch`: parser canónico, secuencia/época, overlap y terminalidad;
+- `v3_adversarial_schedule`: seis órdenes de tres participantes y cinco
+  políticas de entrega, conservando el límite de como máximo dos confirmados.
+
+Cada input tiene timeout de cinco segundos, el proceso un límite de 1 GiB y la
+campaña de CI dura 30 segundos por target. Después, todos los tests del modelo se
+ejecutan con ASan y detección de leaks. Un crash, timeout, crecimiento fuera del
+límite o corpus de fallo bloquea el job; una campaña breve limpia no demuestra
+ausencia de vulnerabilidades. La primera ejecución Linux del runner requiere el
+commit publicado y permanece como evidencia pendiente.
+
+### Cadena de suministro 5.5.5.4
+
+Los lockfiles del modelo, probe TACEO y fuzz son entradas independientes de
+RustSec y cargo-deny. CI produce tres SBOM CycloneDX de investigación separados
+de los dos SBOM de producción y conserva checksums SHA-256. El verificador
+`verify_supply_chain.ps1` falla si desaparece cualquier gate, si el job tolera
+errores, si se añaden fuentes desconocidas/excepciones RustSec o si los
+artefactos dejan de exigirse. La primera ejecución y descarga de artefactos
+requieren publicar el commit; hasta entonces la evidencia es local/estática.
 
 ## 6. Controles de recursos
 
@@ -167,12 +222,13 @@ La matriz trazable vive en
 `spikes/private_rendezvous_v3/taceo_probe/vectors/v3_matrix_coverage.json` y una
 prueba exige exactamente una entrada para cada ID. El balance actual es:
 
-- **21 `verified_local`**: F01–F06, F08–F10, A01–A08, A10 y A14–A16;
+- **20 `verified_local`**: F01–F06, F08–F10, A01–A07, A10 y A14–A16;
 - **3 `partial`**: F07, A09 y A13;
-- **2 `documented_risk`**: A11 y A12.
+- **3 `documented_risk`**: A08, A11 y A12.
 
 `verified_local` sólo significa que la propiedad acotada pasa en el arnés
-aislado. F07 aún no se ejecutó dentro de Android; A09 requiere observar el relay
+aislado. A08 conserva el contraejemplo del relay que oculta/retrasa al tercer
+participante; F07 aún no se ejecutó dentro de Android; A09 requiere observar el relay
 entre procesos y el despliegue; A13 carece todavía de distribución autenticada
 del manifiesto. Los riesgos A11/A12 (correlación de metadatos y coalición del
 umbral) no se eliminan mediante más pruebas unitarias.

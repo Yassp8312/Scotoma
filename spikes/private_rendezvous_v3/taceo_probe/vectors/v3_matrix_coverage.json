@@ -21,7 +21,7 @@
     { "id": "V3-A05", "status": "verified_local", "evidence": "Invalid or mismatched OPRF proofs are rejected; a malleated encrypted share produces a bound, substantiated complaint and terminal cleanup before Ready." },
     { "id": "V3-A06", "status": "verified_local", "evidence": "Operator responses and ceremony messages from different manifests cannot be combined." },
     { "id": "V3-A07", "status": "verified_local", "evidence": "Registration is impossible before the required number of distinct operator responses is reached." },
-    { "id": "V3-A08", "status": "verified_local", "evidence": "A third participant invalidates the complete provisional pair and clears its queued state." },
+    { "id": "V3-A08", "status": "documented_risk", "evidence": "An honest relay invalidates the provisional pair, but the independent-process adversarial matrix proves that a malicious relay can hide or delay the third participant and let one pair confirm." },
     { "id": "V3-A09", "status": "partial", "evidence": "The relay API accepts only an opaque epoch/tag key, but metadata leakage and deployment behavior still require network validation." },
     { "id": "V3-A10", "status": "verified_local", "evidence": "Fresh blindings produce different OPRF requests while finalizing to the same credential-bound output." },
     { "id": "V3-A11", "status": "documented_risk", "evidence": "Timing and IP correlation by an operator plus relay remain visible metadata; the design makes no anonymity claim." },

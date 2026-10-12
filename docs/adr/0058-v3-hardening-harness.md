@@ -29,3 +29,9 @@ quedan verificados por formato y revisión de código, pero su primera campaña
 real debe ocurrir en Linux CI. Una campaña corta sin hallazgos no demuestra
 ausencia de vulnerabilidades, no valida PedPoP, red ni operadores maliciosos y
 no sustituye revisión independiente.
+
+Seguimiento 5.5.5.3: el arnés incorpora `v3_manifest_epoch` y
+`v3_adversarial_schedule`, para un total de cuatro targets. El runner versionado
+fija nightly, timeout, memoria y tamaños, y añade ASan/LSan sobre toda la suite.
+La preparación encontró y corrigió el sucesor saturado de `u64::MAX`. La primera
+ejecución Linux sigue pendiente del próximo commit publicado; WSL no tiene Rust.

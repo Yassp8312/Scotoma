@@ -114,6 +114,12 @@ Firefox reproducen el vector `TEST-ONLY` y rechazos negativos. Permanece abierto
 por falta de prueba dentro del artefacto Android, persistencia antirollback,
 recuperación/rotación de la clave release y revisión independiente.
 
+Seguimiento 5.5.5.1: el modelo exporta y restaura un checkpoint mínimo de
+secuencia, época y hash, y rechaza un cuerpo anterior o alterado. Esto define la
+frontera local pero no protege el checkpoint contra rollback del almacenamiento;
+Android/Web, atomicidad, respaldo y recuperación de la clave release continúan
+pendientes. R04 permanece parcial.
+
 ### V3-R05 — Etiqueta enlazable durante la época — alto
 
 El relay no conocería la credencial, pero vería la misma etiqueta cuando la misma
@@ -122,6 +128,13 @@ ocupación o bloqueo.
 
 Acción: definir duración de época, subetiquetas o mecanismo publicado que reduzca
 la vinculación sin impedir que dos clientes se encuentren.
+
+Seguimiento 5.5.5.1: se fija un solapamiento máximo de 300 segundos. Un intento
+nuevo elige una sola época: la anterior antes del corte y la sucesora desde su
+`valid_from`, sin consulta doble ni fallback. Solo una sesión ya confirmada puede
+conservar la época anterior hasta su vencimiento. Esto acota la coexistencia de
+etiquetas, pero no evita correlación por IP/tiempo ni decide la duración total de
+época; R05 pasa a parcial.
 
 ### V3-R06 — Correlación entre servicios — alto
 
@@ -155,6 +168,14 @@ al finalizar no queda sala ni participante y los tres reciben `Collision`. R07
 permanece parcial porque un relay malicioso todavía puede ocultar la señal y
 causar denegación de servicio.
 
+Seguimiento 5.5.5.2: un proceso adversario recorrió las seis permutaciones de
+tres participantes. Colisión honesta, duplicada o confirmación reordenada dejan
+cero confirmados. Ocultar la colisión o retrasarla hasta después de confirmar
+deja dos confirmados y uno terminal: para esos dos, la vista es indistinguible
+de una sesión legítima. Sin identidades ni consistencia externa no existe una
+corrección puramente cliente/relay. R07 pasa a riesgo documentado; se conserva
+T03 (“como máximo dos”) y se prohíbe afirmar detección garantizada del tercero.
+
 ### V3-R08 — Rotación y disponibilidad — medio
 
 Clientes con manifiestos o épocas diferentes no se encuentran. Una TOPRF umbral
@@ -162,6 +183,13 @@ añade nuevas causas de caída y puede convertir rotaciones en particiones.
 
 Acción: definir solapamiento limitado y autenticado, rollback seguro y UX que no
 revele si falló la contraseña o la infraestructura.
+
+Seguimiento 5.5.5.1: el controlador local exige secuencia/época consecutivas,
+hash previo, ventanas crecientes sin hueco y solapamiento no mayor de 300
+segundos. El corte aborta intentos provisionales; sesiones confirmadas quedan
+fijadas solo hasta el vencimiento; una caída de la nueva época termina sin
+fallback. Pruebas de límites y checkpoint pasan. R08 pasa a parcial hasta repetir
+rotación/partición entre procesos, usar almacenamiento protegido y fijar la UX.
 
 ### V3-R09 — Borrado en Dart, navegador y Wasm — medio
 
@@ -269,3 +297,36 @@ El sprint 5.4 se cierra como **arnés de investigación completado con decisión
 NO-GO para integración**. “Cerrado” significa que el candidato no se conectará
 al producto y que los bloqueos quedan transferidos explícitamente; no significa
 que los criterios criptográficos estén aprobados. v2 no cambia.
+
+## Seguimiento 5.5.5.3 — fuzzing y sanitizers
+
+El arnés Linux pasa de dos a cuatro targets libFuzzer. Los nuevos targets
+ejercitan parsing de manifiesto, límites y estados de transición de época, y las
+cinco políticas adversarias de tres participantes. Un runner único fija nightly,
+timeout, memoria y longitudes máximas, y después ejecuta la suite completa bajo
+AddressSanitizer con detección de leaks.
+
+La exploración de extremos encontró y corrigió un caso real del modelo: una
+suma saturada permitía tratar `u64::MAX` como su propio sucesor de secuencia o
+época. Ahora ambos contadores usan incremento comprobado y el agotamiento falla
+cerrado con pruebas deterministas.
+
+Formato, Clippy y 86 pruebas del modelo pasan en Windows. El manifiesto del fuzz
+y el script Linux validan sintácticamente, pero la primera campaña ASan/libFuzzer
+continúa pendiente de ejecutar al publicar el commit: Ubuntu WSL no tiene Rust y
+no se instaló un toolchain adicional fuera del workspace. El criterio de
+fuzz/sanitizers permanece parcial hasta que el job Linux termine sin hallazgos.
+
+## Seguimiento 5.5.5.4 — CI y cadena de suministro
+
+Los tres lockfiles aislados v3 son ahora entradas obligatorias de RustSec,
+cargo-deny y CycloneDX. Los SBOM de producción e investigación se conservan en
+artefactos separados con checksums, y un verificador versionado impide retirar
+silenciosamente un gate, ignorar su fallo o añadir excepciones RustSec. La
+comprobación local de la definición pasa; la ejecución autoritativa y los
+artefactos esperan el próximo push.
+
+Los avisos de crates no mantenidos `derivative` y `paste`, heredados por TACEO,
+continúan visibles y mantienen parcial el criterio 5. No se convierten en una
+excepción ni se interpretan como vulnerabilidades confirmadas. Deben eliminarse
+o aceptarse mediante una decisión explícita antes de congelar dependencias.

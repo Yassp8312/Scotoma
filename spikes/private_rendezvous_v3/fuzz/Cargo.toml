@@ -30,3 +30,17 @@ path = "fuzz_targets/v3_credential_noise.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "v3_manifest_epoch"
+path = "fuzz_targets/v3_manifest_epoch.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "v3_adversarial_schedule"
+path = "fuzz_targets/v3_adversarial_schedule.rs"
+test = false
+doc = false
+bench = false

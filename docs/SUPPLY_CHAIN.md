@@ -1,9 +1,17 @@
 # Supply-chain controls
 
-SCOTOMA has two independent Rust dependency graphs:
+SCOTOMA has five independent Rust dependency graphs. Two are production inputs:
 
 - `Cargo.lock` covers the protocol, relay and simulator workspace;
 - `packages/scotoma_bridge/rust/Cargo.lock` covers the production Flutter bridge.
+
+Three are isolated research inputs and must never be confused with a production
+inventory:
+
+- `spikes/private_rendezvous_v3/Cargo.lock` covers the v3 state model;
+- `spikes/private_rendezvous_v3/taceo_probe/Cargo.lock` covers the cryptographic
+  probe;
+- `spikes/private_rendezvous_v3/fuzz/Cargo.lock` covers its libFuzzer harness.
 
 The Flutter application has a third locked graph in `app/scotoma/pubspec.lock`.
 All three lockfiles are release inputs and must change only in a dependency-focused
@@ -37,7 +45,7 @@ The security workflow uses:
 
 | Tool | Version | Purpose |
 |---|---:|---|
-| `cargo-audit` | 0.22.2 | Match both Cargo lockfiles against RustSec |
+| `cargo-audit` | 0.22.2 | Match all five Cargo lockfiles against RustSec |
 | `cargo-deny` | 0.20.2 | Enforce advisory, license and source policy |
 | `cargo-cyclonedx` | 0.5.9 | Generate CycloneDX JSON SBOMs |
 | `cargo-fuzz` | 0.13.2 | Run libFuzzer targets on untrusted inputs |
@@ -52,6 +60,9 @@ Run from the repository root after installing the pinned Cargo subcommands:
 ```powershell
 cargo audit --file Cargo.lock
 cargo audit --file packages/scotoma_bridge/rust/Cargo.lock
+cargo audit --file spikes/private_rendezvous_v3/Cargo.lock
+cargo audit --file spikes/private_rendezvous_v3/taceo_probe/Cargo.lock
+cargo audit --file spikes/private_rendezvous_v3/fuzz/Cargo.lock
 cargo deny check
 cargo deny --manifest-path packages/scotoma_bridge/rust/Cargo.toml check
 cargo deny --manifest-path spikes/private_rendezvous_v3/Cargo.toml check
@@ -65,6 +76,7 @@ Fuzzing uses Rust nightly because `cargo-fuzz` is built on libFuzzer:
 cargo +nightly fuzz run wire_decoders -- -max_total_time=60 -max_len=16400
 cargo +nightly fuzz run session_state -- -max_total_time=60 -max_len=256
 cargo +nightly fuzz run noise_handshake -- -max_total_time=60 -max_len=16400
+bash spikes/private_rendezvous_v3/fuzz/run_linux_smoke.sh
 ```
 
 On Windows this requires the MSVC Rust target and a compatible LLVM/Visual C++
@@ -81,9 +93,12 @@ The reproducible Windows soak command is:
 
 It stores unversioned logs and a JSON summary under `artifacts/soak/`.
 
-The security workflow generates two CycloneDX JSON artifacts, one for each Rust
-graph, and retains them with the workflow run. An SBOM must always be associated
-with the exact commit and lockfile that produced it.
+The security workflow generates five CycloneDX JSON inventories. The two
+production graphs and the three isolated v3 research graphs are uploaded as
+separate artifacts, each with a `SHA256SUMS` file and the audited commit in its
+artifact name. An SBOM must always be associated with the exact commit and
+lockfile that produced it. A v3 research SBOM is evidence about the spike, not
+evidence that the dependency graph is approved for production.
 
 ## Review policy
 
@@ -127,3 +142,13 @@ TLS y se sustituyó una dependencia local comodín por la versión exacta `0.0.0
 El grafo de fuzzing admite además `NCSA`, licencia OSI del runtime
 `libfuzzer-sys`; las dos dependencias locales de ese arnés también quedaron
 fijadas a `0.0.0`.
+
+## Seguimiento — 2026-10-12
+
+El tramo 4 de 5.5.5 consolida los tres grafos v3 como entradas obligatorias del
+job de cadena de suministro. `verify_supply_chain.ps1` impide retirar en silencio
+sus gates RustSec, cargo-deny o CycloneDX, introducir `continue-on-error`, añadir
+excepciones RustSec en `deny.toml` o dejar de conservar SBOM y checksums. Los
+avisos de `derivative 2.2.0` y `paste 1.0.15`, transitivos del probe TACEO, no se
+ocultan: bloquean congelar esa biblioteca hasta sustituirlos o aceptar el riesgo
+de forma explícita. La ejecución de CI y sus artefactos esperan el próximo push.

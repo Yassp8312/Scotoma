@@ -1710,9 +1710,9 @@ mod tests {
         }
 
         assert_eq!(actual, expected);
-        assert_eq!(counts.get("verified_local"), Some(&21));
+        assert_eq!(counts.get("verified_local"), Some(&20));
         assert_eq!(counts.get("partial"), Some(&3));
-        assert_eq!(counts.get("documented_risk"), Some(&2));
+        assert_eq!(counts.get("documented_risk"), Some(&3));
     }
 
     #[test]

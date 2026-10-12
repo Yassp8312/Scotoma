@@ -64,6 +64,25 @@ a small invariant smoke. The dated local result is documented in
 `docs/V3_OPERATIONAL_BASELINE.md`; it does not select production defaults or
 replace Android, browser, public-network and independent-operator measurements.
 
+The first 5.5.5 cut adds `epoch.rs`. Authenticated successors must advance
+manifest sequence and epoch by exactly one, link the previous hash, move their
+validity windows forward without a gap and overlap by no more than 300 seconds.
+New attempts select exactly one epoch; provisional old-epoch attempts terminate
+at cutover, while already-confirmed sessions remain pinned only until the old
+expiry. Infrastructure failure never triggers automatic fallback. The manifest
+model also exports a sequence/epoch/hash checkpoint and rejects mismatched
+restart state. Actual rollback-resistant Android/Web storage and multiprocess
+rotation remain outside this local model.
+
+The second 5.5.5 cut adds the independent `v3_adversarial_relay` process and a
+six-order, five-policy matrix for three participants. Visible/duplicated
+collisions and out-of-order confirmation leave no confirmed client. A hidden or
+post-confirmation collision reproducibly leaves two confirmed clients and one
+terminal client. That negative result is fundamental in an identity-free model:
+the selected pair sees the same transcript as an ordinary two-client session.
+The product may claim at most two participants per relay view, not guaranteed
+detection of every third participant under a malicious relay.
+
 Sprint 5.5.2 adds an isolated signed-manifest model using SHA-256 and
 Ed25519 from RustCrypto. `manifest.rs` defines one length-prefixed big-endian
 encoding, an application-pinned initial hash/release key, exact-sequence hash
@@ -90,14 +109,24 @@ does not execute TACEO/Poseidon2 or derive a real Noise handshake transcript,
 so this strengthens R11 without closing it.
 
 The current local matrix is machine-checked against all 26 required IDs. It
-records 21 locally verified cases, 3 partial cases, and 2 documented risks in
+records 20 locally verified cases, 3 partial cases, and 3 documented risks in
 `taceo_probe/vectors/v3_matrix_coverage.json`; those labels are research
 evidence, not a security approval.
 
 `tests/hardening.rs` supplies a deterministic bounded state/relay campaign.
-`fuzz/` contains two Linux/libFuzzer targets, and `run_benchmark.ps1` records a
+`fuzz/` contains four Linux/libFuzzer targets for state/relay,
+credential/Noise, manifest/epoch and adversarial schedules. Its pinned runner
+also executes all model targets under ASan/LSan. `run_benchmark.ps1` records a
 host-local release baseline for mapping/HKDF, Noise and process working set.
 The Windows GNU host cannot substitute for the sanitizer run required in CI.
+The boundary expansion found and fixed saturating sequence/epoch succession at
+`u64::MAX`; this is local hardening evidence, not production approval.
+
+The fourth 5.5.5 cut makes all three isolated lockfiles mandatory inputs to the
+RustSec, cargo-deny and CycloneDX CI gate. `verify_supply_chain.ps1` protects the
+gate definition from silent weakening. Production and v3 research inventories
+are uploaded separately with SHA-256 checksums; neither a green scan nor a v3
+SBOM selects this candidate for the product.
 
 It must not become a dependency of the application, bridge or relay. Its values
 are synthetic test fixtures and must never be used as operational keys,

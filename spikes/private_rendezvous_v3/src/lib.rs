@@ -7,6 +7,7 @@
 use std::collections::BTreeSet;
 
 pub mod ceremony;
+pub mod epoch;
 pub mod manifest;
 pub mod operational;
 pub mod relay;

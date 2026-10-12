@@ -61,24 +61,45 @@ y ataques parciales, pero no convierten el origen web en un cliente inmutable.
 
 ## 3. Rotación de época
 
-El spike comienza con una política conservadora:
+El tramo 5.5.5.1 fija una política conservadora y comprobable:
 
 - una sesión usa exactamente una época;
 - respuestas de épocas distintas nunca se combinan;
-- el cambio de época antes de confirmar destruye el intento;
-- una sesión ya confirmada no cambia de época;
-- no se consultan automáticamente dos épocas, para evitar duplicar señales y
-  ampliar el seguimiento;
+- el sucesor debe estar autenticado por la continuidad del manifiesto, enlazar
+  el hash anterior e incrementar secuencia y época exactamente en uno;
+- sus ventanas deben avanzar sin huecos y pueden solaparse como máximo **300
+  segundos**;
+- antes de `valid_from` los intentos nuevos usan únicamente la época anterior;
+  desde `valid_from` usan únicamente la nueva, incluso si sus operadores fallan;
+- el cambio de época antes de confirmar destruye el intento de forma terminal y
+  exige un reintento manual; nunca se prueba automáticamente la época anterior;
+- una sesión ya confirmada permanece fijada a su época hasta `valid_until`, y
+  entonces termina; no migra claves ni etiqueta;
+- ningún cliente consulta o registra dos etiquetas para un mismo intento;
 - los clientes desincronizados fallan con un error de infraestructura indistinto
   de otros fallos previos a la confirmación.
 
-La duración, tolerancia de reloj y transición sin pérdida de disponibilidad se
-mantienen abiertas hasta disponer de una TOPRF concreta.
+Durante los 300 segundos de solapamiento el relay puede observar tráfico de
+sesiones previamente confirmadas bajo la etiqueta antigua y nuevos intentos bajo
+la nueva. Las etiquetas no contienen un enlace criptográfico entre sí, pero IP,
+tiempo y volumen todavía pueden correlacionarlas. El solapamiento limita esa
+exposición; no proporciona anonimato.
+
+El cliente conserva de forma atómica la mayor secuencia, época y hash aceptados.
+Al reiniciar, el cuerpo canónico debe coincidir con ese checkpoint antes de
+restaurar continuidad. El modelo prueba esta comparación, pero un archivo común
+o almacenamiento web puede ser revertido junto con el checkpoint. La selección
+de almacenamiento protegido en Android y la política equivalente para Web
+siguen siendo puertas de plataforma, no propiedades ya resueltas.
+
+La duración total de cada época, tolerancia de reloj y recuperación de la clave
+release se mantienen abiertas hasta disponer de una TOPRF y operación concretas.
 
 ## 4. Colisiones y más de dos participantes
 
 SCOTOMA es estrictamente uno-a-uno. No existe identidad ni criterio seguro para
-elegir dos personas entre tres que conocen la misma credencial. Por tanto:
+elegir dos personas entre tres que conocen la misma credencial. Para un relay
+honesto o no equívoco:
 
 - el relay mantiene como máximo un intento provisional de dos conexiones por
   etiqueta y época;
@@ -93,6 +114,20 @@ Esta política evita aceptar una pareja ambigua, pero no evita denegación de
 servicio: un relay malicioso o alguien que conozca/adivine la credencial puede
 forzar abortos. Con los requisitos actuales, ese riesgo es fundamental y debe
 permanecer documentado.
+
+El tramo 5.5.5.2 demuestra un límite más fuerte: un relay malicioso puede mostrar
+a dos clientes la vista exacta de una sesión normal y ocultar por completo al
+tercero, o retrasar la colisión hasta después de la confirmación. Los dos primeros
+pueden confirmar porque no existe identidad, registro ni fuente de consistencia
+fuera del relay que pruebe la existencia del tercero. El comportamiento
+alcanzable es T03: como máximo dos confirman por vista y el tercero falla de
+forma acotada. No se afirmará que todos abortan frente a relay malicioso.
+
+Duplicar una colisión visible o entregar confirmación antes del evento `Paired`
+sí termina los clientes sin confirmar. El relay todavía puede elegir qué pareja
+ve, cortar tráfico o causar timeout; no puede obtener por ello las claves Noise
+ni plaintext. Una garantía global de membresía exigiría cambiar el modelo con
+otra fuente de consistencia, identidades o registro.
 
 ## 5. Respuesta observable
 
@@ -116,11 +151,16 @@ credencial, transcript o claves.
 - mezcla de respuestas entre manifiestos y épocas;
 - activación durante una sesión provisional y después de confirmación;
 - llegada simultánea y todos los órdenes posibles de tres conexiones;
-- relay que oculta la colisión a uno de los clientes;
+- relay que oculta o retrasa la colisión, conservando el contraejemplo esperado;
+- colisión duplicada y confirmación reordenada antes de `Paired`;
 - reintento manual, límites y purga después de timeout/colisión.
 
 Cobertura actual: Rust prueba bootstrap fijado, firmas, quorum anterior,
 falsificación, caducidad, secuencias, enlace de hash, reducción de umbral,
 cambio de suite, duplicados, truncado y bytes finales. El mismo vector positivo
 y rechazos de falsificación/codificación se ejecutan con WebCrypto en Node,
-Chrome, Edge y Firefox. Android y persistencia antirollback continúan pendientes.
+Chrome, Edge y Firefox. El modelo local añade checkpoint antirollback, sucesión
+exacta de época, límite de solapamiento, selección única, aborto terminal en el
+corte, pinning de sesiones confirmadas y ausencia de fallback. Android,
+protección durable real y pruebas multiproceso de esta política continúan
+pendientes.

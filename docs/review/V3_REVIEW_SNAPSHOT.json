@@ -1,49 +1,233 @@
 {
   "schema": "scotoma-v3-review-snapshot-v2",
   "created": "2026-10-12",
-  "git_base": "30981180ea25e8fb71f7c7b5be6cc19c52b9a3d4",
+  "git_base": "72ddeac68fff5175d73d03ef401811da89a5d1b3",
   "working_tree": "dirty-intentional",
   "warning": "Review these exact bytes. This snapshot is not a release, audit, endorsement, or production protocol.",
   "files": [
-    { "path": "docs/PRIVATE_RENDEZVOUS_REQUIREMENTS.md", "sha256": "4bfd13e4a8144702652a2a566f5d03dcf7978eb326b575be842a2172e9445f1a" },
-    { "path": "docs/PRIVATE_RENDEZVOUS_V3_CANDIDATE.md", "sha256": "2d5fe5326edabeef5563a53c035dc95b0656c11fc19f499574c8e69641ee50c7" },
-    { "path": "docs/V3_TOPRF_NOISE_COMPOSITION.md", "sha256": "59b8b7f4a405d4689d4d6e06b6c63fc49fa506b2f9e7983a0cd8f8481a62f568" },
-    { "path": "docs/V3_OPERATOR_AND_ABUSE_MODEL.md", "sha256": "c2932175124518bdeb6cd18ca1a30878760d189a464e140a30618c719b8ddf84" },
-    { "path": "docs/V3_MANIFEST_AND_COLLISION_POLICY.md", "sha256": "5c64307deb439d4d5fffe8a3e97779032afc5035dfee94cb3d8c7fd953620dbf" },
-    { "path": "docs/INTERNAL_V3_SECURITY_REVIEW.md", "sha256": "5a70898c747a60b64814d9ee3bb9548b5de347dd2e2a6bfe4883df64186b43a8" },
-    { "path": "docs/PRIVATE_RENDEZVOUS_V3_TEST_PLAN.md", "sha256": "420ea7d766eb7ace6765d8669ecfe9e336b74ab71fc67721f8f4638337ff151f" },
-    { "path": "docs/V3_OPERATIONAL_BASELINE.md", "sha256": "e5b22fbf1ac40c680991d6bfe15d1f3150d3919e1545fb334e7bd0eacaa90bfc" },
-    { "path": "docs/adr/0061-canonical-signed-v3-manifest.md", "sha256": "e2d9a0223d17556fc09bc295e582160137e95667a92a11303551c13055b7f8c3" },
-    { "path": "spikes/private_rendezvous_v3/Cargo.toml", "sha256": "c5c8435bf641d64df54cbb579fca9dec3ac23b77180feedf0889d5403bef98ab" },
-    { "path": "spikes/private_rendezvous_v3/Cargo.lock", "sha256": "07ca0206cbe9028a555f2fbb162918b1a49fe0a5e67621e72dce37ffc0d240d0" },
-    { "path": "spikes/private_rendezvous_v3/src/lib.rs", "sha256": "914ffa70168a103ab3030acc18cd40ec304fd2194c1c066005ebd7dd084c0fec" },
-    { "path": "spikes/private_rendezvous_v3/src/ceremony.rs", "sha256": "4661ea5b11f04e04410a7218616717c24476a7b95cdaceb4a959a77950d9bbfa" },
-    { "path": "spikes/private_rendezvous_v3/src/manifest.rs", "sha256": "02b4c52df3403c501c97ec509a2cf1337701a056799fdbef986cea140b64c154" },
-    { "path": "spikes/private_rendezvous_v3/src/operational.rs", "sha256": "fca20ad519183afc364882d7b6db61833e6ea2b14b562ee4ef54c390dfdce32a" },
-    { "path": "spikes/private_rendezvous_v3/src/relay.rs", "sha256": "a56c395fe9bf89d2b1c7185813af451526e609f2238d79094139ac3871b6c302" },
-    { "path": "spikes/private_rendezvous_v3/src/transport.rs", "sha256": "1529e0fcb4bf6772d3e5961fc7ccb024f5511f7cdfe64611bd8cbffd01a4c251" },
-    { "path": "spikes/private_rendezvous_v3/src/bin/v3_ceremony_coordinator.rs", "sha256": "c9a2dc58c9975d46bc9d1cdc64c6c64b978d3210f508592f35dbfe052a264216" },
-    { "path": "spikes/private_rendezvous_v3/src/bin/v3_loopback_operator.rs", "sha256": "70b63cdecc0e499aeb9d867d09caef19ebdc799e002f74b2837af9d9d9660212" },
-    { "path": "spikes/private_rendezvous_v3/src/bin/v3_operational_node.rs", "sha256": "3ad53a316c16c9deb75534860a8179edba44eda8eb289ed41ecf87007907b654" },
-    { "path": "spikes/private_rendezvous_v3/tests/hardening.rs", "sha256": "b4cbe46459375da0f930b58d519592b878603a595f7c063598935f60097d9068" },
-    { "path": "spikes/private_rendezvous_v3/tests/loopback_transport.rs", "sha256": "315f2a6887ebda5c2f5af6d3d04ed82eb20004cbc04589baed39df9e531e994e" },
-    { "path": "spikes/private_rendezvous_v3/tests/multiprocess_ceremony.rs", "sha256": "a5d9911db153f01fa4f6825923ac867004286868931fb5a5286141bf885d10a2" },
-    { "path": "spikes/private_rendezvous_v3/tests/multiprocess_operations.rs", "sha256": "e9cd1911894e41c6e8c1cdffe9b1a3b48b4dd2088c038b01767e8498f0850338" },
-    { "path": "spikes/private_rendezvous_v3/examples/operational_benchmark.rs", "sha256": "673a5c6b25c1bd080ea7049a6e1429cc79d7e339618e0e9b6bd4adbacff6f2ac" },
-    { "path": "spikes/private_rendezvous_v3/examples/manifest_vector.rs", "sha256": "e8a60818ac612f0f17a8d68c7bdfb2b3147a014807d366414c792920303f4774" },
-    { "path": "spikes/private_rendezvous_v3/examples/admission_simulation.rs", "sha256": "58fd03c3b4768eccf637d042c3ce8eb0c3d57c013915a66903ddacb55b52905e" },
-    { "path": "spikes/private_rendezvous_v3/run_operational_benchmark.ps1", "sha256": "6e812b7c1822d0add1a65d8f58318a384f64f3f1ae191b314e54bad1aa4f64c5" },
-    { "path": "spikes/private_rendezvous_v3/vectors/signed_manifest_v1.json", "sha256": "94f3b89923194740de2e1f51f980989e3736e58996ed5bcee50f07fe7a5b077d" },
-    { "path": "spikes/private_rendezvous_v3/web/manifest_verifier.js", "sha256": "aa6ea63763492f6285da27723938dde1e80276727419c8ffc35752ff0c893899" },
-    { "path": "spikes/private_rendezvous_v3/taceo_probe/Cargo.toml", "sha256": "6b54ac2a39003f7f74953040fb02903bfd47eeaf886ce2dcd07e8b80975602e4" },
-    { "path": "spikes/private_rendezvous_v3/taceo_probe/Cargo.lock", "sha256": "4fff7839b8c6c6ebdc6fff556aed1e80a6e188d0d06f0a3c22662172b2f1e843" },
-    { "path": "spikes/private_rendezvous_v3/taceo_probe/src/lib.rs", "sha256": "c00dc3838ea326b1b847cfab8d5e28dc6a712afaa6f916fd40b3b0bcef092434" },
-    { "path": "spikes/private_rendezvous_v3/taceo_probe/examples/composition_vector.rs", "sha256": "6b1d46071109ab025e42621b2171d9f3a3fcfdbfd195337895673c5b950ecb65" },
-    { "path": "spikes/private_rendezvous_v3/taceo_probe/vectors/composition_test_only_001.json", "sha256": "f98aa008502a6a7cdea9de7eafb3506b1877037476aa08623d1440b54eb5cd8c" },
-    { "path": "spikes/private_rendezvous_v3/taceo_probe/vectors/hash_to_field_rfc9380_001.json", "sha256": "2ea4a05ef847f14ea9795f5c87acce1200bc305ad30fbedf1a9627fd8d4110a2" },
-    { "path": "spikes/private_rendezvous_v3/taceo_probe/vectors/v3_matrix_coverage.json", "sha256": "a67c904ddf8d582902ce753be60eed78b779111e8a0043714515eb0f31f699fc" },
-    { "path": "spikes/private_rendezvous_v3/taceo_probe/web/rfc9380_browser_verifier.js", "sha256": "8c6a8520e2ffbd16c2cd8648861dc616bf1f6033b87b3fc06b9c590389147472" },
-    { "path": "spikes/private_rendezvous_v3/taceo_probe/web/verify_node.mjs", "sha256": "f5476925a4f9f4aa4af81eb4f177d9cda5e8d58f3799a7e8bfed4df03633a0a8" },
-    { "path": "spikes/private_rendezvous_v3/taceo_probe/web/verify_browsers.mjs", "sha256": "b2082d434fd7df8182da4e7794261142ae6b9456b1035c797522987bd4a9e4b3" }
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "6616ab2469704b5592682d92260395be190165e3b9254fbc9d3a1aa455814c7a"
+    },
+    {
+      "path": "docs/SUPPLY_CHAIN.md",
+      "sha256": "f37a9b6b1f6192d44d2b30727328312edc83fb943a46932830cbd29fe9fa7c96"
+    },
+    {
+      "path": "docs/PRIVATE_RENDEZVOUS_REQUIREMENTS.md",
+      "sha256": "4bfd13e4a8144702652a2a566f5d03dcf7978eb326b575be842a2172e9445f1a"
+    },
+    {
+      "path": "docs/PRIVATE_RENDEZVOUS_V3_CANDIDATE.md",
+      "sha256": "2d5fe5326edabeef5563a53c035dc95b0656c11fc19f499574c8e69641ee50c7"
+    },
+    {
+      "path": "docs/V3_TOPRF_NOISE_COMPOSITION.md",
+      "sha256": "59b8b7f4a405d4689d4d6e06b6c63fc49fa506b2f9e7983a0cd8f8481a62f568"
+    },
+    {
+      "path": "docs/V3_OPERATOR_AND_ABUSE_MODEL.md",
+      "sha256": "c2932175124518bdeb6cd18ca1a30878760d189a464e140a30618c719b8ddf84"
+    },
+    {
+      "path": "docs/V3_MANIFEST_AND_COLLISION_POLICY.md",
+      "sha256": "97f777363f52ca4ed36bb56efdd5618c7405987b353f22a9bc00caa9a741577e"
+    },
+    {
+      "path": "docs/INTERNAL_V3_SECURITY_REVIEW.md",
+      "sha256": "58da88fac26929a3462ebe5d3da1f045332a43db40b69fbf0484e07c56f5fb3f"
+    },
+    {
+      "path": "docs/PRIVATE_RENDEZVOUS_V3_TEST_PLAN.md",
+      "sha256": "e381a467aa6b5b27a52ccb964ab08b3781c0a35379b5520878a979d0edd87082"
+    },
+    {
+      "path": "docs/V3_OPERATIONAL_BASELINE.md",
+      "sha256": "e5b22fbf1ac40c680991d6bfe15d1f3150d3919e1545fb334e7bd0eacaa90bfc"
+    },
+    {
+      "path": "docs/adr/0061-canonical-signed-v3-manifest.md",
+      "sha256": "e2d9a0223d17556fc09bc295e582160137e95667a92a11303551c13055b7f8c3"
+    },
+    {
+      "path": "docs/adr/0062-malicious-relay-collision-limit.md",
+      "sha256": "d271ff52ac3ed50a078133ce3986f173afdf8d68a22d7923345222348949ed53"
+    },
+    {
+      "path": "docs/adr/0063-v3-supply-chain-gate.md",
+      "sha256": "47629bbde9d6aa5c05644562a9207152ff7d2e18ce4b33180ba9491575aef87a"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/Cargo.toml",
+      "sha256": "c5c8435bf641d64df54cbb579fca9dec3ac23b77180feedf0889d5403bef98ab"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/Cargo.lock",
+      "sha256": "07ca0206cbe9028a555f2fbb162918b1a49fe0a5e67621e72dce37ffc0d240d0"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/fuzz/Cargo.toml",
+      "sha256": "78da8355ef27da6997026a3bf4756e24ea485796964e55eb7d708fcfe21b7f32"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/fuzz/Cargo.lock",
+      "sha256": "1a4edcaac857015cfe9b42d41b24630e27481b629ffb045bfb7768b8c517ed32"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/fuzz/README.md",
+      "sha256": "71fa65c6fa874c72869075ac25b9cd333379145665cd224f84eb5e35a6c15ac5"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/fuzz/fuzz_targets/v3_state_relay.rs",
+      "sha256": "643b5d14d6092c29597f0a4d1a5d02f15350196da39dfacdf0831f4c025bab79"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/fuzz/fuzz_targets/v3_credential_noise.rs",
+      "sha256": "ac2ae8b935dde67b9d02f449fc7078d275b3d9363067b1327c45cb3e3ad56d49"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/fuzz/fuzz_targets/v3_manifest_epoch.rs",
+      "sha256": "0ba66e3128cb5556545c85219092ed27145b344f109cccf573216d58c9a485a3"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/fuzz/fuzz_targets/v3_adversarial_schedule.rs",
+      "sha256": "fad67ffa8368bf3895fb89a939215fe1d7ff3f793b2b500408783dc83de6ee4f"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/fuzz/run_linux_smoke.sh",
+      "sha256": "f0a4ce7d07960c89ff1ddec2d5be83d346c2965975317f69b4735380d27461e1"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/lib.rs",
+      "sha256": "e3de8abc806e52af8efc8ad4ce504f8922362796d51c43f652536ecdb2b2d8d1"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/ceremony.rs",
+      "sha256": "4661ea5b11f04e04410a7218616717c24476a7b95cdaceb4a959a77950d9bbfa"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/epoch.rs",
+      "sha256": "ab6acd0e9e44921b4d067e5b2a63dbd5f8d50b6681d8b621039e9c35cb58c0db"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/manifest.rs",
+      "sha256": "67ca9b537cfb6f7d7406749031ac955203b5fe8b5811d7592fb962a81fd60900"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/operational.rs",
+      "sha256": "fca20ad519183afc364882d7b6db61833e6ea2b14b562ee4ef54c390dfdce32a"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/relay.rs",
+      "sha256": "a56c395fe9bf89d2b1c7185813af451526e609f2238d79094139ac3871b6c302"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/transport.rs",
+      "sha256": "1529e0fcb4bf6772d3e5961fc7ccb024f5511f7cdfe64611bd8cbffd01a4c251"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/bin/v3_ceremony_coordinator.rs",
+      "sha256": "c9a2dc58c9975d46bc9d1cdc64c6c64b978d3210f508592f35dbfe052a264216"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/bin/v3_adversarial_relay.rs",
+      "sha256": "4369bdc5252445048604d28a7cd494159c631cff8f4234588e866d6f9401093a"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/bin/v3_loopback_operator.rs",
+      "sha256": "70b63cdecc0e499aeb9d867d09caef19ebdc799e002f74b2837af9d9d9660212"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/bin/v3_operational_node.rs",
+      "sha256": "3ad53a316c16c9deb75534860a8179edba44eda8eb289ed41ecf87007907b654"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/tests/hardening.rs",
+      "sha256": "b4cbe46459375da0f930b58d519592b878603a595f7c063598935f60097d9068"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/tests/adversarial_relay_process.rs",
+      "sha256": "c317b28942373382638111da1ba84eb0d1ffe175df376285267f0e95d23dd264"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/tests/loopback_transport.rs",
+      "sha256": "315f2a6887ebda5c2f5af6d3d04ed82eb20004cbc04589baed39df9e531e994e"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/tests/multiprocess_ceremony.rs",
+      "sha256": "a5d9911db153f01fa4f6825923ac867004286868931fb5a5286141bf885d10a2"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/tests/multiprocess_operations.rs",
+      "sha256": "e9cd1911894e41c6e8c1cdffe9b1a3b48b4dd2088c038b01767e8498f0850338"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/examples/operational_benchmark.rs",
+      "sha256": "673a5c6b25c1bd080ea7049a6e1429cc79d7e339618e0e9b6bd4adbacff6f2ac"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/examples/manifest_vector.rs",
+      "sha256": "e8a60818ac612f0f17a8d68c7bdfb2b3147a014807d366414c792920303f4774"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/examples/admission_simulation.rs",
+      "sha256": "58fd03c3b4768eccf637d042c3ce8eb0c3d57c013915a66903ddacb55b52905e"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/run_operational_benchmark.ps1",
+      "sha256": "6e812b7c1822d0add1a65d8f58318a384f64f3f1ae191b314e54bad1aa4f64c5"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/verify_supply_chain.ps1",
+      "sha256": "6a3676ce7a30b27fc3e5773c38dd7540175e2ff09ab68323ade99b2abcec8092"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/vectors/signed_manifest_v1.json",
+      "sha256": "94f3b89923194740de2e1f51f980989e3736e58996ed5bcee50f07fe7a5b077d"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/web/manifest_verifier.js",
+      "sha256": "aa6ea63763492f6285da27723938dde1e80276727419c8ffc35752ff0c893899"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/taceo_probe/Cargo.toml",
+      "sha256": "6b54ac2a39003f7f74953040fb02903bfd47eeaf886ce2dcd07e8b80975602e4"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/taceo_probe/Cargo.lock",
+      "sha256": "4fff7839b8c6c6ebdc6fff556aed1e80a6e188d0d06f0a3c22662172b2f1e843"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/taceo_probe/src/lib.rs",
+      "sha256": "0166c10e7d3c834070db78fa1368c13052a7606e678609d777453bf7a09bf5f6"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/taceo_probe/examples/composition_vector.rs",
+      "sha256": "6b1d46071109ab025e42621b2171d9f3a3fcfdbfd195337895673c5b950ecb65"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/taceo_probe/vectors/composition_test_only_001.json",
+      "sha256": "f98aa008502a6a7cdea9de7eafb3506b1877037476aa08623d1440b54eb5cd8c"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/taceo_probe/vectors/hash_to_field_rfc9380_001.json",
+      "sha256": "2ea4a05ef847f14ea9795f5c87acce1200bc305ad30fbedf1a9627fd8d4110a2"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/taceo_probe/vectors/v3_matrix_coverage.json",
+      "sha256": "47f259e50aac6adcddd0216770903d52e769179c05dac2cc62114c96d8109da5"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/taceo_probe/web/rfc9380_browser_verifier.js",
+      "sha256": "8c6a8520e2ffbd16c2cd8648861dc616bf1f6033b87b3fc06b9c590389147472"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/taceo_probe/web/verify_node.mjs",
+      "sha256": "f5476925a4f9f4aa4af81eb4f177d9cda5e8d58f3799a7e8bfed4df03633a0a8"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/taceo_probe/web/verify_browsers.mjs",
+      "sha256": "b2082d434fd7df8182da4e7794261142ae6b9456b1035c797522987bd4a9e4b3"
+    }
   ]
 }

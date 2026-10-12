@@ -67,6 +67,19 @@ pub struct ContinuityState {
     accepted_hash: Option<[u8; 32]>,
 }
 
+/// Minimum integrity-protected state a client must retain across restarts.
+///
+/// The research model assumes the platform stores this record atomically and
+/// prevents an attacker from rolling the record itself back. Android/Web
+/// integration and the concrete protected-storage mechanism remain external
+/// release gates.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ContinuityCheckpoint {
+    pub sequence: u64,
+    pub epoch: u64,
+    pub manifest_hash: [u8; 32],
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ManifestError {
     NonCanonical,
@@ -87,6 +100,8 @@ pub enum ManifestError {
     UnknownContinuitySigner,
     WrongPreviousManifest,
     Downgrade,
+    InvalidEpochTransition,
+    CheckpointMismatch,
     IncompatibleProtocol,
 }
 
@@ -254,6 +269,35 @@ impl ContinuityState {
         self.accepted_hash
     }
 
+    pub fn checkpoint(&self) -> Option<ContinuityCheckpoint> {
+        Some(ContinuityCheckpoint {
+            sequence: self.accepted.as_ref()?.sequence,
+            epoch: self.accepted.as_ref()?.epoch,
+            manifest_hash: self.accepted_hash?,
+        })
+    }
+
+    /// Restores continuity from an integrity-protected checkpoint and the
+    /// matching canonical body. This deliberately does not claim that ordinary
+    /// files or browser storage provide rollback resistance by themselves.
+    pub fn restore_from_checkpoint(
+        accepted: ManifestBody,
+        checkpoint: ContinuityCheckpoint,
+    ) -> Result<Self, ManifestError> {
+        accepted.validate_structure()?;
+        let accepted_hash = accepted.hash()?;
+        if accepted.sequence != checkpoint.sequence
+            || accepted.epoch != checkpoint.epoch
+            || accepted_hash != checkpoint.manifest_hash
+        {
+            return Err(ManifestError::CheckpointMismatch);
+        }
+        Ok(Self {
+            accepted: Some(accepted),
+            accepted_hash: Some(accepted_hash),
+        })
+    }
+
     pub fn accept(
         &mut self,
         candidate: &SignedManifest,
@@ -274,8 +318,19 @@ impl ContinuityState {
 
         if let Some(current) = &self.accepted {
             let current_hash = self.accepted_hash.expect("accepted hash accompanies body");
-            if candidate.body.sequence != current.sequence.saturating_add(1) {
+            let next_sequence = current
+                .sequence
+                .checked_add(1)
+                .ok_or(ManifestError::Downgrade)?;
+            if candidate.body.sequence != next_sequence {
                 return Err(ManifestError::Downgrade);
+            }
+            let next_epoch = current
+                .epoch
+                .checked_add(1)
+                .ok_or(ManifestError::InvalidEpochTransition)?;
+            if candidate.body.epoch != next_epoch {
+                return Err(ManifestError::InvalidEpochTransition);
             }
             if candidate.body.previous_manifest_hash != current_hash {
                 return Err(ManifestError::WrongPreviousManifest);
@@ -662,6 +717,115 @@ mod tests {
             ));
             assert_eq!(state.accepted().unwrap().sequence, 1);
         }
+    }
+
+    #[test]
+    fn same_skipped_or_rolled_back_epoch_is_rejected_without_changing_state() {
+        let release = key(99);
+        let prior = operators();
+        let initial = SignedManifest::new_for_research(body(1, [0; 32]), &release, &[]).unwrap();
+        let trust = anchor(&release, &initial.body);
+        let mut state = ContinuityState::default();
+        let initial_hash = state.accept(&initial, trust, 150).unwrap();
+
+        for epoch in [0, 1, 3, u64::MAX] {
+            let mut candidate_body = body(2, initial_hash);
+            candidate_body.epoch = epoch;
+            let candidate = SignedManifest::new_for_research(
+                candidate_body,
+                &release,
+                &[(10, &prior[0].1), (20, &prior[1].1)],
+            )
+            .unwrap();
+            assert_eq!(
+                state.accept(&candidate, trust, 150),
+                Err(ManifestError::InvalidEpochTransition)
+            );
+            assert_eq!(state.checkpoint().unwrap().epoch, 1);
+        }
+    }
+
+    #[test]
+    fn trusted_checkpoint_rejects_older_or_mismatched_restart_state() {
+        let release = key(99);
+        let prior = operators();
+        let initial = SignedManifest::new_for_research(body(1, [0; 32]), &release, &[]).unwrap();
+        let trust = anchor(&release, &initial.body);
+        let mut state = ContinuityState::default();
+        let initial_hash = state.accept(&initial, trust, 150).unwrap();
+        let update = SignedManifest::new_for_research(
+            body(2, initial_hash),
+            &release,
+            &[(10, &prior[0].1), (20, &prior[1].1)],
+        )
+        .unwrap();
+        state.accept(&update, trust, 150).unwrap();
+        let checkpoint = state.checkpoint().unwrap();
+
+        let restored =
+            ContinuityState::restore_from_checkpoint(update.body.clone(), checkpoint).unwrap();
+        assert_eq!(restored.checkpoint(), Some(checkpoint));
+        assert_eq!(
+            ContinuityState::restore_from_checkpoint(initial.body.clone(), checkpoint),
+            Err(ManifestError::CheckpointMismatch)
+        );
+        let mut altered = checkpoint;
+        altered.manifest_hash[0] ^= 1;
+        assert_eq!(
+            ContinuityState::restore_from_checkpoint(update.body, altered),
+            Err(ManifestError::CheckpointMismatch)
+        );
+    }
+
+    #[test]
+    fn exhausted_sequence_or_epoch_has_no_saturating_successor() {
+        let release = key(99);
+        let prior = operators();
+
+        let mut max_sequence_body = body(u64::MAX, [0; 32]);
+        max_sequence_body.epoch = 1;
+        let max_sequence =
+            SignedManifest::new_for_research(max_sequence_body.clone(), &release, &[]).unwrap();
+        let max_sequence_trust = anchor(&release, &max_sequence.body);
+        let mut max_sequence_state = ContinuityState::default();
+        let max_sequence_hash = max_sequence_state
+            .accept(&max_sequence, max_sequence_trust, 150)
+            .unwrap();
+        let mut impossible = max_sequence_body;
+        impossible.previous_manifest_hash = max_sequence_hash;
+        impossible.epoch = 2;
+        let impossible = SignedManifest::new_for_research(
+            impossible,
+            &release,
+            &[(10, &prior[0].1), (20, &prior[1].1)],
+        )
+        .unwrap();
+        assert_eq!(
+            max_sequence_state.accept(&impossible, max_sequence_trust, 150),
+            Err(ManifestError::Downgrade)
+        );
+
+        let mut max_epoch_body = body(1, [0; 32]);
+        max_epoch_body.epoch = u64::MAX;
+        let max_epoch =
+            SignedManifest::new_for_research(max_epoch_body.clone(), &release, &[]).unwrap();
+        let max_epoch_trust = anchor(&release, &max_epoch.body);
+        let mut max_epoch_state = ContinuityState::default();
+        let max_epoch_hash = max_epoch_state
+            .accept(&max_epoch, max_epoch_trust, 150)
+            .unwrap();
+        let mut impossible = body(2, max_epoch_hash);
+        impossible.epoch = u64::MAX;
+        let impossible = SignedManifest::new_for_research(
+            impossible,
+            &release,
+            &[(10, &prior[0].1), (20, &prior[1].1)],
+        )
+        .unwrap();
+        assert_eq!(
+            max_epoch_state.accept(&impossible, max_epoch_trust, 150),
+            Err(ManifestError::InvalidEpochTransition)
+        );
     }
 
     #[test]

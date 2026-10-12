@@ -38,3 +38,9 @@ El tercer corte sube a 37 rutas con el coordinador y la prueba de ceremonia
 multiproceso; conserva la misma decisión y los bloqueos PedPoP/consenso.
 El cuarto corte alcanza 40 rutas con benchmark, wrapper de memoria y baseline
 operacional; el resultado sigue siendo local, sintético y `NO-GO`.
+El primer y segundo tramo de 5.5.5 elevan el paquete a 44 rutas con política de
+épocas, checkpoint y el contraejemplo multiproceso de relay malicioso; R07 queda
+como riesgo documentado y la decisión permanece `NO-GO`.
+El tercer tramo eleva el paquete a 53 rutas al congelar workflow, cuatro targets,
+runner y lockfile de fuzzing. La campaña Linux aún debe ejecutarse después de
+publicar el commit; congelar estos bytes no equivale a un resultado sanitizer.

@@ -299,6 +299,41 @@ saturación y working set. El CI ejecuta un smoke reducido y el baseline de esta
 PC queda en `V3_OPERATIONAL_BASELINE.md`. R03 no se cierra: siguen pendientes
 Android, Web, red pública, cold starts y operadores independientes.
 
+5.5.5 está en curso. El tramo 1 fija la transición local de épocas: sucesión
+autenticada exacta, ventanas crecientes sin huecos, solapamiento máximo de 300
+segundos, selección de una sola época, aborto terminal de intentos provisionales
+en el corte y pinning de sesiones confirmadas hasta el vencimiento anterior. Un
+checkpoint de secuencia/época/hash detecta cuerpos anteriores o alterados al
+restaurar. R05 y R08 pasan de abiertos a parciales; R04 sigue parcial porque la
+protección durable Android/Web y la recuperación de la clave release no están
+implementadas. El siguiente tramo es relay adversario multiproceso.
+
+El tramo 2 de 5.5.5 ejecuta un relay adversario como proceso separado para las
+seis permutaciones de tres participantes. Colisiones visibles/duplicadas y
+eventos reordenados dejan cero confirmados. El experimento también conserva el
+contraejemplo inevitable: ocultar la colisión o retrasarla hasta después del
+handshake permite que dos confirmen mientras el tercero termina. R07 pasa a
+riesgo documentado y la política vuelve al requisito alcanzable T03, “como
+máximo dos”; no se prometerá detección de terceros frente a un relay malicioso.
+El siguiente tramo es fuzzing y sanitizers Linux.
+
+El tramo 3 de 5.5.5 amplía el arnés a cuatro fuzzers: estado/relay,
+credencial/Noise, manifiesto/época y schedule adversario. El runner Linux fija
+nightly, cargo-fuzz, timeout por input, 1 GiB y longitudes máximas, y ejecuta la
+suite bajo ASan/LSan. Los nuevos extremos detectaron y corrigieron la sucesión
+saturada en `u64::MAX`; 86 pruebas deterministas y Clippy pasan localmente.
+Falta ejecutar el runner en GitHub Actions después de confirmar/publicar estos
+cambios; WSL Ubuntu no contiene Rust y no se instaló otro toolchain. El siguiente
+tramo es consolidación de CI y cadena de suministro.
+
+El tramo 4 de 5.5.5 queda implementado y cierra el sprint localmente. Los cinco
+lockfiles Rust son gates obligatorios de RustSec/cargo-deny; los dos grafos de
+producción y los tres grafos v3 generan artefactos CycloneDX separados con
+checksums. Un verificador evita retirar controles, introducir excepciones o
+convertir fallos en informativos. La evidencia Linux, los SBOM y los resultados
+del workflow permanecen pendientes hasta publicar el commit. Los avisos de dos
+crates no mantenidos heredados por TACEO siguen abiertos y v3 continúa NO-GO.
+
 - Someter especificación, composición e implementación completas a revisión
   independiente comunitaria o pro bono.
 - Corregir hallazgos, repetir vectores, fuzzing, benchmarks y matrices de

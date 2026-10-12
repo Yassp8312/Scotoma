@@ -123,17 +123,10 @@ jobs:
           cargo +nightly-2026-09-01 fuzz run noise_handshake --
           -max_total_time=30 -max_len=16400
 
-      - name: Fuzz v3 state and opaque relay invariants
-        working-directory: spikes/private_rendezvous_v3/fuzz
-        run: >-
-          cargo +nightly-2026-09-01 fuzz run v3_state_relay --
-          -max_total_time=30 -max_len=4096
-
-      - name: Fuzz v3 credential mapping and Noise frames
-        working-directory: spikes/private_rendezvous_v3/fuzz
-        run: >-
-          cargo +nightly-2026-09-01 fuzz run v3_credential_noise --
-          -max_total_time=30 -max_len=512
+      - name: Fuzz v3 and run AddressSanitizer/LeakSanitizer
+        env:
+          SCOTOMA_FUZZ_SECONDS: "30"
+        run: bash spikes/private_rendezvous_v3/fuzz/run_linux_smoke.sh
 
   supply-chain:
     runs-on: ubuntu-latest
@@ -152,6 +145,10 @@ jobs:
           cargo install cargo-audit --version 0.22.2 --locked
           cargo install cargo-deny --version 0.20.2 --locked
           cargo install cargo-cyclonedx --version 0.5.9 --locked
+
+      - name: Verify v3 supply-chain gate definition
+        shell: pwsh
+        run: ./spikes/private_rendezvous_v3/verify_supply_chain.ps1
 
       - name: Audit production and isolated v3 Rust lockfiles
         run: |
@@ -174,18 +171,35 @@ jobs:
 
       - name: Generate reproducible CycloneDX inventories
         run: |
-          mkdir -p artifacts/sbom
+          mkdir -p artifacts/sbom/production artifacts/sbom/research-v3
           cargo cyclonedx --manifest-path rust/scotoma-relay/Cargo.toml --format json --spec-version 1.5 --target all --override-filename scotoma-relay.cdx
           cargo cyclonedx --manifest-path packages/scotoma_bridge/rust/Cargo.toml --format json --spec-version 1.5 --target all --override-filename scotoma-bridge.cdx
-          mv rust/scotoma-relay/scotoma-relay.cdx.json artifacts/sbom/
-          mv packages/scotoma_bridge/rust/scotoma-bridge.cdx.json artifacts/sbom/
+          cargo cyclonedx --manifest-path spikes/private_rendezvous_v3/Cargo.toml --format json --spec-version 1.5 --target all --override-filename scotoma-v3-model.cdx
+          cargo cyclonedx --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml --format json --spec-version 1.5 --target all --override-filename scotoma-v3-taceo-probe.cdx
+          cargo cyclonedx --manifest-path spikes/private_rendezvous_v3/fuzz/Cargo.toml --format json --spec-version 1.5 --target all --override-filename scotoma-v3-fuzz.cdx
+          mv rust/scotoma-relay/scotoma-relay.cdx.json artifacts/sbom/production/
+          mv packages/scotoma_bridge/rust/scotoma-bridge.cdx.json artifacts/sbom/production/
+          mv spikes/private_rendezvous_v3/scotoma-v3-model.cdx.json artifacts/sbom/research-v3/
+          mv spikes/private_rendezvous_v3/taceo_probe/scotoma-v3-taceo-probe.cdx.json artifacts/sbom/research-v3/
+          mv spikes/private_rendezvous_v3/fuzz/scotoma-v3-fuzz.cdx.json artifacts/sbom/research-v3/
+          (cd artifacts/sbom/production && sha256sum *.cdx.json > SHA256SUMS)
+          (cd artifacts/sbom/research-v3 && sha256sum *.cdx.json > SHA256SUMS)
 
-      - name: Retain SBOMs with the workflow run
+      - name: Retain production SBOMs with the workflow run
         uses: actions/upload-artifact@v4
         with:
-          name: scotoma-cyclonedx-${{ github.sha }}
-          path: artifacts/sbom/*.cdx.json
+          name: scotoma-production-cyclonedx-${{ github.sha }}
+          path: artifacts/sbom/production/
           if-no-files-found: error
+          retention-days: 30
+
+      - name: Retain isolated v3 research SBOMs with the workflow run
+        uses: actions/upload-artifact@v4
+        with:
+          name: scotoma-v3-research-cyclonedx-${{ github.sha }}
+          path: artifacts/sbom/research-v3/
+          if-no-files-found: error
+          retention-days: 30
 
   deployment-boundary:
     runs-on: ubuntu-latest

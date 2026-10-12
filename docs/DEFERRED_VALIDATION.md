@@ -82,16 +82,23 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 - [x] Completar en proceso dos clientes sintéticos con TOPRF, registro opaco,
   Noise, confirmación mutua, mensaje, ACK, BURN y purga del relay.
 - [x] Añadir campaña determinista v3 de 20.000 operaciones de relay y 2.000
-  sesiones, benchmark release y dos targets libFuzzer aislados.
-- [ ] Confirmar la primera ejecución Linux de los targets `v3_state_relay` y
-  `v3_credential_noise` con libFuzzer/sanitizer; Windows GNU no aporta evidencia
-  equivalente.
+  sesiones, benchmark release y cuatro targets libFuzzer aislados: estado/relay,
+  credencial/Noise, manifiesto/época y schedules adversarios.
+- [x] Versionar un runner Linux acotado con nightly y cargo-fuzz fijados, timeout
+  por input, límite de 1 GiB y ASan/LSan sobre todos los targets del modelo.
+- [ ] Confirmar la primera ejecución Linux del runner después de publicar el
+  commit. Ubuntu WSL existe, pero no tiene Rust instalado; Windows GNU no aporta
+  evidencia sanitizer equivalente y no se instaló otro toolchain silenciosamente.
 - [x] Ejecutar RustSec local sobre los tres lockfiles v3: sin vulnerabilidades;
   aparecen dos avisos permitidos por crates no mantenidos (`derivative` y
   `paste`) heredados por el grafo TACEO.
 - [ ] Confirmar en CI los nuevos gates RustSec/cargo-deny sobre los tres
   lockfiles v3 aislados y decidir el tratamiento de esos dos avisos antes de
   seleccionar la biblioteca.
+- [x] Separar los SBOM CycloneDX de producción e investigación v3, añadir
+  checksums y verificar que CI no pueda omitir silenciosamente audit/policy/SBOM.
+- [ ] Descargar y conservar los dos artefactos SBOM del primer workflow verde
+  posterior al push; asociarlos al commit exacto y revisar sus `SHA256SUMS`.
 - [x] Verificar aislamiento final del spike: 8 entradas de build/manifiestos,
   3 paquetes del grafo Cargo y 23 artefactos Android/Web sin marcadores v3.
 - [ ] Resolver los bloqueos restantes del probe TACEO: revisión independiente
