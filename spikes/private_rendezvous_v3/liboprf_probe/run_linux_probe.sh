@@ -44,6 +44,7 @@ export LD_LIBRARY_PATH="$work_dir/prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH
 make --quiet -C "$work_dir/liboprf/src" liboprf.a
 cc -std=c11 -Wall -Wextra -Werror \
   -I"$work_dir/liboprf/src" \
+  -I"$work_dir/prefix/include" \
   "$probe_dir/scotoma_3hashtdh_probe.c" \
   "$work_dir/liboprf/src/liboprf.a" \
   "$work_dir/prefix/lib/libsodium.a" \
@@ -52,6 +53,7 @@ cc -std=c11 -Wall -Wextra -Werror \
 
 cc -std=c11 -Wall -Wextra -Werror \
   -I"$work_dir/liboprf/src" \
+  -I"$work_dir/prefix/include" \
   "$probe_dir/scotoma_3hashtdh_vector.c" \
   "$work_dir/liboprf/src/liboprf.a" \
   "$work_dir/prefix/lib/libsodium.a" \
