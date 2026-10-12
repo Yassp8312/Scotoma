@@ -85,7 +85,7 @@ fetch_exact "$LIBSODIUM_REPOSITORY" "$LIBSODIUM_COMMIT" "$work_dir/libsodium-was
 (
   cd "$work_dir/libsodium-wasm"
   emconfigure ./configure --quiet --disable-shared --without-pthreads \
-    --disable-ssp --disable-asm --disable-pie --enable-minimal \
+    --disable-ssp --disable-asm --disable-pie \
     --prefix="$work_dir/wasm-prefix"
   emmake make --quiet -j2
   emmake make --quiet install
