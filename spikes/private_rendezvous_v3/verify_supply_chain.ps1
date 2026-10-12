@@ -14,7 +14,8 @@ $errors = [Collections.Generic.List[string]]::new()
 $graphs = @(
     [ordered]@{ name = 'v3-model'; manifest = 'spikes/private_rendezvous_v3/Cargo.toml'; lockfile = 'spikes/private_rendezvous_v3/Cargo.lock'; sbom = 'scotoma-v3-model.cdx' },
     [ordered]@{ name = 'v3-taceo-probe'; manifest = 'spikes/private_rendezvous_v3/taceo_probe/Cargo.toml'; lockfile = 'spikes/private_rendezvous_v3/taceo_probe/Cargo.lock'; sbom = 'scotoma-v3-taceo-probe.cdx' },
-    [ordered]@{ name = 'v3-fuzz'; manifest = 'spikes/private_rendezvous_v3/fuzz/Cargo.toml'; lockfile = 'spikes/private_rendezvous_v3/fuzz/Cargo.lock'; sbom = 'scotoma-v3-fuzz.cdx' }
+    [ordered]@{ name = 'v3-fuzz'; manifest = 'spikes/private_rendezvous_v3/fuzz/Cargo.toml'; lockfile = 'spikes/private_rendezvous_v3/fuzz/Cargo.lock'; sbom = 'scotoma-v3-fuzz.cdx' },
+    [ordered]@{ name = 'v3-liboprf-vector'; manifest = 'spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml'; lockfile = 'spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.lock'; sbom = 'scotoma-v3-liboprf-vector.cdx' }
 )
 
 foreach ($graph in $graphs) {

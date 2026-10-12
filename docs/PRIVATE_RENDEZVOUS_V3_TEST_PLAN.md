@@ -177,6 +177,50 @@ errores, si se añaden fuentes desconocidas/excepciones RustSec o si los
 artefactos dejan de exigirse. La primera ejecución y descarga de artefactos
 requieren publicar el commit; hasta entonces la evidencia es local/estática.
 
+### Selección criptográfica 5.5.6.1
+
+`V3_CRYPTO_SELECTION.json` congela 3HashTDH/liboprf 0.9.4, commit exacto,
+Ristretto255/SHA-512 y topología dos-de-tres. El gate
+`verify_crypto_selection.ps1` exige esos valores, conserva la decisión NO-GO y
+rechaza marcadores liboprf/3HashTDH/TACEO en los manifiestos productivos.
+
+Esta comprobación no ejecuta la primitiva por sí sola. El tramo 5.5.6.2 añade un
+job C/Linux fijado a commits exactos de liboprf y libsodium. Comprueba los tres
+subconjuntos honestos dos-de-tres contra OPRF base, rechaza un resultado con
+`ssid_S` mezclados y verifica que una sola share no produce la evaluación
+esperada. Orden, índices duplicados y un vector publicado determinista siguen
+abiertos; cualquier divergencia revoca la selección antes de tocar Android, Web
+o v2.
+
+### Probe de ceremonia real 5.5.6.2
+
+`liboprf_probe/run_linux_probe.sh` compila el source upstream fuera del
+repositorio y ejecuta los fixtures honestos y corruptos del DKG
+FT-Joint-DL-VSS y de actualización. El DKG corrupto debe terminar no-cero tras
+identificar al tramposo; el runner comprueba ese fallo en vez de aceptar
+cualquier estado. `V3_CEREMONY_PROBE.json` registra inputs y límites exactos.
+
+Es la primera ejecución de una ceremonia publicada real dentro del paquete v3,
+pero no demuestra PedPoP. El documento de actualización es borrador, todos los
+participantes del fixture viven aún en un proceso y no se prueba dominio
+independiente, consenso durable, Android ni Wasm. Incluso un job verde conserva
+la decisión NO-GO y mantiene R02/R12 bloqueados.
+
+### Vector y portabilidad 5.5.6.3
+
+`liboprf_probe/vectors/3hashtdh_test_only_001.json` fija escalares y polinomios
+públicos sintéticos, `alpha`, tres respuestas indexadas, `beta` y Finalize. Una
+implementación safe Rust independiente reproduce SHA-512 XMD, Ristretto255,
+BLAKE2b de contexto e interpolación. El C nativo y el C compilado a Wasm deben
+emitir exactamente el mismo JSON; una comparación byte a byte cierra el gate.
+
+`run_platform_builds.sh` fija liboprf, libsodium, NDK 28.2/API 21 y emsdk 3.1.74.
+Cruza Android ARM64, ARMv7 y x86_64 y comprueba las máquinas ELF, pero no ejecuta
+esos binarios. La prueba Android física queda en la cola ADB. Wasm se ejecuta en
+Node; Chrome, Edge y Firefox permanecen pendientes para este módulo nuevo.
+Safari/iPhone siguen diferidos. Ningún resultado permite empaquetar todavía el
+código en Flutter ni afirmar interoperabilidad del transcript Noise completo.
+
 ## 6. Controles de recursos
 
 El arnés medirá, sin convertirlo todavía en promesa de producción:

@@ -41,10 +41,11 @@ La seguridad buscada depende de que no se coaliguen suficientes operadores
 OPRF. Ejecutar todas las participaciones en la misma cuenta, proveedor o equipo
 no satisface esta hipótesis.
 
-No se fija todavía una biblioteca ni una variante TOPRF. RFC 9497 define OPRF,
-VOPRF y POPRF de dos partes, pero no estandariza el sistema umbral completo que
-SCOTOMA necesita. Una biblioteca compatible con RFC 9497 no valida por sí sola
-la composición descrita aquí.
+El sprint 5.5.6.1 congela para validación aislada 3HashTDH de Gu et al. mediante
+`stef/liboprf v0.9.4` (commit `ba452048...d641`), con suite base
+Ristretto255/SHA-512 y topología dos-de-tres. RFC 9497 define la base OPRF, no el
+sistema umbral completo. La selección no autoriza integración: Android/Wasm,
+licencia LGPL, ceremonia y composición continúan como puertas NO-GO.
 
 ## 3. Entradas y separación de dominios
 

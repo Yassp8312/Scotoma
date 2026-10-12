@@ -1,0 +1,53 @@
+{
+  "schema": "scotoma-v3-crypto-selection-v1",
+  "date": "2026-10-12",
+  "status": "frozen-research-candidate",
+  "production_decision": "NO-GO",
+  "selected": {
+    "construction": "3HashTDH",
+    "reference": "Gu-Jarecki-Kedzior-Nazarian-Xu-2024-eprint-2024-1455",
+    "base_suite": "OPRF(ristretto255, SHA-512)",
+    "implementation": "stef/liboprf",
+    "version": "0.9.4",
+    "tag": "v0.9.4",
+    "commit": "ba45204806daeb5b1b249d7b35ca0035cba3d641",
+    "license": "LGPL-3.0-or-later",
+    "topology": {
+      "operators": 3,
+      "threshold": 2
+    }
+  },
+  "required_protocol_inputs": [
+    "signed manifest hash",
+    "manifest epoch",
+    "fresh evaluation session identifier",
+    "canonical SCOTOMA credential"
+  ],
+  "rejected_as_definitive": [
+    {
+      "candidate": "TaceoLabs/oprf-service",
+      "reason": "Maintained Rust/Wasm implementation, but its threshold TwoHashDH path has not been shown to realize the corrected fixed tOPRF functionality required by SCOTOMA."
+    },
+    {
+      "candidate": "bytemare/voprf",
+      "reason": "Maintained Go TOPRF/DKG implementation based on TOPPSS, without the required Rust/Wasm/Android client path or corrected-context evidence."
+    },
+    {
+      "candidate": "facebook/voprf",
+      "reason": "Maintained RFC 9497 Rust implementation, but not a threshold construction."
+    }
+  ],
+  "blocking_gates": [
+    "Obtain a green CI execution of the pinned 3HashTDH invariants and independent mixed-session/below-threshold negatives.",
+    "Prove a supported Android and WebAssembly build with pinned libsodium and build inputs.",
+    "Complete LGPL combined-work compliance review before distributing linked artifacts.",
+    "Select and review a malicious-secure DKG: the real FT-Joint-DL-VSS probe does not establish the required PedPoP property.",
+    "Bind the session identifier, signed manifest, epoch and SCOTOMA transcript without changing the 3HashTDH primitive.",
+    "Complete independent review of the frozen composition before changing production v2."
+  ],
+  "prohibitions": [
+    "No liboprf or TACEO dependency may enter a production manifest in this tranche.",
+    "SCOTOMA must not implement or modify the 3HashTDH primitive.",
+    "This selection must not be described as audited, production-ready or secure for high-risk use."
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "scotoma-v3-platform-probe-v1",
+  "date": "2026-10-12",
+  "status": "implemented-awaiting-ci-execution",
+  "production_decision": "NO-GO",
+  "pinned_inputs": {
+    "liboprf_commit": "ba45204806daeb5b1b249d7b35ca0035cba3d641",
+    "libsodium_commit": "93a7d0d41fe2e32409b5d00386946f491750b7de",
+    "android_ndk": "28.2.13676358",
+    "android_api": 21,
+    "emsdk_version": "3.1.74",
+    "emsdk_commit": "3d6d8ee910466516a53e665b86458faa81dae9ba"
+  },
+  "local_evidence": [
+    "Independent safe-Rust Ristretto255 implementation reproduces alpha, all three indexed responses, beta and final output.",
+    "Rust formatting and Clippy pass with warnings denied.",
+    "Both C probes pass Android NDK Clang syntax checks.",
+    "Linux and platform runners pass Bash syntax checks."
+  ],
+  "ci_gates": [
+    "Native liboprf C output must byte-match the independent Rust vector.",
+    "Emscripten/WebAssembly liboprf C output must byte-match the independent Rust vector.",
+    "Android ARM64, ARMv7 and x86_64 probe executables must link and expose the expected ELF machines.",
+    "All source repositories and tool versions must match the pinned identifiers."
+  ],
+  "deferred": [
+    "Runtime execution of the vector on a physical Android device requires ADB later.",
+    "Chrome, Edge and Firefox execution of this new Wasm module is not yet recorded; CI runs it under Node.",
+    "iPhone and Safari remain explicitly deferred.",
+    "The vector validates primitive interoperability, not the complete TOPRF-to-HKDF-to-Noise product composition.",
+    "No liboprf or libsodium artifact is packaged into the application."
+  ]
+}

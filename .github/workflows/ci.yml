@@ -65,6 +65,16 @@ jobs:
           cargo clippy --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml --target wasm32-unknown-unknown --lib -- -D warnings
           cargo test --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml --all-targets
 
+      - name: Verify independent Ristretto255 3HashTDH vector
+        run: |
+          cargo fmt --manifest-path spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml --all -- --check
+          cargo clippy --manifest-path spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml --all-targets -- -D warnings
+          cargo run --quiet --manifest-path spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml
+
+      - name: Verify frozen 3HashTDH vector contract
+        shell: pwsh
+        run: ./spikes/private_rendezvous_v3/liboprf_probe/verify_vector.ps1
+
       - name: Verify Rust to WebCrypto manifest vectors
         run: node spikes/private_rendezvous_v3/taceo_probe/web/verify_node.mjs
 
@@ -91,6 +101,26 @@ jobs:
       - name: Prove v3 remains outside production graphs and artifacts
         shell: pwsh
         run: ./spikes/private_rendezvous_v3/verify_isolation.ps1
+
+      - name: Verify frozen v3 cryptographic selection remains isolated
+        shell: pwsh
+        run: ./spikes/private_rendezvous_v3/verify_crypto_selection.ps1
+
+      - name: Install isolated liboprf probe build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes autoconf automake build-essential libtool pkgconf
+
+      - name: Execute pinned 3HashTDH and authenticated-ceremony probe
+        run: bash spikes/private_rendezvous_v3/liboprf_probe/run_linux_probe.sh
+
+      - name: Install exact Android NDK for isolated platform probe
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.2.13676358"
+
+      - name: Cross-check Android and WebAssembly 3HashTDH builds
+        run: >-
+          ANDROID_NDK_HOME="$ANDROID_HOME/ndk/28.2.13676358"
+          bash spikes/private_rendezvous_v3/liboprf_probe/run_platform_builds.sh
 
       - name: Verify frozen v3 review snapshot and findings ledger
         shell: pwsh
@@ -157,6 +187,7 @@ jobs:
           cargo audit --file spikes/private_rendezvous_v3/Cargo.lock
           cargo audit --file spikes/private_rendezvous_v3/taceo_probe/Cargo.lock
           cargo audit --file spikes/private_rendezvous_v3/fuzz/Cargo.lock
+          cargo audit --file spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.lock
 
       - name: Enforce advisory, license and source policy
         run: |
@@ -165,6 +196,7 @@ jobs:
           cargo deny --manifest-path spikes/private_rendezvous_v3/Cargo.toml check
           cargo deny --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml check
           cargo deny --manifest-path spikes/private_rendezvous_v3/fuzz/Cargo.toml check
+          cargo deny --manifest-path spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml check
 
       - name: Fix SBOM timestamp to the audited commit
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
@@ -177,11 +209,13 @@ jobs:
           cargo cyclonedx --manifest-path spikes/private_rendezvous_v3/Cargo.toml --format json --spec-version 1.5 --target all --override-filename scotoma-v3-model.cdx
           cargo cyclonedx --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml --format json --spec-version 1.5 --target all --override-filename scotoma-v3-taceo-probe.cdx
           cargo cyclonedx --manifest-path spikes/private_rendezvous_v3/fuzz/Cargo.toml --format json --spec-version 1.5 --target all --override-filename scotoma-v3-fuzz.cdx
+          cargo cyclonedx --manifest-path spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml --format json --spec-version 1.5 --target all --override-filename scotoma-v3-liboprf-vector.cdx
           mv rust/scotoma-relay/scotoma-relay.cdx.json artifacts/sbom/production/
           mv packages/scotoma_bridge/rust/scotoma-bridge.cdx.json artifacts/sbom/production/
           mv spikes/private_rendezvous_v3/scotoma-v3-model.cdx.json artifacts/sbom/research-v3/
           mv spikes/private_rendezvous_v3/taceo_probe/scotoma-v3-taceo-probe.cdx.json artifacts/sbom/research-v3/
           mv spikes/private_rendezvous_v3/fuzz/scotoma-v3-fuzz.cdx.json artifacts/sbom/research-v3/
+          mv spikes/private_rendezvous_v3/liboprf_probe/rust_vector/scotoma-v3-liboprf-vector.cdx.json artifacts/sbom/research-v3/
           (cd artifacts/sbom/production && sha256sum *.cdx.json > SHA256SUMS)
           (cd artifacts/sbom/research-v3 && sha256sum *.cdx.json > SHA256SUMS)
 

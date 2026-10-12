@@ -1,0 +1,21 @@
+{
+  "schema": "scotoma-3hashtdh-vector-v1",
+  "id": "test-only-001",
+  "construction": "3HashTDH",
+  "suite": "OPRF(ristretto255, SHA-512)",
+  "credential_utf8": "scotoma-v3-vector-room-password",
+  "session_identifier_utf8": "SCOTOMA-v3|manifest=7f1d|epoch=19|evaluation=0001",
+  "key_scalar_le_hex": "0700000000000000000000000000000000000000000000000000000000000000",
+  "blind_scalar_le_hex": "0500000000000000000000000000000000000000000000000000000000000000",
+  "key_polynomial_coefficient_le_hex": "0b00000000000000000000000000000000000000000000000000000000000000",
+  "zero_polynomial_coefficient_le_hex": "0d00000000000000000000000000000000000000000000000000000000000000",
+  "alpha": "e6e36b61a327a3df0b912ecad511ba49bef23afab338251378cc4a3b99bca00e",
+  "responses": [
+    "01dc5448ab1869371c61f6893d901141c259b1c59a16d43f01f617afe2a450e518",
+    "02b2688913f5a1ff178bbeac3208b8d9c56d782c1d25c07b5787a0a23675727a2f",
+    "032c5b63f0fc453747b73b1e244a360e0acd576f6b5bf4c90a353d9241e0fdd333"
+  ],
+  "beta": "7c1484b9a3e273b3a1bd6f0d1846d35daa77f1d7275ec24a3674f1b8b8a4b57a",
+  "final": "2846b6285132174d2f7825609a9eebc79054ed4a9c1657dd2cd2b8d626adeae7c4eeac1b4f03f5f61952a09787ad423e09af92d6050b741f44c43e44892f0656",
+  "warning": "Public synthetic fixture only. Never use these scalars, shares or credential operationally."
+}

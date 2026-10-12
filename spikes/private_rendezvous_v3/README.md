@@ -128,6 +128,26 @@ gate definition from silent weakening. Production and v3 research inventories
 are uploaded separately with SHA-256 checksums; neither a green scan nor a v3
 SBOM selects this candidate for the product.
 
+Sprint 5.5.6 tranche 1 freezes 3HashTDH through `stef/liboprf v0.9.4` at commit
+`ba45204806daeb5b1b249d7b35ca0035cba3d641` as the sole candidate for the next
+isolated probe. TACEO remains comparison evidence. The JSON selection contract
+and `verify_crypto_selection.ps1` keep both implementations out of production;
+the decision stays NO-GO until portability, license, ceremony, vectors and
+composition gates pass.
+
+Tranche 2 adds `liboprf_probe/`. Its Linux runner pins both liboprf and
+libsodium source commits, executes a C 3HashTDH 2-of-3 conformance/negative
+probe, and runs the real upstream honest/corrupt FT-Joint-DL-VSS DKG and share-
+update fixtures. This is stronger evidence than the local ceremony simulation,
+but FT-Joint-DL-VSS is not PedPoP, the update specification is draft, and the
+first authoritative execution waits for CI after the commit is pushed.
+
+Tranche 3 adds a deterministic public 3HashTDH vector and an independent safe-
+Rust Ristretto255 implementation. CI requires native C and Emscripten/Wasm to
+emit the same bytes, then cross-links Android ARM64, ARMv7 and x86_64 research
+executables with pinned NDK and source inputs. Physical Android and browser
+execution remain deferred; none of these artifacts enters Flutter or v2.
+
 It must not become a dependency of the application, bridge or relay. Its values
 are synthetic test fixtures and must never be used as operational keys,
 credentials or production security evidence.

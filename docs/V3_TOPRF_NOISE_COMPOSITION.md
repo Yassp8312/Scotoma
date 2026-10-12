@@ -1,6 +1,14 @@
 # Composición candidata TOPRF + Noise PSK para SCOTOMA v3
 
-Estado: **candidato interno preferido; no implementado ni desplegado**.
+Estado: **composición condicionada; 3HashTDH/liboprf congelado para el próximo
+probe, no implementado ni desplegado**.
+
+Nota 5.5.6.1: la evidencia TACEO/Poseidon2 de este documento se conserva como
+comparación histórica, pero deja de ser la construcción definitiva candidata.
+La ruta seleccionada para validación es 3HashTDH de Gu et al. implementada por
+`liboprf v0.9.4`, sobre Ristretto255/SHA-512. Las codificaciones y vectores
+normativos se actualizarán únicamente después de reproducir el upstream en un
+workspace aislado; no se traducirá ni reimplementará la primitiva en SCOTOMA.
 
 ## 1. Cambio respecto al primer borrador
 

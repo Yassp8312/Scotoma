@@ -1,17 +1,17 @@
 {
   "schema": "scotoma-v3-review-snapshot-v2",
   "created": "2026-10-12",
-  "git_base": "72ddeac68fff5175d73d03ef401811da89a5d1b3",
+  "git_base": "791955365b0feec33e1d5bdd2893f5f689c8b19a",
   "working_tree": "dirty-intentional",
   "warning": "Review these exact bytes. This snapshot is not a release, audit, endorsement, or production protocol.",
   "files": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "6616ab2469704b5592682d92260395be190165e3b9254fbc9d3a1aa455814c7a"
+      "sha256": "e89fa3662e7c51f4a2d00141244782291e99fde9266f5f5b6ca1f8122a1e7e36"
     },
     {
       "path": "docs/SUPPLY_CHAIN.md",
-      "sha256": "f37a9b6b1f6192d44d2b30727328312edc83fb943a46932830cbd29fe9fa7c96"
+      "sha256": "e936582360dcea82896041a2e78897ae9c70b01919fa82d7f07852cc5e668ed8"
     },
     {
       "path": "docs/PRIVATE_RENDEZVOUS_REQUIREMENTS.md",
@@ -19,11 +19,15 @@
     },
     {
       "path": "docs/PRIVATE_RENDEZVOUS_V3_CANDIDATE.md",
-      "sha256": "2d5fe5326edabeef5563a53c035dc95b0656c11fc19f499574c8e69641ee50c7"
+      "sha256": "3afdb0bbccffff53d7b4955561a9a9ec7ed408295fb51a780046bb53ad849793"
+    },
+    {
+      "path": "docs/TOPRF_LIBRARY_EVALUATION.md",
+      "sha256": "f6c60427c430009b5d497960dd3f3913d980fc1243c63d289be827682bfeea50"
     },
     {
       "path": "docs/V3_TOPRF_NOISE_COMPOSITION.md",
-      "sha256": "59b8b7f4a405d4689d4d6e06b6c63fc49fa506b2f9e7983a0cd8f8481a62f568"
+      "sha256": "8ee97b7f8076b1bf465e6e9cffe04efd8cd5e846aaec23f402db4d2d223e73f7"
     },
     {
       "path": "docs/V3_OPERATOR_AND_ABUSE_MODEL.md",
@@ -35,11 +39,11 @@
     },
     {
       "path": "docs/INTERNAL_V3_SECURITY_REVIEW.md",
-      "sha256": "58da88fac26929a3462ebe5d3da1f045332a43db40b69fbf0484e07c56f5fb3f"
+      "sha256": "47640c1110eabda911861c48cf39b69b4c48194ab0e940ef9bbd1999f589db18"
     },
     {
       "path": "docs/PRIVATE_RENDEZVOUS_V3_TEST_PLAN.md",
-      "sha256": "e381a467aa6b5b27a52ccb964ab08b3781c0a35379b5520878a979d0edd87082"
+      "sha256": "fdb86b8a669d9c9b4e101942c1545981b0a913c33221ad798274796438a466e9"
     },
     {
       "path": "docs/V3_OPERATIONAL_BASELINE.md",
@@ -56,6 +60,30 @@
     {
       "path": "docs/adr/0063-v3-supply-chain-gate.md",
       "sha256": "47629bbde9d6aa5c05644562a9207152ff7d2e18ce4b33180ba9491575aef87a"
+    },
+    {
+      "path": "docs/adr/0064-select-liboprf-3hashtdh-candidate.md",
+      "sha256": "5022b116ccb0f63d9a6924a0dec207d7e5885f2ad011bc1274189a4356f4e895"
+    },
+    {
+      "path": "docs/adr/0065-probe-real-liboprf-ceremony.md",
+      "sha256": "b3902b480c60ae13b1972ae2d062701490b5f329ef80f8ca67e2be89656fba7b"
+    },
+    {
+      "path": "docs/adr/0066-cross-platform-3hashtdh-probe.md",
+      "sha256": "61f62e1ab442975def4df8fb5592e39e56649bd2f7764d3d5d8e6d81f02aac94"
+    },
+    {
+      "path": "docs/review/V3_CRYPTO_SELECTION.json",
+      "sha256": "f114266f19a597aa7d8aca6bca79b9b62d5eacd49119b9111ea4e306e7b24c9a"
+    },
+    {
+      "path": "docs/review/V3_CEREMONY_PROBE.json",
+      "sha256": "3341edb012fcf23345177e73f184b2ef3c4d1309967a0b1d02b595f8c1ed3629"
+    },
+    {
+      "path": "docs/review/V3_PLATFORM_PROBE.json",
+      "sha256": "495bff168f70aeb837895248fd98c7fac6e5900e3809941f94f500f6ec0cba12"
     },
     {
       "path": "spikes/private_rendezvous_v3/Cargo.toml",
@@ -178,8 +206,56 @@
       "sha256": "6e812b7c1822d0add1a65d8f58318a384f64f3f1ae191b314e54bad1aa4f64c5"
     },
     {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/README.md",
+      "sha256": "2eb80d7b7cc30367d54e4b8cb59fed8d6dc8d8a332ecfe5ed1d23513154fe246"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/scotoma_3hashtdh_probe.c",
+      "sha256": "9b578ff8275d7cb41c6e9e28a6021353a6d50508601670075a196913c270a5ca"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/scotoma_3hashtdh_vector.c",
+      "sha256": "f117995b7810723fdfb6847cebc978e7e02924be919df673f7a9bdcda21fc3a6"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/run_linux_probe.sh",
+      "sha256": "f5f7e5103f33032146165ceb37b57cdb61e3720346bb0bfce8a1961fb093a135"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/run_platform_builds.sh",
+      "sha256": "ec2fde57a82aa71d5b7e05bb4fa75683598ed3e86ee91fdf3962fdaf710db732"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/verify_vector.ps1",
+      "sha256": "45672cba2ffc9c4cd567dec6d66f38b37ca9ec5b64ba4276c201622794855121"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/vectors/3hashtdh_test_only_001.json",
+      "sha256": "0ce3dadd7f49cfe15bfe8349a3d227c8464959b640afdd1e866f22c4db1c1236"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml",
+      "sha256": "75ea9dc69ceacca6362650f03b66debfb7d398f1f11dbeeb4b71130d29b66d73"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.lock",
+      "sha256": "6adb10295fc2c9748d37df59f18415ca08881cfe7eb6d7ede3091acb9bba833c"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs",
+      "sha256": "2caf9ab928dbaa8e228813500be0b823e242de2f2bc662c8efae74ce7bdae9a2"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/verify_crypto_selection.ps1",
+      "sha256": "77fc51996ac643b3c9abb1850f1498ed1234217cdd4f2053759b1e58ff3c488b"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/verify_review_snapshot.ps1",
+      "sha256": "049be745c37693dcbc0c8341331f1b745d059517a1ccd83220b26eaa24bf0946"
+    },
+    {
       "path": "spikes/private_rendezvous_v3/verify_supply_chain.ps1",
-      "sha256": "6a3676ce7a30b27fc3e5773c38dd7540175e2ff09ab68323ade99b2abcec8092"
+      "sha256": "df514f8c18d0136088135ed07db0b18ef5f3ae5f0185ed255bbcbc4c624b44ee"
     },
     {
       "path": "spikes/private_rendezvous_v3/vectors/signed_manifest_v1.json",

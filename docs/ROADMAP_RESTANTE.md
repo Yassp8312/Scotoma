@@ -334,6 +334,48 @@ convertir fallos en informativos. La evidencia Linux, los SBOM y los resultados
 del workflow permanecen pendientes hasta publicar el commit. Los avisos de dos
 crates no mantenidos heredados por TACEO siguen abiertos y v3 continúa NO-GO.
 
+### Sprint 5.5.6 — construcción criptográfica definitiva
+
+Este sprint tiene cinco tramos y debe terminar con una decisión formal antes del
+bloque 6:
+
+1. seleccionar y congelar construcción, suite, implementación y versiones;
+2. sustituir la ceremonia simulada por DKG, denuncias, exclusión, rotación y
+   recuperación autenticadas;
+3. integrar vectores y transcript reales en Android y Web;
+4. desplegar coordinadores independientes y medirlos sobre Internet público;
+5. repetir revisión, corregir hallazgos y emitir GO/NO-GO.
+
+El tramo 1 queda completado como selección de investigación: 3HashTDH de Gu et
+al., `stef/liboprf v0.9.4`, commit
+`ba45204806daeb5b1b249d7b35ca0035cba3d641`, suite base
+Ristretto255/SHA-512 y topología dos-de-tres. TACEO permanece como comparación,
+no como construcción definitiva. La selección sigue NO-GO: C/libsodium,
+LGPL-3.0-or-later, Android/Wasm, vectores y ceremonia real aún deben superar los
+tramos siguientes. Ninguna dependencia nueva entra en producción.
+
+El tramo 2 incorpora un probe Linux aislado sobre el código C real. Fija también
+libsodium 1.0.20, comprueba los tres quorums dos-de-tres, desacuerdo de `ssid_S`
+y umbral insuficiente, y ejecuta los fixtures upstream de DKG y actualización,
+tanto honestos como corruptos. La ceremonia comprobada es FT-Joint-DL-VSS con
+mensajes y transcripciones firmados y shares protegidos por Noise_XK; **no es
+PedPoP**. La actualización sigue descrita upstream como borrador. Por eso el
+tramo aporta evidencia ejecutable pero no cierra R02/R12 ni autoriza integrar
+liboprf. La primera ejecución autoritativa queda pendiente del próximo push/CI.
+
+Para cerrar el tramo 2 todavía hay que seleccionar y revisar una ceremonia que
+satisfaga el requisito malicious-secure, probar exclusión y recuperación entre
+procesos y decidir si el diseño de actualización upstream puede conservarse.
+
+El tramo 3 queda implementado como gate multiplataforma, todavía pendiente de
+su primera ejecución CI. Un vector determinista 3HashTDH es reproducido por una
+implementación safe Rust independiente y debe coincidir byte a byte con liboprf
+C nativo y WebAssembly. El mismo source se cruza para Android ARM64, ARMv7 y
+x86_64 con NDK/API fijados. La ejecución Android física se conserva para la fase
+ADB; Node cubre Wasm inicialmente y Chrome/Edge/Firefox quedan por repetir. No
+se empaqueta ninguna biblioteca nueva en la app y el transcript Noise completo
+sigue pendiente.
+
 - Someter especificación, composición e implementación completas a revisión
   independiente comunitaria o pro bono.
 - Corregir hallazgos, repetir vectores, fuzzing, benchmarks y matrices de

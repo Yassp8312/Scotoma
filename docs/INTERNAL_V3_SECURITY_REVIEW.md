@@ -330,3 +330,45 @@ Los avisos de crates no mantenidos `derivative` y `paste`, heredados por TACEO,
 continúan visibles y mantienen parcial el criterio 5. No se convierten en una
 excepción ni se interpretan como vulnerabilidades confirmadas. Deben eliminarse
 o aceptarse mediante una decisión explícita antes de congelar dependencias.
+
+## Seguimiento 5.5.6.1 — selección de construcción
+
+La reevaluación incorpora la corrección de funcionalidad tOPRF publicada por Gu
+et al. y no congela la ruta TwoHashDH/TACEO como definitiva. Se selecciona para
+el siguiente probe 3HashTDH mediante `stef/liboprf v0.9.4`, commit
+`ba45204806daeb5b1b249d7b35ca0035cba3d641`, suite Ristretto255/SHA-512 y
+dos-de-tres. Un contrato JSON y un gate CI fijan esos bytes conceptuales y
+comprueban que no entren en manifiestos productivos.
+
+R01 continúa bloqueado: seleccionar una construcción publicada no revisa su
+composición con HKDF/Noise. C/libsodium, LGPL, Android/Wasm, ceremonia real,
+vectores independientes y autenticación de contexto deben aprobarse antes de
+cambiar la decisión NO-GO.
+
+## Seguimiento 5.5.6.2 — ejecución de ceremonia upstream
+
+Se añadió un probe C aislado que fija liboprf y libsodium por commit. Recorre los
+tres subconjuntos dos-de-tres de 3HashTDH, compara contra OPRF base y añade
+negativos de identificador de sesión mezclado y umbral insuficiente. El mismo
+job ejecuta la ceremonia FT-Joint-DL-VSS y la actualización upstream en rutas
+honestas y corruptas; exige que el DKG corrupto identifique al tramposo y falle.
+
+Esto reduce la distancia entre el modelo y una implementación publicada, pero
+no resuelve el hallazgo. FT-Joint-DL-VSS no se documenta como PedPoP, el
+protocolo de actualización está marcado como borrador y los fixtures no prueban
+consenso durable ni independencia administrativa. R02 y R12 continúan
+bloqueados. R01 y R11 tampoco cambian: aún faltan binding completo, vectores
+interoperables y ejecución Android/Web. La decisión permanece NO-GO.
+
+## Seguimiento 5.5.6.3 — vector y builds multiplataforma
+
+Se añadió un vector determinista que ya reproduce localmente una implementación
+safe Rust independiente de liboprf. El gate CI compara sus bytes con C nativo y
+Emscripten, y cruza ejecutables de investigación Android para ARM64, ARMv7 y
+x86_64. Commits de fuentes, NDK y emsdk quedan fijados y el nuevo lockfile entra
+en RustSec, cargo-deny y CycloneDX.
+
+R11 continúa parcial: Android solo se compila hasta recuperar ADB, Wasm se
+ejecuta inicialmente en Node y aún faltan los tres navegadores y el transcript
+Noise real completo. La coincidencia de un vector público tampoco revisa la
+composición ni la ceremonia. La decisión permanece NO-GO.

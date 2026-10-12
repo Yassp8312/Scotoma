@@ -1,0 +1,15 @@
+[package]
+name = "scotoma-liboprf-independent-vector"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+blake2 = "=0.10.6"
+curve25519-dalek = "=4.1.3"
+sha2 = "=0.10.9"
+
+[lints.rust]
+unsafe_code = "forbid"

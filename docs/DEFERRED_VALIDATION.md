@@ -108,19 +108,29 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
   v3: 21 verificadas localmente, 3 parciales y 2 riesgos documentados. Los casos
   parciales y los riesgos siguen abiertos en sus entradas específicas; esta
   marca no significa aprobación integral del protocolo.
-- [ ] Seleccionar una construcción TOPRF publicada, suite exacta y biblioteca
-  mantenida; no implementar una primitiva propia.
+- [x] Seleccionar para validación aislada 3HashTDH publicado mediante
+  `stef/liboprf v0.9.4`/`ba452048...d641`, Ristretto255/SHA-512 y dos-de-tres;
+  no implementar una primitiva propia ni incorporarla aún al producto.
+- [ ] Demostrar compilación reproducible de liboprf/libsodium para Android y
+  Wasm y cerrar el análisis LGPL antes de conservar la selección. El gate
+  5.5.6.3 ya fija NDK/emsdk y prepara ARM64, ARMv7, x86_64 y Wasm; su primera
+  ejecución autoritativa espera CI y todavía no incorpora artefactos al APK/Web.
 - [x] Crear vectores sintéticos interoperables Rust/WebCrypto y ejecutarlos en
   Node, Chrome, Edge y Firefox. La segunda versión cubre una salida OPRF fija,
   HKDF, prologue y confirmaciones, con negativos de época/salida/transcript.
 - [ ] Ejecutar los vectores canónicos dentro del artefacto Android y reproducir
   TACEO/Poseidon2 y un transcript Noise real en una segunda implementación; el
   navegador actual comienza desde una salida OPRF congelada y un hash sintético.
+  El vector 3HashTDH determinista ya tiene reproducción Rust independiente y
+  rutas C/Wasm; queda ejecutarlo en Android físico y tres navegadores, y unirlo
+  al transcript Noise completo.
 - [ ] Completar manifiesto firmado dentro del artefacto Android, persistencia
   antirollback y recuperación de la clave release. El modelo Rust y WebCrypto
   ya cubre codificación, firmas, continuidad y negativos en tres navegadores.
-- [ ] Probar DKG/PedPoP real, caída de operadores, tres clientes y particiones
-  entre procesos independientes.
+- [ ] Seleccionar y aprobar DKG/PedPoP real, caída de operadores, tres clientes
+  y particiones entre procesos independientes. El probe 5.5.6.2 ya ejecuta el
+  FT-Joint-DL-VSS real de liboprf, incluyendo casos corruptos y actualización,
+  pero no demuestra PedPoP; la actualización upstream es todavía borrador.
 - [x] Modelar rondas separadas de compromiso/prueba, ciphertext y veredicto del
   receptor, con timeout y aborto/purga ante quejas válidas o fraudulentas. Los
   verificadores PedPoP, firmas y evidencias serializadas siguen pendientes.

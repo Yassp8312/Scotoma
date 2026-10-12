@@ -1,8 +1,9 @@
 # Evaluación de implementaciones TOPRF para SCOTOMA v3
 
-Fecha: 2026-10-11.
+Fecha: 2026-10-12.
 
-Estado: **ninguna dependencia seleccionada**.
+Estado: **3HashTDH/liboprf seleccionado únicamente como candidato congelado de
+investigación; producción continúa NO-GO**.
 
 ## Criterios eliminatorios
 
@@ -21,6 +22,59 @@ persistencia de usuario como requisito del protocolo.
 | `bytemare/voprf` + `bytemare/dkg` | RFC 9497, TOPRF, DKG, licencia MIT | Go; no ofrece el camino Rust/Dart/Wasm requerido ni valida nuestra composición | Investigación únicamente |
 | `TaceoLabs/oprf-service` | Rust, OPRF distribuida con prueba DLog verificable, cliente separado, releases y licencia MIT/Apache-2.0 | Construcción BabyJubJub/Poseidon2 no estandarizada por RFC 9497; faltan ceremonia PedPoP/rotación reales, autenticación sin cuentas y revisión del mapeo/composición SCOTOMA | Candidata técnica condicionada; no integrar |
 | `RustCrypto/hash2curve 0.14.0` | RFC 9380, Rust `no_std`, vectores oficiales XMD, MIT/Apache-2.0 | Solo resuelve expansión/mapeo; añade otro conjunto de abstracciones de campo y no valida la composición TOPRF | Candidata condicionada para el mapeo aislado |
+| `stef/liboprf 0.9.4` / 3HashTDH | Implementa la corrección publicada en ASIACRYPT 2024/ePrint 2024/1455, usa Ristretto255/SHA-512, incluye DKG y permanece mantenida | C + libsodium, LGPL-3.0-or-later, Android/Wasm y cumplimiento de enlace aún sin demostrar; ceremonia operativa sin validar | **Seleccionada para validación aislada; no integrar** |
+
+## Reevaluación 5.5.6.1
+
+La publicación de Gu, Jarecki, Kedzior, Nazarian y Xu corrige una ambigüedad de
+la funcionalidad tOPRF previa: 3HashTDH fuerza acuerdo sobre un identificador de
+sesión dentro de la evaluación umbral. Por ello una implementación que solo se
+describa como TwoHashDH/TOPPSS no basta como construcción definitiva de SCOTOMA
+sin una demostración adicional de equivalencia con la funcionalidad corregida.
+
+`liboprf v0.9.4`, commit
+`ba45204806daeb5b1b249d7b35ca0035cba3d641`, es la única candidata examinada
+que declara e implementa 3HashTDH de ese trabajo y continúa publicando releases.
+Queda congelada para los probes siguientes con suite
+`OPRF(ristretto255, SHA-512)` y topología inicial dos-de-tres. El tag es ligero;
+los artefactos de firma de la release, el origen exacto y toda dependencia de
+build deberán verificarse antes de producir binarios.
+
+Esta decisión no incorpora C ni LGPL al producto. Antes debe demostrarse una
+ruta reproducible Android/Wasm, revisar obligaciones de Combined Work, fijar
+libsodium, reproducir vectores y completar una ceremonia autenticada. El
+registro normativo está en `review/V3_CRYPTO_SELECTION.json` y
+`verify_crypto_selection.ps1` impide que la selección aparezca en manifiestos
+productivos.
+
+## Probe de ceremonia 5.5.6.2
+
+El probe nuevo ejecuta `toprf_3hashtdh` directamente desde la revisión fijada y
+prueba los tres quorums 2-de-3 frente a la evaluación OPRF no umbral. También
+demuestra el efecto de mezclar identificadores de sesión y que una sola share no
+reproduce la salida esperada. libsodium 1.0.20 queda fijada al commit
+`93a7d0d41fe2e32409b5d00386946f491750b7de` para esta ejecución.
+
+Además compila y ejecuta los fixtures upstream `stp-dkg`, `stp-dkg-corrupt`,
+`toprf-update` y `toprf-update-corrupt`. Esto comprueba código real con firmas,
+transcripciones, quejas/defensas, descalificación y canales Noise_XK; no permite
+renombrar FT-Joint-DL-VSS como PedPoP. El documento upstream de actualización
+continúa siendo un borrador y los fixtures corren dentro de un solo proceso.
+Por ello la evidencia es necesaria pero insuficiente y no cambia el NO-GO.
+
+## Vector y builds 5.5.6.3
+
+El fixture `3hashtdh_test_only_001.json` elimina la aleatoriedad de la prueba:
+usa escalares públicos, shares lineales y un `ssid_S` fijo. Una implementación
+Rust independiente obtiene exactamente `alpha`, tres respuestas, `beta` y la
+salida Finalize esperadas. liboprf C nativo y Emscripten deben igualar todos los
+bytes en CI.
+
+La ruta Android cruza el probe para ARM64, ARMv7 y x86_64 con NDK 28.2/API 21;
+la ruta Web usa emsdk 3.1.74 y ejecuta Wasm bajo Node. Esto responde a
+portabilidad de la primitiva, no a integración del producto. Todavía faltan la
+ejecución en Android físico, Chrome/Edge/Firefox, el transcript Noise completo,
+la decisión LGPL y una ceremonia aceptada.
 
 ## Probe reproducible de TACEO
 
@@ -112,19 +166,24 @@ participante que publique ciphertext y compromiso maliciosos pero coherentes.
 La marca `authenticated` del simulador es una precondición de prueba, no una
 firma ni un canal autenticado implementado.
 
-## Decisión
+## Decisión anterior y transición
 
 No se añade ninguna de estas bibliotecas al workspace productivo. Tampoco se
 construirá una TOPRF propia combinando primitivas de bajo nivel. El probe de
 TACEO permite continuar la evaluación, pero no constituye una selección.
 
-El adaptador abstracto del spike permanece sin implementación criptográfica hasta
-que se cumpla una de estas condiciones:
+El adaptador abstracto del spike permanece sin implementación criptográfica
+productiva. 5.5.6.1 cumple la segunda condición solo para abrir una nueva fase
+aislada, no para aprobar el producto:
 
 1. una candidata con interfaz Rust/Wasm documente una especificación que cubra
    mapeo de entrada, verificación, DKG y rotación y supere el arnés aislado; o
 2. una revisión técnica identifique una construcción publicada distinta y una
    implementación mantenida apropiada.
+
+La construcción identificada es 3HashTDH/liboprf. Las puertas de portabilidad,
+ceremonia, composición y revisión siguen abiertas; cualquier fallo devuelve la
+selección a NO-GO sin modificar v2.
 
 ## Evidencia que falta pedir a los mantenedores
 
@@ -151,3 +210,7 @@ composición con Noise PSK ni la operación independiente.
   <https://docs.rs/taceo-oprf-core/0.6.3/taceo_oprf_core/>;
 - RFC 9497 para distinguir las suites OPRF/VOPRF/POPRF estandarizadas:
   <https://www.rfc-editor.org/rfc/rfc9497.html>.
+- paper 3HashTDH y funcionalidad tOPRF corregida:
+  <https://eprint.iacr.org/2024/1455>;
+- implementación seleccionada para validación aislada:
+  <https://github.com/stef/liboprf/tree/v0.9.4>.

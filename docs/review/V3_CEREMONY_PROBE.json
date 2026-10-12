@@ -1,0 +1,32 @@
+{
+  "schema": "scotoma-v3-ceremony-probe-v1",
+  "date": "2026-10-12",
+  "status": "implemented-awaiting-ci-execution",
+  "production_decision": "NO-GO",
+  "inputs": {
+    "liboprf_commit": "ba45204806daeb5b1b249d7b35ca0035cba3d641",
+    "libsodium_version": "1.0.20",
+    "libsodium_commit": "93a7d0d41fe2e32409b5d00386946f491750b7de"
+  },
+  "executable_checks": [
+    "3HashTDH every honest two-of-three quorum equals the base OPRF evaluation",
+    "mixing two evaluation-session identifiers does not yield the expected OPRF evaluation",
+    "one share does not yield the expected threshold evaluation",
+    "upstream honest FT-Joint-DL-VSS DKG completes",
+    "upstream corrupt FT-Joint-DL-VSS DKG detects a cheater and fails closed",
+    "upstream honest share update completes",
+    "upstream corrupt share-update scenario exercises complaint and recovery paths"
+  ],
+  "verified_properties": [
+    "Exact source commits are checked before compilation.",
+    "The real upstream C implementation is executed rather than the SCOTOMA ceremony simulation.",
+    "Upstream ceremony messages use long-term signatures, transcript binding and Noise_XK protected share delivery."
+  ],
+  "not_verified": [
+    "FT-Joint-DL-VSS is not PedPoP and has not been accepted as SCOTOMA's definitive DKG.",
+    "The upstream share-update specification is marked draft and is not approved for production.",
+    "The fixture runs participants in one process and does not prove independent operation or durable consensus.",
+    "Android, WebAssembly, Internet deployment, denial-of-service behavior and license compliance remain open.",
+    "Independent cryptographic review remains open."
+  ]
+}
