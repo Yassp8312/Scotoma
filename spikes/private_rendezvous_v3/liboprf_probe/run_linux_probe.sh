@@ -29,7 +29,7 @@ fetch_exact "$LIBSODIUM_REPOSITORY" "$LIBSODIUM_COMMIT" "$work_dir/libsodium"
 (
   cd "$work_dir/libsodium"
   ./autogen.sh
-  ./configure --quiet --prefix="$work_dir/prefix" --disable-shared
+  ./configure --quiet --prefix="$work_dir/prefix" --disable-shared --with-pic
   make --quiet -j2
   make --quiet install
 )
