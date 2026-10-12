@@ -19,10 +19,26 @@ const EXTRACT_DOMAIN: &[u8] = b"SCOTOMA-V3-EXTRACT";
 const TAG_DOMAIN: &[u8] = b"SCOTOMA-V3-RENDEZVOUS-TAG";
 const PSK_DOMAIN: &[u8] = b"SCOTOMA-V3-NOISE-PSK";
 const PROLOGUE_DOMAIN: &[u8] = b"SCOTOMA-NOISE-PROLOGUE-v3";
+const CONFIRM_DOMAIN: &[u8] = b"SCOTOMA-V3-KEY-CONFIRM-v1";
 const INPUT_HASH_DST: &[u8] = b"SCOTOMA-v3-TACEO-TWOHASHDH-BABYJUBJUB-POSEIDON2_XMD:SHA-256_H2F";
 const PROTOCOL_VERSION: u16 = 3;
 const FIELD_BYTES: usize = 32;
 const HASH_TO_FIELD_BYTES: usize = 48;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ConfirmationRole {
+    Initiator = 1,
+    Responder = 2,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ConfirmationError {
+    WrongLength,
+    WrongDomain,
+    WrongRole,
+    WrongHandshake,
+    WrongContext,
+}
 
 /// Keeps the two result types needed by a future adapter visible to both the
 /// native and `wasm32-unknown-unknown` compilers.
@@ -157,6 +173,57 @@ pub fn build_noise_prologue(
     prologue
 }
 
+/// Builds the fixed-layout frame exchanged inside Noise before application data.
+#[must_use]
+pub fn build_key_confirmation(
+    role: ConfirmationRole,
+    handshake_hash: &[u8; 32],
+    noise_prologue: &[u8],
+    confirmation_nonce: &[u8; 32],
+) -> Vec<u8> {
+    let context_hash = Sha256::digest(noise_prologue);
+    let mut frame = Vec::with_capacity(CONFIRM_DOMAIN.len() + 1 + 32 + 32 + 32);
+    frame.extend_from_slice(CONFIRM_DOMAIN);
+    frame.push(role as u8);
+    frame.extend_from_slice(handshake_hash);
+    frame.extend_from_slice(&context_hash);
+    frame.extend_from_slice(confirmation_nonce);
+    frame
+}
+
+/// Verifies the peer's complete confirmation view and rejects reflected frames.
+pub fn verify_key_confirmation(
+    frame: &[u8],
+    expected_peer_role: ConfirmationRole,
+    expected_handshake_hash: &[u8; 32],
+    expected_noise_prologue: &[u8],
+) -> Result<[u8; 32], ConfirmationError> {
+    let expected_len = CONFIRM_DOMAIN.len() + 1 + 32 + 32 + 32;
+    if frame.len() != expected_len {
+        return Err(ConfirmationError::WrongLength);
+    }
+    if &frame[..CONFIRM_DOMAIN.len()] != CONFIRM_DOMAIN {
+        return Err(ConfirmationError::WrongDomain);
+    }
+    let mut offset = CONFIRM_DOMAIN.len();
+    if frame[offset] != expected_peer_role as u8 {
+        return Err(ConfirmationError::WrongRole);
+    }
+    offset += 1;
+    if &frame[offset..offset + 32] != expected_handshake_hash {
+        return Err(ConfirmationError::WrongHandshake);
+    }
+    offset += 32;
+    let expected_context = Sha256::digest(expected_noise_prologue);
+    if frame[offset..offset + 32] != expected_context[..] {
+        return Err(ConfirmationError::WrongContext);
+    }
+    offset += 32;
+    frame[offset..offset + 32]
+        .try_into()
+        .map_err(|_| ConfirmationError::WrongLength)
+}
+
 fn build_context(manifest_hash: &[u8; 32], epoch: u64) -> Vec<u8> {
     let mut context = Vec::with_capacity(CONTEXT_DOMAIN.len() + 32 + 8);
     context.extend_from_slice(CONTEXT_DOMAIN);
@@ -168,8 +235,9 @@ fn build_context(manifest_hash: &[u8; 32], epoch: u64) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_noise_prologue, derive_candidate_keys, map_credential_to_arkworks_draft_query,
-        map_credential_to_rfc9380_query, serialize_oprf_output,
+        ConfirmationError, ConfirmationRole, build_key_confirmation, build_noise_prologue,
+        derive_candidate_keys, map_credential_to_arkworks_draft_query,
+        map_credential_to_rfc9380_query, serialize_oprf_output, verify_key_confirmation,
     };
     use ark_ec::{AffineRepr as _, CurveGroup as _};
     use ark_ff::{AdditiveGroup as _, Field as _, PrimeField as _, UniformRand as _};
@@ -180,6 +248,7 @@ mod tests {
     use scotoma_private_rendezvous_v3_model::relay::{
         MemoryRelay, RegistrationOutcome, RelayEvent, RendezvousKey,
     };
+    use sha2::{Digest as _, Sha256};
     use taceo_ark_babyjubjub::{EdwardsAffine, EdwardsProjective, Fq, Fr};
     use taceo_oprf_core::{
         ddlog_equality::shamir::{DLogCommitmentsShamir, DLogSessionShamir, DLogShareShamir},
@@ -189,7 +258,7 @@ mod tests {
         },
         oprf::{
             BlindedOprfRequest, BlindedOprfResponse, BlindingFactor,
-            client::{blind_query, finalize_query_and_verify_proof},
+            client::{blind_query, finalize_query, finalize_query_and_verify_proof},
             server::{OprfKey, OprfServer},
         },
         shamir,
@@ -225,6 +294,33 @@ mod tests {
             write!(&mut encoded, "{byte:02x}").expect("writing to a String cannot fail");
         }
         encoded
+    }
+
+    fn fixed_hex<const N: usize>(value: &str) -> [u8; N] {
+        assert_eq!(value.len(), N * 2, "hex fixture has the wrong length");
+        let mut decoded = [0_u8; N];
+        for (index, byte) in decoded.iter_mut().enumerate() {
+            *byte = u8::from_str_radix(&value[index * 2..index * 2 + 2], 16)
+                .expect("fixture must contain canonical lowercase hex");
+        }
+        assert_eq!(
+            bytes_to_hex(&decoded),
+            value,
+            "hex fixture must be canonical"
+        );
+        decoded
+    }
+
+    fn model_digest(parts: &[&[u8]]) -> [u8; 32] {
+        let mut hasher = Sha256::new();
+        for part in parts {
+            hasher.update(part);
+        }
+        hasher.finalize().into()
+    }
+
+    fn encrypted_share_model_digest(encrypted: &EncryptedShare) -> [u8; 32] {
+        model_digest(&[&serialize_oprf_output(&encrypted.ciphertext)])
     }
 
     fn generate_distributed_key(rng: &mut rand::rngs::ThreadRng) -> DistributedKey {
@@ -305,6 +401,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         for (sender, digest) in commitment_digests.iter().enumerate() {
+            let proof_digest = model_digest(&[b"SCOTOMA-V3-TEST-POP", digest]);
             network
                 .accept(CeremonyEnvelope {
                     ceremony_id: config.ceremony_id,
@@ -313,16 +410,22 @@ mod tests {
                     sender_id: u16::try_from(sender).expect("test sender fits u16"),
                     sequence: 0,
                     authenticated: true,
-                    message: CeremonyMessage::Commitment { digest: *digest },
+                    message: CeremonyMessage::Commitment {
+                        digest: *digest,
+                        proof_digest,
+                        proof_valid: true,
+                    },
                 })
                 .unwrap();
         }
         assert_eq!(network.phase(), CeremonyPhase::Shares);
 
         let mut recipient_pieces = vec![Vec::with_capacity(polynomials.len()); recipient_pks.len()];
+        let mut verdicts = Vec::new();
         for (sender, poly) in polynomials.iter().enumerate() {
             for (recipient, recipient_pk) in recipient_pks.iter().enumerate() {
                 let encrypted = poly.gen_share(recipient, &dealer_sks[sender], *recipient_pk, rng);
+                let ciphertext_digest = encrypted_share_model_digest(&encrypted);
                 let verified = decrypt_committed_share(
                     &recipient_sks[recipient],
                     dealer_pks[sender],
@@ -341,13 +444,48 @@ mod tests {
                             recipient_id: u16::try_from(recipient)
                                 .expect("test recipient fits u16"),
                             polynomial_commitment_digest: commitment_digests[sender],
-                            share_valid: verified.is_some(),
+                            ciphertext_digest,
                         },
                     })
                     .unwrap();
+                let share_valid = verified.is_some();
+                let evidence_digest = model_digest(&[
+                    b"SCOTOMA-V3-TEST-SHARE-VERDICT",
+                    &commitment_digests[sender],
+                    &ciphertext_digest,
+                    &[u8::from(share_valid)],
+                ]);
+                verdicts.push((
+                    sender,
+                    recipient,
+                    ciphertext_digest,
+                    share_valid,
+                    evidence_digest,
+                ));
                 recipient_pieces[recipient]
                     .push(verified.expect("honest TACEO share must pass commitment verification"));
             }
+        }
+        assert_eq!(network.phase(), CeremonyPhase::Verification);
+        for (sender, recipient, ciphertext_digest, share_valid, evidence_digest) in verdicts {
+            network
+                .accept(CeremonyEnvelope {
+                    ceremony_id: config.ceremony_id,
+                    manifest_hash: config.manifest_hash,
+                    epoch: config.epoch,
+                    sender_id: u16::try_from(recipient).expect("test recipient fits u16"),
+                    sequence: 100 + u32::try_from(sender).expect("test sender fits u32"),
+                    authenticated: true,
+                    message: CeremonyMessage::ShareVerification {
+                        dealer_id: u16::try_from(sender).expect("test sender fits u16"),
+                        polynomial_commitment_digest: commitment_digests[sender],
+                        ciphertext_digest,
+                        share_valid,
+                        evidence_digest,
+                        evidence_valid: true,
+                    },
+                })
+                .unwrap();
         }
         assert_eq!(network.phase(), CeremonyPhase::Ready);
         recipient_pieces
@@ -619,6 +757,7 @@ mod tests {
             threshold: 1,
         };
         let mut network = NetworkCeremony::new(config.clone()).unwrap();
+        let proof_digest = model_digest(&[b"SCOTOMA-V3-TEST-POP", &digest]);
         network
             .accept(CeremonyEnvelope {
                 ceremony_id: config.ceremony_id,
@@ -627,7 +766,11 @@ mod tests {
                 sender_id: 0,
                 sequence: 0,
                 authenticated: true,
-                message: CeremonyMessage::Commitment { digest },
+                message: CeremonyMessage::Commitment {
+                    digest,
+                    proof_digest,
+                    proof_valid: true,
+                },
             })
             .unwrap();
 
@@ -642,8 +785,10 @@ mod tests {
         let share_valid =
             (EdwardsAffine::generator() * raw_tampered).into_affine() == encrypted.commitment;
         assert!(!share_valid);
-        assert_eq!(
-            network.accept(CeremonyEnvelope {
+        let ciphertext_digest =
+            model_digest(&[&serialize_oprf_output(&(encrypted.ciphertext + Fq::ONE))]);
+        network
+            .accept(CeremonyEnvelope {
                 ceremony_id: config.ceremony_id,
                 manifest_hash: config.manifest_hash,
                 epoch: config.epoch,
@@ -653,10 +798,35 @@ mod tests {
                 message: CeremonyMessage::EncryptedShare {
                     recipient_id: 0,
                     polynomial_commitment_digest: digest,
+                    ciphertext_digest,
+                },
+            })
+            .unwrap();
+        assert_eq!(network.phase(), CeremonyPhase::Verification);
+        let evidence_digest = model_digest(&[
+            b"SCOTOMA-V3-TEST-SHARE-VERDICT",
+            &digest,
+            &ciphertext_digest,
+            &[u8::from(share_valid)],
+        ]);
+        assert_eq!(
+            network.accept(CeremonyEnvelope {
+                ceremony_id: config.ceremony_id,
+                manifest_hash: config.manifest_hash,
+                epoch: config.epoch,
+                sender_id: 0,
+                sequence: 100,
+                authenticated: true,
+                message: CeremonyMessage::ShareVerification {
+                    dealer_id: 0,
+                    polynomial_commitment_digest: digest,
+                    ciphertext_digest,
                     share_valid,
+                    evidence_digest,
+                    evidence_valid: true,
                 },
             }),
-            Err(CeremonyError::InvalidShare)
+            Err(CeremonyError::SubstantiatedComplaint)
         );
         assert_eq!(network.phase(), CeremonyPhase::Terminal);
     }
@@ -797,6 +967,157 @@ mod tests {
     }
 
     #[test]
+    fn rust_reproduces_the_full_composition_fixture() {
+        let vector: serde_json::Value =
+            serde_json::from_str(include_str!("../vectors/composition_test_only_001.json"))
+                .expect("the composition vector must be valid JSON");
+        assert_eq!(
+            vector["schema"].as_str(),
+            Some("scotoma-v3-composition-vector-v1")
+        );
+        assert_eq!(vector["classification"].as_str(), Some("TEST-ONLY"));
+        assert_eq!(
+            vector["context"]["handshake_hash_source"].as_str(),
+            Some("fixed-test-input-not-derived-noise")
+        );
+
+        assert_eq!(vector["credential"]["room"].as_str(), Some("13"));
+        assert_eq!(vector["credential"]["password"].as_str(), Some("1370"));
+        let credential = scotoma_private_rendezvous_v3_model::encode_credential(b"13", b"1370")
+            .expect("fixed vector credential must be valid");
+        assert_eq!(
+            bytes_to_hex(&credential),
+            vector["credential"]["encoding_hex"]
+                .as_str()
+                .expect("credential fixture must be a string")
+        );
+
+        let query = map_credential_to_rfc9380_query(b"13", b"1370").unwrap();
+        assert_eq!(
+            bytes_to_hex(&serialize_oprf_output(&query)),
+            vector["credential"]["query_big_endian_hex"]
+                .as_str()
+                .expect("query fixture must be a string")
+        );
+
+        assert_eq!(
+            vector["oprf_fixture"]["construction"].as_str(),
+            Some("TACEO TwoHashDH BabyJubJub Poseidon2")
+        );
+        assert_eq!(
+            vector["oprf_fixture"]["secret_scalar_decimal"].as_str(),
+            Some("42")
+        );
+        assert_eq!(
+            vector["oprf_fixture"]["blinding_scalar_decimal"].as_str(),
+            Some("17")
+        );
+        assert_eq!(
+            vector["oprf_fixture"]["finalize_domain_ascii"].as_str(),
+            Some("SCOTOMA-TACEO-PROBE-ONLY")
+        );
+        let secret = Fr::from(42_u64);
+        let blinding = BlindingFactor::from_scalar(Fr::from(17_u64)).unwrap();
+        let request = blind_query(query, blinding);
+        let response = BlindedOprfResponse::new((request.blinded_query() * secret).into_affine());
+        let domain = Fq::from_be_bytes_mod_order(b"SCOTOMA-TACEO-PROBE-ONLY");
+        let output = finalize_query(query, &response, &blinding.prepare(), domain);
+        assert_eq!(
+            bytes_to_hex(&serialize_oprf_output(&output)),
+            vector["oprf_fixture"]["output_big_endian_hex"]
+                .as_str()
+                .expect("OPRF output fixture must be a string")
+        );
+
+        let manifest = fixed_hex::<32>(
+            vector["context"]["manifest_hash_hex"]
+                .as_str()
+                .expect("manifest hash fixture must be a string"),
+        );
+        let epoch = vector["context"]["epoch"]
+            .as_u64()
+            .expect("epoch fixture must be an unsigned integer");
+        let initiator_nonce = fixed_hex::<32>(
+            vector["context"]["initiator_nonce_hex"]
+                .as_str()
+                .expect("initiator nonce fixture must be a string"),
+        );
+        let responder_nonce = fixed_hex::<32>(
+            vector["context"]["responder_nonce_hex"]
+                .as_str()
+                .expect("responder nonce fixture must be a string"),
+        );
+        let handshake_hash = fixed_hex::<32>(
+            vector["context"]["handshake_hash_hex"]
+                .as_str()
+                .expect("handshake fixture must be a string"),
+        );
+        let keys = derive_candidate_keys(&output, &manifest, epoch);
+        assert_eq!(
+            bytes_to_hex(keys.rendezvous_tag()),
+            vector["expected"]["rendezvous_tag_hex"]
+                .as_str()
+                .expect("tag fixture must be a string")
+        );
+        assert_eq!(
+            bytes_to_hex(keys.noise_psk()),
+            vector["expected"]["noise_psk_hex"]
+                .as_str()
+                .expect("PSK fixture must be a string")
+        );
+
+        let prologue = build_noise_prologue(
+            &manifest,
+            epoch,
+            keys.rendezvous_tag(),
+            &initiator_nonce,
+            &responder_nonce,
+        );
+        assert_eq!(
+            bytes_to_hex(&prologue),
+            vector["expected"]["noise_prologue_hex"]
+                .as_str()
+                .expect("prologue fixture must be a string")
+        );
+        assert_eq!(
+            bytes_to_hex(&Sha256::digest(&prologue)),
+            vector["expected"]["noise_prologue_sha256_hex"]
+                .as_str()
+                .expect("prologue hash fixture must be a string")
+        );
+
+        for (role, nonce_field, expected_field) in [
+            (
+                ConfirmationRole::Initiator,
+                "initiator_confirmation_nonce_hex",
+                "initiator_confirmation_hex",
+            ),
+            (
+                ConfirmationRole::Responder,
+                "responder_confirmation_nonce_hex",
+                "responder_confirmation_hex",
+            ),
+        ] {
+            let nonce = fixed_hex::<32>(
+                vector["context"][nonce_field]
+                    .as_str()
+                    .expect("confirmation nonce fixture must be a string"),
+            );
+            let confirmation = build_key_confirmation(role, &handshake_hash, &prologue, &nonce);
+            assert_eq!(
+                bytes_to_hex(&confirmation),
+                vector["expected"][expected_field]
+                    .as_str()
+                    .expect("confirmation fixture must be a string")
+            );
+        }
+
+        let changed = derive_candidate_keys(&output, &manifest, epoch + 1);
+        assert_ne!(keys.rendezvous_tag(), changed.rendezvous_tag());
+        assert_ne!(keys.noise_psk(), changed.noise_psk());
+    }
+
+    #[test]
     fn mapped_credential_completes_threshold_and_noise_layers() {
         let mut rng = rand::thread_rng();
         let secret = Fr::rand(&mut rng);
@@ -863,6 +1184,84 @@ mod tests {
         );
     }
 
+    #[test]
+    fn key_confirmation_binds_role_handshake_context_and_nonce() {
+        let manifest = [0x53; 32];
+        let keys = derive_candidate_keys(&Fq::from(1370_u64), &manifest, 7);
+        let prologue = build_noise_prologue(
+            &manifest,
+            7,
+            keys.rendezvous_tag(),
+            &[0x11; 32],
+            &[0x22; 32],
+        );
+        let handshake = [0x48; 32];
+        let nonce = [0x4e; 32];
+        let frame =
+            build_key_confirmation(ConfirmationRole::Initiator, &handshake, &prologue, &nonce);
+        assert_eq!(
+            verify_key_confirmation(&frame, ConfirmationRole::Initiator, &handshake, &prologue,),
+            Ok(nonce)
+        );
+
+        assert_eq!(
+            verify_key_confirmation(&frame, ConfirmationRole::Responder, &handshake, &prologue,),
+            Err(ConfirmationError::WrongRole),
+            "a reflected initiator confirmation must not satisfy the responder role"
+        );
+        let mut other_handshake = handshake;
+        other_handshake[0] ^= 1;
+        assert_eq!(
+            verify_key_confirmation(
+                &frame,
+                ConfirmationRole::Initiator,
+                &other_handshake,
+                &prologue,
+            ),
+            Err(ConfirmationError::WrongHandshake)
+        );
+        let mut other_prologue = prologue.clone();
+        other_prologue[0] ^= 1;
+        assert_eq!(
+            verify_key_confirmation(
+                &frame,
+                ConfirmationRole::Initiator,
+                &handshake,
+                &other_prologue,
+            ),
+            Err(ConfirmationError::WrongContext)
+        );
+        assert_eq!(
+            verify_key_confirmation(
+                &frame[..frame.len() - 1],
+                ConfirmationRole::Initiator,
+                &handshake,
+                &prologue,
+            ),
+            Err(ConfirmationError::WrongLength)
+        );
+        let mut wrong_domain = frame.clone();
+        wrong_domain[0] ^= 1;
+        assert_eq!(
+            verify_key_confirmation(
+                &wrong_domain,
+                ConfirmationRole::Initiator,
+                &handshake,
+                &prologue,
+            ),
+            Err(ConfirmationError::WrongDomain)
+        );
+        assert_ne!(
+            frame,
+            build_key_confirmation(
+                ConfirmationRole::Initiator,
+                &handshake,
+                &prologue,
+                &[0x4f; 32],
+            )
+        );
+    }
+
     fn noise_handshake(
         initiator_keys: &super::CandidateKeys,
         initiator_prologue: &[u8],
@@ -891,12 +1290,33 @@ mod tests {
         let second_len = responder.write_message(&[], &mut message)?;
         initiator.read_message(&message[..second_len], &mut payload)?;
 
+        let initiator_handshake: [u8; 32] = initiator
+            .get_handshake_hash()
+            .try_into()
+            .expect("fixed Noise hash is 32 bytes");
+        let responder_handshake: [u8; 32] = responder
+            .get_handshake_hash()
+            .try_into()
+            .expect("fixed Noise hash is 32 bytes");
+        assert_eq!(initiator_handshake, responder_handshake);
+
         let mut initiator = initiator.into_transport_mode()?;
         let mut responder = responder.into_transport_mode()?;
-        let confirmation = b"SCOTOMA-V3-KEY-CONFIRM-I";
-        let encrypted_len = initiator.write_message(confirmation, &mut message)?;
+        let confirmation = build_key_confirmation(
+            ConfirmationRole::Initiator,
+            &initiator_handshake,
+            initiator_prologue,
+            &[0x41; 32],
+        );
+        let encrypted_len = initiator.write_message(&confirmation, &mut message)?;
         let decrypted_len = responder.read_message(&message[..encrypted_len], &mut payload)?;
-        assert_eq!(&payload[..decrypted_len], confirmation);
+        verify_key_confirmation(
+            &payload[..decrypted_len],
+            ConfirmationRole::Initiator,
+            &responder_handshake,
+            responder_prologue,
+        )
+        .expect("the initiator confirmation must bind the shared Noise view");
         Ok(())
     }
 
@@ -983,20 +1403,42 @@ mod tests {
         let frame = take_relay_frame(&mut relay, 11);
         initiator.read_message(&frame, &mut plaintext).unwrap();
 
+        let initiator_handshake: [u8; 32] = initiator
+            .get_handshake_hash()
+            .try_into()
+            .expect("fixed Noise hash is 32 bytes");
+        let responder_handshake: [u8; 32] = responder
+            .get_handshake_hash()
+            .try_into()
+            .expect("fixed Noise hash is 32 bytes");
+        assert_eq!(initiator_handshake, responder_handshake);
+
         let mut initiator = initiator.into_transport_mode().unwrap();
         let mut responder = responder.into_transport_mode().unwrap();
-        for (sender, recipient, payload, expected) in [
+        let initiator_confirmation = build_key_confirmation(
+            ConfirmationRole::Initiator,
+            &initiator_handshake,
+            &prologue,
+            &[0x41; 32],
+        );
+        let responder_confirmation = build_key_confirmation(
+            ConfirmationRole::Responder,
+            &responder_handshake,
+            &prologue,
+            &[0x42; 32],
+        );
+        for (sender, recipient, payload, expected_role) in [
             (
                 11,
                 22,
-                b"SCOTOMA-V3-KEY-CONFIRM-I".as_slice(),
-                b"SCOTOMA-V3-KEY-CONFIRM-I".as_slice(),
+                initiator_confirmation.as_slice(),
+                ConfirmationRole::Initiator,
             ),
             (
                 22,
                 11,
-                b"SCOTOMA-V3-KEY-CONFIRM-R".as_slice(),
-                b"SCOTOMA-V3-KEY-CONFIRM-R".as_slice(),
+                responder_confirmation.as_slice(),
+                ConfirmationRole::Responder,
             ),
         ] {
             let length = if sender == 11 {
@@ -1011,7 +1453,13 @@ mod tests {
             } else {
                 initiator.read_message(&frame, &mut plaintext).unwrap()
             };
-            assert_eq!(&plaintext[..decrypted], expected);
+            verify_key_confirmation(
+                &plaintext[..decrypted],
+                expected_role,
+                &initiator_handshake,
+                &prologue,
+            )
+            .expect("both encrypted confirmations must bind the same Noise view");
         }
 
         let message = b"MESSAGE:hello from synthetic client A";

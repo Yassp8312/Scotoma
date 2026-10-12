@@ -1,7 +1,9 @@
 use scotoma_private_rendezvous_v3_model::{
-    relay::{MemoryRelay, RendezvousKey, MAX_RELAY_FRAME_BYTES},
+    relay::{MemoryRelay, RegistrationOutcome, RelayEvent, RendezvousKey, MAX_RELAY_FRAME_BYTES},
     AbortReason, Phase, PublicConfig, ResearchSession, ThresholdResponse,
 };
+use std::sync::{Arc, Barrier, Mutex};
+use std::thread;
 
 const MANIFEST: [u8; 32] = [0x53; 32];
 
@@ -131,5 +133,59 @@ fn deterministic_state_and_relay_campaign_remains_bounded_and_fail_closed() {
         assert_eq!(session.accepted_response_count(), 0);
         assert_eq!(session.pending_message_count(), 0);
         assert!(!session.key_material_active());
+    }
+}
+
+#[test]
+fn simultaneous_three_client_registration_never_leaves_an_accepted_pair() {
+    for round in 0..128_u64 {
+        let relay = Arc::new(Mutex::new(MemoryRelay::default()));
+        let barrier = Arc::new(Barrier::new(3));
+        let rendezvous = key((round % 251) as u8);
+        let participants = [round * 3 + 1, round * 3 + 2, round * 3 + 3];
+        let mut workers = Vec::new();
+
+        for participant in participants {
+            let relay = Arc::clone(&relay);
+            let barrier = Arc::clone(&barrier);
+            workers.push(thread::spawn(move || {
+                barrier.wait();
+                relay.lock().unwrap().register(rendezvous, participant)
+            }));
+        }
+
+        let outcomes = workers
+            .into_iter()
+            .map(|worker| worker.join().unwrap().unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            outcomes
+                .iter()
+                .filter(|outcome| **outcome == RegistrationOutcome::Waiting)
+                .count(),
+            1
+        );
+        assert_eq!(
+            outcomes
+                .iter()
+                .filter(|outcome| matches!(outcome, RegistrationOutcome::Paired { .. }))
+                .count(),
+            1
+        );
+        assert_eq!(
+            outcomes
+                .iter()
+                .filter(|outcome| **outcome == RegistrationOutcome::Collision)
+                .count(),
+            1
+        );
+
+        let mut relay = relay.lock().unwrap();
+        assert_eq!(relay.room_count(), 0);
+        assert_eq!(relay.participant_count(), 0);
+        for participant in participants {
+            assert_eq!(relay.poll_event(participant), Some(RelayEvent::Collision));
+            assert_eq!(relay.poll_event(participant), None);
+        }
     }
 }

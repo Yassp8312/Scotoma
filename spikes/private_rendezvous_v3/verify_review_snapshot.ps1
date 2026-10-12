@@ -9,11 +9,57 @@ $snapshot = Get-Content -LiteralPath $snapshotPath -Raw | ConvertFrom-Json
 $ledger = Get-Content -LiteralPath $ledgerPath -Raw | ConvertFrom-Json
 $errors = [Collections.Generic.List[string]]::new()
 
-if ($snapshot.schema -ne 'scotoma-v3-review-snapshot-v1') {
+if ($snapshot.schema -ne 'scotoma-v3-review-snapshot-v2') {
     $errors.Add('unexpected review snapshot schema')
 }
-if ($snapshot.files.Count -ne 18) {
-    $errors.Add("expected 18 review files, found $($snapshot.files.Count)")
+$expectedPaths = @(
+    'docs/PRIVATE_RENDEZVOUS_REQUIREMENTS.md',
+    'docs/PRIVATE_RENDEZVOUS_V3_CANDIDATE.md',
+    'docs/V3_TOPRF_NOISE_COMPOSITION.md',
+    'docs/V3_OPERATOR_AND_ABUSE_MODEL.md',
+    'docs/V3_MANIFEST_AND_COLLISION_POLICY.md',
+    'docs/INTERNAL_V3_SECURITY_REVIEW.md',
+    'docs/PRIVATE_RENDEZVOUS_V3_TEST_PLAN.md',
+    'docs/V3_OPERATIONAL_BASELINE.md',
+    'docs/adr/0061-canonical-signed-v3-manifest.md',
+    'spikes/private_rendezvous_v3/Cargo.toml',
+    'spikes/private_rendezvous_v3/Cargo.lock',
+    'spikes/private_rendezvous_v3/src/lib.rs',
+    'spikes/private_rendezvous_v3/src/ceremony.rs',
+    'spikes/private_rendezvous_v3/src/manifest.rs',
+    'spikes/private_rendezvous_v3/src/operational.rs',
+    'spikes/private_rendezvous_v3/src/relay.rs',
+    'spikes/private_rendezvous_v3/src/transport.rs',
+    'spikes/private_rendezvous_v3/src/bin/v3_ceremony_coordinator.rs',
+    'spikes/private_rendezvous_v3/src/bin/v3_loopback_operator.rs',
+    'spikes/private_rendezvous_v3/src/bin/v3_operational_node.rs',
+    'spikes/private_rendezvous_v3/tests/hardening.rs',
+    'spikes/private_rendezvous_v3/tests/loopback_transport.rs',
+    'spikes/private_rendezvous_v3/tests/multiprocess_ceremony.rs',
+    'spikes/private_rendezvous_v3/tests/multiprocess_operations.rs',
+    'spikes/private_rendezvous_v3/examples/operational_benchmark.rs',
+    'spikes/private_rendezvous_v3/examples/manifest_vector.rs',
+    'spikes/private_rendezvous_v3/examples/admission_simulation.rs',
+    'spikes/private_rendezvous_v3/run_operational_benchmark.ps1',
+    'spikes/private_rendezvous_v3/vectors/signed_manifest_v1.json',
+    'spikes/private_rendezvous_v3/web/manifest_verifier.js',
+    'spikes/private_rendezvous_v3/taceo_probe/Cargo.toml',
+    'spikes/private_rendezvous_v3/taceo_probe/Cargo.lock',
+    'spikes/private_rendezvous_v3/taceo_probe/src/lib.rs',
+    'spikes/private_rendezvous_v3/taceo_probe/examples/composition_vector.rs',
+    'spikes/private_rendezvous_v3/taceo_probe/vectors/composition_test_only_001.json',
+    'spikes/private_rendezvous_v3/taceo_probe/vectors/hash_to_field_rfc9380_001.json',
+    'spikes/private_rendezvous_v3/taceo_probe/vectors/v3_matrix_coverage.json',
+    'spikes/private_rendezvous_v3/taceo_probe/web/rfc9380_browser_verifier.js',
+    'spikes/private_rendezvous_v3/taceo_probe/web/verify_node.mjs',
+    'spikes/private_rendezvous_v3/taceo_probe/web/verify_browsers.mjs'
+)
+if ($snapshot.files.Count -ne $expectedPaths.Count) {
+    $errors.Add("expected $($expectedPaths.Count) review files, found $($snapshot.files.Count)")
+}
+$actualPaths = @($snapshot.files | ForEach-Object { [string]$_.path })
+if (Compare-Object $expectedPaths $actualPaths) {
+    $errors.Add('review snapshot paths do not match the required v2 package')
 }
 $seenPaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($entry in $snapshot.files) {

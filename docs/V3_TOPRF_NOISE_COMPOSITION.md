@@ -198,6 +198,22 @@ se rechaza y destruye el intento.
 El código exacto del frame, los tamaños y el hash deben compartir los tipos
 versionados del protocolo; no se aceptan mapas o JSON con campos opcionales.
 
+El spike 5.5.3 fija esta codificación provisional:
+
+```text
+"SCOTOMA-V3-KEY-CONFIRM-v1" ||
+u8(role) ||
+noise_handshake_hash[32] ||
+SHA256(noise_prologue)[32] ||
+confirmation_nonce[32]
+```
+
+`role` vale 1 para iniciador y 2 para respondedor. Cada extremo exige el rol
+opuesto; por ello un frame reflejado no confirma. El frame completo viaja dentro
+del transporte Noise. Longitudes incorrectas, dominio desconocido, transcript o
+contexto distintos abortan antes de aceptar datos de aplicación. La prueba
+end-to-end intercambia ambos frames y después ejecuta MESSAGE, ACK y BURN.
+
 ## 7. Transporte
 
 Después de confirmar, se mantienen las propiedades existentes del canal:
@@ -271,6 +287,11 @@ La composición se abandona si ocurre cualquiera de estos puntos:
 - ningún dato de aplicación se acepta antes de dos confirmaciones;
 - compromiso simulado de una sola participación no reproduce la PSK;
 - búsqueda de credenciales capturadas requiere una consulta TOPRF por candidato.
+
+Evidencia 5.5.3: pruebas unitarias alteran rol, transcript, prologue, dominio,
+longitud y nonce; la confirmación falla cerrada salvo para la vista idéntica. Esto
+fortalece el argumento de composición local, pero no sustituye un análisis
+criptográfico de la construcción TOPRF ni interoperabilidad entre implementaciones.
 
 ## 11. Referencias normativas candidatas
 

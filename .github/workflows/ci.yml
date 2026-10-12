@@ -65,6 +65,9 @@ jobs:
           cargo clippy --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml --target wasm32-unknown-unknown --lib -- -D warnings
           cargo test --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml --all-targets
 
+      - name: Verify Rust to WebCrypto manifest vectors
+        run: node spikes/private_rendezvous_v3/taceo_probe/web/verify_node.mjs
+
       - name: Record bounded v3 performance smoke
         env:
           SCOTOMA_V3_MAPPING_ITERATIONS: "200"
@@ -73,6 +76,17 @@ jobs:
           cargo run --release
           --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml
           --example v3_benchmark
+
+      - name: Record bounded v3 operational smoke
+        env:
+          SCOTOMA_V3_OPERATIONAL_ITERATIONS: "100"
+          SCOTOMA_V3_PUZZLE_ITERATIONS: "5"
+          SCOTOMA_V3_SCENARIO_CLIENTS: "20"
+          SCOTOMA_V3_STATE_LIMIT: "20"
+        run: >-
+          cargo run --release
+          --manifest-path spikes/private_rendezvous_v3/Cargo.toml
+          --example operational_benchmark
 
       - name: Prove v3 remains outside production graphs and artifacts
         shell: pwsh

@@ -22,15 +22,16 @@ Antes de añadir código, CI deberá poder demostrar:
 Una violación de estas reglas cancela el experimento.
 
 Evidencia actual: el modelo independiente cubre estados, codificación canónica,
-ceremonia, ACK/BURN y relay opaco en memoria con 38 pruebas. Un segundo workspace compila
-la superficie cliente en Windows y Wasm y pasa 21 pruebas nativas: VOPRF de un
+ceremonia, ACK/BURN, relay opaco, admisión y transporte firmado con 65 pruebas
+unitarias y 8 pruebas de integración/endurecimiento. Un segundo workspace compila
+la superficie cliente en Windows y Wasm y pasa 23 pruebas nativas: VOPRF de un
 servidor, 2-de-3 sintético, el mapeo
 arkworks rechazado, su reemplazo RFC 9380, DKG y reshare honestos en proceso,
 verificación de compromisos,
 serialización, HKDF, Noise, separación y rechazo de vistas. No hay todavía
-ceremonia PedPoP real, firmas/autenticación criptográfica, operadores
-independientes ni relay v3 de red/desplegable; el relay actual es sólo memoria
-de test sin sockets.
+ceremonia PedPoP real, operadores independientes ni relay v3 desplegable. TCP,
+Ed25519 y procesos múltiples existen únicamente en loopback con claves y
+comandos `TEST_ONLY`.
 
 ## 2. Capas del arnés
 
@@ -135,6 +136,12 @@ El arnés medirá, sin convertirlo todavía en promesa de producción:
 Las pruebas de carga no deben ejecutar un coste de memoria arbitrario en el
 equipo de un usuario. La defensa principal pertenece al relay y a los
 operadores; cualquier puzzle de cliente debe ser acotado, medible y accesible.
+
+Evidencia 5.5.4: `operational_benchmark` emite JSON de p50/p95/p99, throughput,
+puzzle sintético, NAT, fuentes distribuidas y saturación; el wrapper PowerShell
+mide working set desde otro proceso. `V3_OPERATIONAL_BASELINE.md` conserva el
+resultado local y sus limitaciones. El smoke de CI verifica invariantes, pero no
+impone esos tiempos como umbrales ni sustituye Android/Web/red pública.
 
 ## 7. Criterios de salida del sprint 5.4
 

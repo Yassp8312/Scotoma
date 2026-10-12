@@ -7,7 +7,10 @@
 use std::collections::BTreeSet;
 
 pub mod ceremony;
+pub mod manifest;
+pub mod operational;
 pub mod relay;
+pub mod transport;
 
 const CREDENTIAL_DOMAIN: &[u8] = b"SCOTOMA-CREDENTIAL-v3";
 const MAX_NUMERIC_LEN: usize = 128;

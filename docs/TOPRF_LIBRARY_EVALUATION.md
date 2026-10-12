@@ -59,9 +59,18 @@ Resultados actualizados al 2026-10-11:
   completó el flujo TOPRF→HKDF→Noise y compiló en nativo y Wasm;
 - un JSON canónico `TEST-ONLY` fue consumido por Rust, Node WebCrypto, Chrome,
   Edge y Firefox 155; todos produjeron exactamente `128dc49b...4f3c39e`;
+- un segundo vector `TEST-ONLY` fija una evaluación TwoHashDH/Poseidon2 con
+  escalares públicos de prueba y reproduce en Rust la salida OPRF, HKDF,
+  prologue y confirmaciones. Node, Chrome, Edge y Firefox reproducen desde la
+  salida OPRF congelada hasta `dc10ca7a...bef6a2e8` y rechazan mutaciones de
+  época, salida y transcript; no implementan TACEO/Poseidon2 ni Noise completo;
 - los árboles normales efectivos contienen 280 entradas únicas en nativo y 236
   en Wasm, contando el crate raíz y versiones repetidas por nombre;
 - ninguna ruta efectiva contiene `alloy`, `ethers`, wallet, `sqlx` o PostgreSQL;
+- `cargo-deny 0.20.2` acepta las fuentes, avisos y licencias del grafo aislado;
+  `CDLA-Permissive-2.0` queda documentada para los datos de certificados raíz
+  Mozilla que hereda el transporte TLS, y las versiones transitivas duplicadas
+  permanecen visibles como advertencias;
 - el cliente sí incorpora transporte WebSocket específico para navegador y
   verifica una prueba distribuida de igualdad de logaritmo discreto;
 - la API acepta un payload de autenticación genérico, pero la URI requiere un
@@ -76,7 +85,9 @@ criptográficos u operacionales siguientes:
 1. revisar y congelar el candidato RustCrypto que convierte los bytes
    `SCOTOMA-CREDENTIAL-v3` al elemento `Fq`, incluida la separación de dominio;
 2. fijar la especificación exacta de TwoHashDH/BabyJubJub/Poseidon2, sus
-   supuestos y vectores, en vez de describirla genéricamente como RFC 9497;
+   supuestos y vectores normativos entre implementaciones, en vez de describirla
+   genéricamente como RFC 9497; el fixture local nuevo no satisface por sí solo
+   esta condición;
 3. convertir las primitivas de DKG/reshare probadas localmente en una ceremonia
    PedPoP completa: autenticación de participantes y compromisos, custodia,
    rotación de época, quejas y recuperación ante nodos maliciosos;

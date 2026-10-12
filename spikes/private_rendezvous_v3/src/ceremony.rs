@@ -1,7 +1,10 @@
 //! Non-cryptographic network ceremony model for the isolated v3 research spike.
 //!
-//! It models authenticated delivery and fail-closed sequencing only. It is not
-//! a PedPoP, DKG, encryption or signature implementation.
+//! It models authenticated delivery, locally verified proof/verdict events,
+//! complaints and fail-closed sequencing only. Boolean verification results are
+//! preconditions supplied by a cryptographic verifier, not wire fields that a
+//! peer may assert. This is not a PedPoP, DKG, encryption or signature
+//! implementation.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -9,6 +12,7 @@ use std::collections::{BTreeMap, BTreeSet};
 pub enum CeremonyPhase {
     Commitments,
     Shares,
+    Verification,
     Ready,
     Terminal,
 }
@@ -25,9 +29,15 @@ pub enum CeremonyError {
     Replay,
     WrongPhase,
     DuplicateCommitment,
+    InvalidCommitmentProof,
     DuplicateShare,
     UnboundShare,
-    InvalidShare,
+    DuplicateVerification,
+    MissingShare,
+    UnboundVerification,
+    InvalidVerification,
+    SubstantiatedComplaint,
+    InvalidComplaint,
     Timeout,
 }
 
@@ -46,12 +56,42 @@ pub struct CeremonyConfig {
 pub enum CeremonyMessage {
     Commitment {
         digest: [u8; 32],
+        proof_digest: [u8; 32],
+        proof_valid: bool,
     },
     EncryptedShare {
         recipient_id: u16,
         polynomial_commitment_digest: [u8; 32],
-        share_valid: bool,
+        ciphertext_digest: [u8; 32],
     },
+    ShareVerification {
+        dealer_id: u16,
+        polynomial_commitment_digest: [u8; 32],
+        ciphertext_digest: [u8; 32],
+        share_valid: bool,
+        evidence_digest: [u8; 32],
+        evidence_valid: bool,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ComplaintRecord {
+    pub reporter_id: u16,
+    pub dealer_id: u16,
+    pub evidence_digest: [u8; 32],
+    pub substantiated: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct DealerCommitment {
+    polynomial_digest: [u8; 32],
+    proof_digest: [u8; 32],
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct PendingShare {
+    polynomial_commitment_digest: [u8; 32],
+    ciphertext_digest: [u8; 32],
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -69,9 +109,11 @@ pub struct CeremonyEnvelope {
 pub struct NetworkCeremony {
     config: CeremonyConfig,
     phase: CeremonyPhase,
-    commitments: BTreeMap<u16, [u8; 32]>,
-    shares: BTreeSet<(u16, u16)>,
+    commitments: BTreeMap<u16, DealerCommitment>,
+    shares: BTreeMap<(u16, u16), PendingShare>,
+    verifications: BTreeSet<(u16, u16)>,
     seen_sequences: BTreeSet<(u16, u32)>,
+    complaint: Option<ComplaintRecord>,
     abort_reason: Option<CeremonyError>,
 }
 
@@ -92,8 +134,10 @@ impl NetworkCeremony {
             config,
             phase: CeremonyPhase::Commitments,
             commitments: BTreeMap::new(),
-            shares: BTreeSet::new(),
+            shares: BTreeMap::new(),
+            verifications: BTreeSet::new(),
             seen_sequences: BTreeSet::new(),
+            complaint: None,
             abort_reason: None,
         })
     }
@@ -118,6 +162,16 @@ impl NetworkCeremony {
         self.shares.len()
     }
 
+    #[must_use]
+    pub fn verification_count(&self) -> usize {
+        self.verifications.len()
+    }
+
+    #[must_use]
+    pub const fn complaint(&self) -> Option<ComplaintRecord> {
+        self.complaint
+    }
+
     pub fn accept(&mut self, envelope: CeremonyEnvelope) -> Result<(), CeremonyError> {
         if self.phase == CeremonyPhase::Terminal {
             return Err(self.abort_reason.unwrap_or(CeremonyError::WrongPhase));
@@ -131,18 +185,36 @@ impl NetworkCeremony {
         }
 
         match envelope.message {
-            CeremonyMessage::Commitment { digest } => {
-                self.accept_commitment(envelope.sender_id, digest)
-            }
+            CeremonyMessage::Commitment {
+                digest,
+                proof_digest,
+                proof_valid,
+            } => self.accept_commitment(envelope.sender_id, digest, proof_digest, proof_valid),
             CeremonyMessage::EncryptedShare {
                 recipient_id,
                 polynomial_commitment_digest,
-                share_valid,
+                ciphertext_digest,
             } => self.accept_share(
                 envelope.sender_id,
                 recipient_id,
                 polynomial_commitment_digest,
+                ciphertext_digest,
+            ),
+            CeremonyMessage::ShareVerification {
+                dealer_id,
+                polynomial_commitment_digest,
+                ciphertext_digest,
                 share_valid,
+                evidence_digest,
+                evidence_valid,
+            } => self.accept_verification(
+                envelope.sender_id,
+                dealer_id,
+                polynomial_commitment_digest,
+                ciphertext_digest,
+                share_valid,
+                evidence_digest,
+                evidence_valid,
             ),
         }
     }
@@ -167,17 +239,46 @@ impl NetworkCeremony {
         if !envelope.authenticated {
             return self.abort(CeremonyError::Unauthenticated);
         }
-        if envelope.sender_id >= self.config.dealer_count {
-            return self.abort(CeremonyError::UnknownOperator);
+        match &envelope.message {
+            CeremonyMessage::Commitment { .. } | CeremonyMessage::EncryptedShare { .. }
+                if envelope.sender_id >= self.config.dealer_count =>
+            {
+                return self.abort(CeremonyError::UnknownOperator);
+            }
+            CeremonyMessage::ShareVerification { .. }
+                if envelope.sender_id >= self.config.recipient_count =>
+            {
+                return self.abort(CeremonyError::UnknownRecipient);
+            }
+            _ => {}
         }
         Ok(())
     }
 
-    fn accept_commitment(&mut self, sender_id: u16, digest: [u8; 32]) -> Result<(), CeremonyError> {
+    fn accept_commitment(
+        &mut self,
+        sender_id: u16,
+        digest: [u8; 32],
+        proof_digest: [u8; 32],
+        proof_valid: bool,
+    ) -> Result<(), CeremonyError> {
         if self.phase != CeremonyPhase::Commitments {
             return self.abort(CeremonyError::WrongPhase);
         }
-        if self.commitments.insert(sender_id, digest).is_some() {
+        if !proof_valid || proof_digest == [0; 32] {
+            return self.abort(CeremonyError::InvalidCommitmentProof);
+        }
+        if self
+            .commitments
+            .insert(
+                sender_id,
+                DealerCommitment {
+                    polynomial_digest: digest,
+                    proof_digest,
+                },
+            )
+            .is_some()
+        {
             return self.abort(CeremonyError::DuplicateCommitment);
         }
         if self.commitments.len() == usize::from(self.config.dealer_count) {
@@ -191,7 +292,7 @@ impl NetworkCeremony {
         sender_id: u16,
         recipient_id: u16,
         polynomial_commitment_digest: [u8; 32],
-        share_valid: bool,
+        ciphertext_digest: [u8; 32],
     ) -> Result<(), CeremonyError> {
         if self.phase != CeremonyPhase::Shares {
             return self.abort(CeremonyError::WrongPhase);
@@ -199,28 +300,99 @@ impl NetworkCeremony {
         if recipient_id >= self.config.recipient_count {
             return self.abort(CeremonyError::UnknownRecipient);
         }
-        if self.commitments.get(&sender_id) != Some(&polynomial_commitment_digest) {
+        if self
+            .commitments
+            .get(&sender_id)
+            .map(|commitment| commitment.polynomial_digest)
+            != Some(polynomial_commitment_digest)
+        {
             return self.abort(CeremonyError::UnboundShare);
         }
-        if !share_valid {
-            return self.abort(CeremonyError::InvalidShare);
-        }
-        if !self.shares.insert((sender_id, recipient_id)) {
+        if ciphertext_digest == [0; 32]
+            || self
+                .shares
+                .insert(
+                    (sender_id, recipient_id),
+                    PendingShare {
+                        polynomial_commitment_digest,
+                        ciphertext_digest,
+                    },
+                )
+                .is_some()
+        {
             return self.abort(CeremonyError::DuplicateShare);
         }
-        let expected = usize::from(self.config.dealer_count)
-            .checked_mul(usize::from(self.config.recipient_count))
-            .expect("u16 ceremony dimensions fit usize");
+        let expected = self.expected_share_count();
         if self.shares.len() == expected {
+            self.phase = CeremonyPhase::Verification;
+        }
+        Ok(())
+    }
+
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the model binds every public complaint field"
+    )]
+    fn accept_verification(
+        &mut self,
+        reporter_id: u16,
+        dealer_id: u16,
+        polynomial_commitment_digest: [u8; 32],
+        ciphertext_digest: [u8; 32],
+        share_valid: bool,
+        evidence_digest: [u8; 32],
+        evidence_valid: bool,
+    ) -> Result<(), CeremonyError> {
+        if self.phase != CeremonyPhase::Verification {
+            return self.abort(CeremonyError::WrongPhase);
+        }
+        if dealer_id >= self.config.dealer_count {
+            return self.abort(CeremonyError::UnknownOperator);
+        }
+        let Some(share) = self.shares.get(&(dealer_id, reporter_id)) else {
+            return self.abort(CeremonyError::MissingShare);
+        };
+        if share.polynomial_commitment_digest != polynomial_commitment_digest
+            || share.ciphertext_digest != ciphertext_digest
+        {
+            return self.abort(CeremonyError::UnboundVerification);
+        }
+        if !self.verifications.insert((dealer_id, reporter_id)) {
+            return self.abort(CeremonyError::DuplicateVerification);
+        }
+        if !share_valid {
+            self.complaint = Some(ComplaintRecord {
+                reporter_id,
+                dealer_id,
+                evidence_digest,
+                substantiated: evidence_valid && evidence_digest != [0; 32],
+            });
+            return if evidence_valid && evidence_digest != [0; 32] {
+                self.abort(CeremonyError::SubstantiatedComplaint)
+            } else {
+                self.abort(CeremonyError::InvalidComplaint)
+            };
+        }
+        if !evidence_valid || evidence_digest == [0; 32] {
+            return self.abort(CeremonyError::InvalidVerification);
+        }
+        if self.verifications.len() == self.expected_share_count() {
             self.phase = CeremonyPhase::Ready;
         }
         Ok(())
+    }
+
+    fn expected_share_count(&self) -> usize {
+        usize::from(self.config.dealer_count)
+            .checked_mul(usize::from(self.config.recipient_count))
+            .expect("u16 ceremony dimensions fit usize")
     }
 
     fn abort<T>(&mut self, reason: CeremonyError) -> Result<T, CeremonyError> {
         self.phase = CeremonyPhase::Terminal;
         self.commitments.clear();
         self.shares.clear();
+        self.verifications.clear();
         self.seen_sequences.clear();
         self.abort_reason = Some(reason);
         Err(reason)
@@ -261,8 +433,14 @@ mod tests {
             0,
             CeremonyMessage::Commitment {
                 digest: [u8::try_from(sender_id + 1).expect("test id fits"); 32],
+                proof_digest: [u8::try_from(sender_id + 0x21).expect("test id fits"); 32],
+                proof_valid: true,
             },
         )
+    }
+
+    fn ciphertext_digest(sender_id: u16, recipient_id: u16) -> [u8; 32] {
+        [u8::try_from(0x80 + sender_id * 3 + recipient_id).expect("test id fits"); 32]
     }
 
     fn share(sender_id: u16, recipient_id: u16) -> CeremonyEnvelope {
@@ -273,7 +451,29 @@ mod tests {
                 recipient_id,
                 polynomial_commitment_digest: [u8::try_from(sender_id + 1).expect("test id fits");
                     32],
-                share_valid: true,
+                ciphertext_digest: ciphertext_digest(sender_id, recipient_id),
+            },
+        )
+    }
+
+    fn verification(
+        dealer_id: u16,
+        recipient_id: u16,
+        share_valid: bool,
+        evidence_valid: bool,
+    ) -> CeremonyEnvelope {
+        envelope(
+            recipient_id,
+            100 + u32::from(dealer_id),
+            CeremonyMessage::ShareVerification {
+                dealer_id,
+                polynomial_commitment_digest: [u8::try_from(dealer_id + 1).expect("test id fits");
+                    32],
+                ciphertext_digest: ciphertext_digest(dealer_id, recipient_id),
+                share_valid,
+                evidence_digest: [u8::try_from(0xe0 + dealer_id * 3 + recipient_id)
+                    .expect("test id fits"); 32],
+                evidence_valid,
             },
         )
     }
@@ -287,16 +487,50 @@ mod tests {
     }
 
     #[test]
-    fn honest_rotation_reaches_ready_after_every_bound_share() {
+    fn honest_rotation_reaches_ready_after_every_verified_share() {
         let mut ceremony = committed_ceremony();
         for sender in 0..2 {
             for recipient in 0..3 {
                 ceremony.accept(share(sender, recipient)).unwrap();
             }
         }
+        assert_eq!(ceremony.phase(), CeremonyPhase::Verification);
+        for recipient in 0..3 {
+            for dealer in 0..2 {
+                ceremony
+                    .accept(verification(dealer, recipient, true, true))
+                    .unwrap();
+            }
+        }
         assert_eq!(ceremony.phase(), CeremonyPhase::Ready);
         assert_eq!(ceremony.commitment_count(), 2);
         assert_eq!(ceremony.share_count(), 6);
+        assert_eq!(ceremony.verification_count(), 6);
+    }
+
+    #[test]
+    fn invalid_commitment_proof_fails_before_share_delivery() {
+        for mutation in 0..2 {
+            let mut ceremony = NetworkCeremony::new(config()).unwrap();
+            let mut message = commitment(0);
+            if let CeremonyMessage::Commitment {
+                proof_digest,
+                proof_valid,
+                ..
+            } = &mut message.message
+            {
+                match mutation {
+                    0 => *proof_digest = [0; 32],
+                    1 => *proof_valid = false,
+                    _ => unreachable!(),
+                }
+            }
+            assert_eq!(
+                ceremony.accept(message),
+                Err(CeremonyError::InvalidCommitmentProof)
+            );
+            assert_eq!(ceremony.phase(), CeremonyPhase::Terminal);
+        }
     }
 
     #[test]
@@ -344,26 +578,84 @@ mod tests {
     }
 
     #[test]
-    fn unbound_or_invalid_share_fails_closed() {
-        for error in [CeremonyError::UnboundShare, CeremonyError::InvalidShare] {
-            let mut ceremony = committed_ceremony();
-            let mut message = share(0, 0);
-            if let CeremonyMessage::EncryptedShare {
-                polynomial_commitment_digest,
-                share_valid,
-                ..
-            } = &mut message.message
-            {
-                match error {
-                    CeremonyError::UnboundShare => polynomial_commitment_digest[0] ^= 1,
-                    CeremonyError::InvalidShare => *share_valid = false,
-                    _ => unreachable!(),
-                }
-            }
-            assert_eq!(ceremony.accept(message), Err(error));
-            assert_eq!(ceremony.commitment_count(), 0);
-            assert_eq!(ceremony.share_count(), 0);
+    fn unbound_share_fails_closed() {
+        let mut ceremony = committed_ceremony();
+        let mut message = share(0, 0);
+        if let CeremonyMessage::EncryptedShare {
+            polynomial_commitment_digest,
+            ..
+        } = &mut message.message
+        {
+            polynomial_commitment_digest[0] ^= 1;
         }
+        assert_eq!(ceremony.accept(message), Err(CeremonyError::UnboundShare));
+        assert_eq!(ceremony.commitment_count(), 0);
+        assert_eq!(ceremony.share_count(), 0);
+    }
+
+    fn ceremony_awaiting_verification() -> NetworkCeremony {
+        let mut ceremony = committed_ceremony();
+        for sender in 0..2 {
+            for recipient in 0..3 {
+                ceremony.accept(share(sender, recipient)).unwrap();
+            }
+        }
+        assert_eq!(ceremony.phase(), CeremonyPhase::Verification);
+        ceremony
+    }
+
+    #[test]
+    fn substantiated_complaint_is_terminal_and_retains_only_public_evidence() {
+        let mut ceremony = ceremony_awaiting_verification();
+        let complaint = verification(1, 2, false, true);
+        assert_eq!(
+            ceremony.accept(complaint),
+            Err(CeremonyError::SubstantiatedComplaint)
+        );
+        assert_eq!(ceremony.phase(), CeremonyPhase::Terminal);
+        assert_eq!(ceremony.commitment_count(), 0);
+        assert_eq!(ceremony.share_count(), 0);
+        assert_eq!(ceremony.verification_count(), 0);
+        assert_eq!(
+            ceremony.complaint(),
+            Some(ComplaintRecord {
+                reporter_id: 2,
+                dealer_id: 1,
+                evidence_digest: [0xe5; 32],
+                substantiated: true,
+            })
+        );
+    }
+
+    #[test]
+    fn forged_complaint_and_unbound_verdict_fail_closed() {
+        let mut invalid_complaint = ceremony_awaiting_verification();
+        assert_eq!(
+            invalid_complaint.accept(verification(0, 2, false, false)),
+            Err(CeremonyError::InvalidComplaint)
+        );
+        assert_eq!(
+            invalid_complaint.complaint(),
+            Some(ComplaintRecord {
+                reporter_id: 2,
+                dealer_id: 0,
+                evidence_digest: [0xe2; 32],
+                substantiated: false,
+            })
+        );
+
+        let mut unbound = ceremony_awaiting_verification();
+        let mut verdict = verification(0, 2, true, true);
+        if let CeremonyMessage::ShareVerification {
+            ciphertext_digest, ..
+        } = &mut verdict.message
+        {
+            ciphertext_digest[0] ^= 1;
+        }
+        assert_eq!(
+            unbound.accept(verdict),
+            Err(CeremonyError::UnboundVerification)
+        );
     }
 
     #[test]
@@ -374,6 +666,17 @@ mod tests {
         assert_eq!(ceremony.phase(), CeremonyPhase::Terminal);
         assert_eq!(ceremony.commitment_count(), 0);
         assert_eq!(ceremony.share_count(), 0);
+    }
+
+    #[test]
+    fn incomplete_verification_times_out_and_clears_state() {
+        let mut ceremony = ceremony_awaiting_verification();
+        ceremony.accept(verification(0, 0, true, true)).unwrap();
+        assert_eq!(ceremony.timeout(), Err(CeremonyError::Timeout));
+        assert_eq!(ceremony.phase(), CeremonyPhase::Terminal);
+        assert_eq!(ceremony.commitment_count(), 0);
+        assert_eq!(ceremony.share_count(), 0);
+        assert_eq!(ceremony.verification_count(), 0);
     }
 
     #[test]

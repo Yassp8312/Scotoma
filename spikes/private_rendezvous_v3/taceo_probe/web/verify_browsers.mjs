@@ -11,8 +11,16 @@ const verifierPath = fileURLToPath(
   new URL('./rfc9380_browser_verifier.js', import.meta.url),
 );
 const verifierSource = await readFile(verifierPath, 'utf8');
+const manifestVerifierPath = fileURLToPath(
+  new URL('../../web/manifest_verifier.js', import.meta.url),
+);
+const manifestVerifierSource = await readFile(manifestVerifierPath, 'utf8');
 const vectorUrl = new URL('../vectors/hash_to_field_rfc9380_001.json', import.meta.url);
 const vector = JSON.parse(await readFile(vectorUrl, 'utf8'));
+const compositionUrl = new URL('../vectors/composition_test_only_001.json', import.meta.url);
+const compositionVector = JSON.parse(await readFile(compositionUrl, 'utf8'));
+const manifestUrl = new URL('../../vectors/signed_manifest_v1.json', import.meta.url);
+const manifestVector = JSON.parse(await readFile(manifestUrl, 'utf8'));
 
 const browsers = [
   {
@@ -36,10 +44,16 @@ const server = createServer((request, response) => {
     response.end(verifierSource);
     return;
   }
+  if (request.url === '/manifest_verifier.js') {
+    response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' });
+    response.end(manifestVerifierSource);
+    return;
+  }
   response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   response.end(
     '<!doctype html><meta charset="utf-8"><title>SCOTOMA v3 vector</title>'
-      + '<script src="/rfc9380_browser_verifier.js"></script>',
+      + '<script src="/rfc9380_browser_verifier.js"></script>'
+      + '<script src="/manifest_verifier.js"></script>',
   );
 });
 
@@ -70,6 +84,35 @@ try {
       );
       console.log(`${candidate.name.toUpperCase()}_VECTOR=${result.id}`);
       console.log(`${candidate.name.toUpperCase()}_QUERY=${result.query}`);
+      const compositionResult = await page.evaluate(
+        async ({ composition, mapping }) => globalThis.ScotomaRfc9380
+          .verifyCompositionVector(composition, mapping),
+        { composition: compositionVector, mapping: vector },
+      );
+      console.log(`${candidate.name.toUpperCase()}_COMPOSITION=${compositionResult.id}`);
+      console.log(`${candidate.name.toUpperCase()}_TAG=${compositionResult.rendezvousTag}`);
+      const rejectedMutation = await page.evaluate(
+        async ({ composition, mapping }) => {
+          const mutated = structuredClone(composition);
+          mutated.context.epoch += 1;
+          try {
+            await globalThis.ScotomaRfc9380.verifyCompositionVector(mutated, mapping);
+            return false;
+          } catch {
+            return true;
+          }
+        },
+        { composition: compositionVector, mapping: vector },
+      );
+      if (!rejectedMutation) {
+        throw new Error(`${candidate.name} accepted a mutated composition epoch`);
+      }
+      const manifestResult = await page.evaluate(
+        async (input) => globalThis.ScotomaManifest.verifyVector(input),
+        manifestVector,
+      );
+      console.log(`${candidate.name.toUpperCase()}_MANIFEST_INITIAL=${manifestResult.initial}`);
+      console.log(`${candidate.name.toUpperCase()}_MANIFEST_UPDATE=${manifestResult.update}`);
     } finally {
       await browser.close();
     }

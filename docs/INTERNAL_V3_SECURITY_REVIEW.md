@@ -28,6 +28,12 @@ etiqueta, PSK, prologue, claves efímeras y transcript.
 Acción: no escribir TOPRF propia; escoger una construcción publicada y validar
 `V3_TOPRF_NOISE_COMPOSITION.md` con la suite e implementación exactas.
 
+Seguimiento 5.5.3: se reemplazó la confirmación constante del probe por un frame
+canónico cifrado que vincula rol, hash final de Noise, hash del prologue completo
+y nonce único. Las pruebas rechazan reflexión y alteración de cada componente.
+R01 continúa crítico porque esta evidencia ejecutable no constituye una prueba
+de composición TOPRF→HKDF→Noise ni una revisión independiente.
+
 ### V3-R02 — Confianza operacional nueva — crítico, modelo inicial documentado
 
 El diseño solo mejora al servidor único si suficientes operadores son realmente
@@ -44,6 +50,12 @@ Seguimiento adicional: el spike simula una ceremonia autenticada y ejecuta DKG
 y rotación TACEO honestos con rechazo de replay/corrupción. No reduce la
 severidad: identidad, firmas, quejas y operadores independientes siguen ausentes.
 
+Seguimiento 5.5.3: un modelo declarativo rechaza infraestructura,
+administradores, credenciales, respaldos o control del relay compartidos, y su
+respuesta a compromiso nunca reduce silenciosamente el umbral. Es una
+precondición comprobable, no evidencia de independencia real; R02 permanece
+bloqueado hasta operar la ceremonia autenticada en dominios independientes.
+
 ### V3-R03 — Diccionario online permanece — alto, mitigación inicial documentada
 
 La TOPRF dificulta la verificación offline por el relay, pero un atacante puede
@@ -57,7 +69,36 @@ Seguimiento: se documentaron límites por conexión/red, capacidad global y puzz
 adaptativo. El hallazgo no se cierra hasta medirlos; el riesgo fundamental para
 secretos muy cortos permanece.
 
-### V3-R04 — Bootstrap del manifiesto — alto, diseño inicial documentado
+Seguimiento 5.5.3: el arnés implementa allowance inicial, etiquetas de red
+efímeras con rotación, desafíos acotados de un solo uso, techo global y límites
+duros para todas las tablas. Una simulación sintética reproduce falsos positivos
+de NAT y el límite global frente a fuentes distribuidas. R03 continúa parcial:
+el puzzle aún es una precondición de verificador y faltan benchmarks y tráfico
+real en Android/Web e infraestructura independiente.
+
+Seguimiento 5.5.4: dos procesos locales verifican puzzles y mantienen estado de
+admisión separado; desafíos cruzados, entradas malformadas, reinicio y techo
+global tienen pruebas automatizadas. R03 permanece parcial porque loopback no
+mide NAT, Web/Android, red pública ni evasión distribuida real.
+
+El segundo corte 5.5.4 añade frames Ed25519 acotados en TCP loopback y rechazos
+de replay, firma, contexto, reloj, tamaño y timeout. Esto prueba una frontera de
+transporte autenticada local, no identidades operacionales, TLS público ni una
+ceremonia PedPoP; R02 continúa bloqueado.
+
+El tercer corte 5.5.4 lleva las tres rondas a dos coordinadores TCP separados y
+exige reportes firmados idénticos de identidades distintas. Partición, timeout,
+proceso caído, queja y voto duplicado no activan la época. R02/R12 siguen
+bloqueados porque las claves, validadores y control de timeout son fixtures y no
+hay PedPoP, consenso durable ni dominios administrativos independientes.
+
+El cuarto corte 5.5.4 mide localmente admisión, framing firmado, puzzle, NAT,
+fuentes distribuidas, saturación y working set. Los límites permanecen acotados,
+pero el resultado cuantifica falsos desafíos de NAT y la denegación global. R03
+continúa parcial hasta repetirlo en Android, Web, red pública y operadores
+independientes con un puzzle revisado y parámetros accesibles.
+
+### V3-R04 — Bootstrap del manifiesto — alto, mitigación local parcial
 
 El cliente necesita confiar inicialmente en claves de operadores, umbral y suite.
 Una actualización maliciosa podría reducir el umbral o redirigir todos los
@@ -66,8 +107,12 @@ operadores al adversario.
 Acción: anclar la configuración en la aplicación, exigir continuidad firmada y
 tratar una reducción de seguridad como actualización incompatible visible.
 
-Seguimiento: `V3_MANIFEST_AND_COLLISION_POLICY.md` define la primera política.
-Permanece abierto hasta seleccionar codificación, claves y pruebas reales.
+Seguimiento: el sprint 5.5.2 fijó una codificación binaria única, SHA-256,
+Ed25519, raíz de release y hash inicial embebidos, continuidad por hash/secuencia
+y quorum de los operadores anteriores. Rust, Node/WebCrypto, Chrome, Edge y
+Firefox reproducen el vector `TEST-ONLY` y rechazos negativos. Permanece abierto
+por falta de prueba dentro del artefacto Android, persistencia antirollback,
+recuperación/rotación de la clave release y revisión independiente.
 
 ### V3-R05 — Etiqueta enlazable durante la época — alto
 
@@ -103,6 +148,12 @@ servicio y por eso el hallazgo no se considera cerrado para producción.
 Evidencia adicional: `MemoryRelay` invalida la pareja, descarta frames pendientes
 y notifica colisión a los tres participantes. Sigue siendo un modelo local sin
 resistencia operacional a un relay malicioso.
+
+Seguimiento 5.5.3: 128 ejecuciones con tres hilos liberados simultáneamente
+producen exactamente un estado provisional, un emparejamiento y una colisión;
+al finalizar no queda sala ni participante y los tres reciben `Collision`. R07
+permanece parcial porque un relay malicioso todavía puede ocultar la señal y
+causar denegación de servicio.
 
 ### V3-R08 — Rotación y disponibilidad — medio
 
@@ -153,6 +204,14 @@ independiente y compila en Windows/Wasm. Sustituye al mapeo rechazado dentro del
 spike, pero el hallazgo continúa abierto hasta confirmar interoperabilidad en
 otra plataforma, revisar la composición y congelar la suite/manifiesto.
 
+Seguimiento 5.5.3: Rust reproduce una evaluación fija y pública de prueba
+TwoHashDH/BabyJubJub/Poseidon2 y toda la derivación posterior. WebCrypto en
+Node, Chrome, Edge y Firefox reproduce RFC 9380, HKDF, prologue y confirmaciones,
+y rechaza mutaciones de época, salida OPRF y hash de handshake. R11 permanece
+parcial: el navegador comienza desde la salida OPRF congelada y el hash de
+handshake es un input sintético, no una ejecución independiente de TACEO y
+Noise. Android también sigue pendiente.
+
 ### V3-R12 — Share cifrado sin autenticación autónoma — alto
 
 La primitiva `decrypt_share` del core TACEO aplica cifrado simétrico aditivo y
@@ -172,6 +231,16 @@ Seguimiento: el simulador ya falla cerrado ante un share TACEO alterado y mezcla
 de contexto. El hallazgo permanece abierto porque un emisor malicioso puede
 crear share y compromiso coherentes y porque `authenticated` aún no es una
 prueba criptográfica de identidad.
+
+Seguimiento 5.5.3: la máquina de estados separa compromiso con prueba, entrega
+de ciphertext y veredicto independiente del receptor. Cada veredicto vincula
+dealer, receptor, compromiso y ciphertext. Ninguna ceremonia alcanza `Ready`
+sin todos los veredictos; una queja demostrada o fraudulenta aborta, elimina
+todo estado provisional y conserva solo un registro público acotado. La prueba
+con TACEO enruta un ciphertext alterado hasta una queja demostrada terminal.
+R12 continúa bloqueado: `proof_valid`, `evidence_valid` y `authenticated` son
+precondiciones del modelo, no verificadores PedPoP, firmas ni evidencia de queja
+serializada. Tampoco existen exclusión, recuperación ni consenso entre procesos.
 
 ## Decisión interna
 

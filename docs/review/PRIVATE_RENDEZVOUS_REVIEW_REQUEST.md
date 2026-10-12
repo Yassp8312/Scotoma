@@ -106,6 +106,13 @@ before any production wire format is adopted:
 9. Is there a known impossibility or lower-bound result for the single malicious
    server, low-entropy, no-registration variant?
 
+The review package now includes a `TEST-ONLY` composition fixture. Rust executes
+the fixed TACEO-compatible OPRF calculation and the full downstream derivation;
+WebCrypto independently executes RFC 9380 and the downstream HKDF/prologue/
+confirmation steps. The frozen OPRF output and synthetic handshake hash are
+explicit trust boundaries of that vector, not interoperability evidence for
+TACEO/Poseidon2 or Noise itself.
+
 ## Evidence requested from a reviewer
 
 A useful response may be negative. Please identify:
@@ -132,7 +139,7 @@ composition and implementation.
 - ADR 0031, ADR 0043 and ADR 0044: historical decisions and gates.
 - `docs/review/V3_FINDINGS_LEDGER.json`: R01–R12 status, next action and exact
   exit condition.
-- `docs/review/V3_REVIEW_SNAPSHOT.json`: SHA-256 identity of the 18 files in the
+- `docs/review/V3_REVIEW_SNAPSHOT.json`: SHA-256 identity of the 40 files in the
   review scope.
 
 ## Primary references already considered

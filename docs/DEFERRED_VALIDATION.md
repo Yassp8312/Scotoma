@@ -103,16 +103,42 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
   marca no significa aprobación integral del protocolo.
 - [ ] Seleccionar una construcción TOPRF publicada, suite exacta y biblioteca
   mantenida; no implementar una primitiva propia.
-- [x] Crear el primer vector sintético interoperable Rust/WebCrypto y ejecutarlo
-  en Node, Chrome, Edge y Firefox.
-- [ ] Ejecutar los vectores canónicos dentro del artefacto Android y ampliar la
-  cobertura a salida TOPRF, HKDF, prologue y transcript.
-- [ ] Probar manifiesto firmado, DKG/PedPoP real, caída de operadores, tres
-  clientes y particiones entre procesos independientes.
+- [x] Crear vectores sintéticos interoperables Rust/WebCrypto y ejecutarlos en
+  Node, Chrome, Edge y Firefox. La segunda versión cubre una salida OPRF fija,
+  HKDF, prologue y confirmaciones, con negativos de época/salida/transcript.
+- [ ] Ejecutar los vectores canónicos dentro del artefacto Android y reproducir
+  TACEO/Poseidon2 y un transcript Noise real en una segunda implementación; el
+  navegador actual comienza desde una salida OPRF congelada y un hash sintético.
+- [ ] Completar manifiesto firmado dentro del artefacto Android, persistencia
+  antirollback y recuperación de la clave release. El modelo Rust y WebCrypto
+  ya cubre codificación, firmas, continuidad y negativos en tres navegadores.
+- [ ] Probar DKG/PedPoP real, caída de operadores, tres clientes y particiones
+  entre procesos independientes.
+- [x] Modelar rondas separadas de compromiso/prueba, ciphertext y veredicto del
+  receptor, con timeout y aborto/purga ante quejas válidas o fraudulentas. Los
+  verificadores PedPoP, firmas y evidencias serializadas siguen pendientes.
 - [ ] Medir intentos online, disponibilidad y coste operacional con al menos dos
   operadores verdaderamente independientes.
 - [ ] Medir límites por conexión/red, capacidad global y puzzle adaptativo en
   Android y Web, incluyendo NAT compartido y adversarios distribuidos.
+- [x] Modelar límites estrictos de conexiones, redes efímeras, desafíos y
+  capacidad global, junto con topología declarativa y respuesta a compromiso;
+  la simulación usa parámetros sintéticos y no sustituye las mediciones previas.
+- [x] Cruzar una frontera real de procesos con dos operadores locales, puzzle
+  verificado, rechazo uniforme de entrada malformada, aislamiento de desafíos,
+  techo global y reinicio sin estado. Sigue pendiente desplegarlo y medirlo en
+  dominios, redes y dispositivos independientes.
+- [x] Añadir transporte TCP loopback Ed25519 con framing previo acotado, timeout,
+  secuencia y reloj; probar replay, firma/contexto incorrectos, expiración,
+  longitud excesiva y cliente ocioso. Las identidades y claves siguen siendo
+  fixtures locales, no credenciales de operadores reales.
+- [x] Ejecutar la ceremonia en dos coordinadores loopback firmados y exigir
+  reportes `READY` idénticos de claves distintas; partición, timeout, caída,
+  queja y voto duplicado quedan sin activación. PedPoP, consenso e independencia
+  administrativa continúan pendientes.
+- [x] Medir localmente en `release` latencia p50/p95/p99, throughput, working
+  set, NAT sintético, fuentes distribuidas y saturación con salida JSON y smoke
+  de CI. Siguen pendientes Android, Web, red pública y operadores independientes.
 - [x] Completar la segunda pasada de revisión interna y registrar decisión
   `NO-GO` para integrar v3.
 - [ ] Corregir los hallazgos críticos/altos de composición y operación antes de
@@ -120,10 +146,23 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 - [ ] Mantener como pendiente para producción una revisión independiente. La
   revisión interna permite avanzar investigación y alpha experimental, pero no
   convertir la afirmación en “auditado” ni recomendarlo para alto riesgo.
-- [x] Congelar el primer paquete revisable del sprint 5.5: 18 archivos con
+- [x] Congelar el paquete revisable 5.5.2 y ampliarlo en 5.5.3: 30 archivos con
   SHA-256 y ledger completo R01–R12; verificador local y gate CI aprobados.
 - [ ] Sustituir el identificador de árbol sucio por enlaces a un commit público
   estable antes de enviar cualquier solicitud de revisión.
+- [x] Repetir `cargo test --all-targets` del probe TACEO: 23/23 pruebas pasan en
+  Windows GNU usando LLVM-MinGW y `libgcc`/`libgcc_eh` autocontenidas de Rust;
+  `clippy --all-targets -D warnings` también pasa.
+
+## Toolchain local y actualización TLS
+
+- [x] `cargo check --workspace --all-targets` recompiló el producto con
+  `rustls 0.23.45` después de corregir `RUSTSEC-2026-0285`.
+- [x] Repetir `cargo test --workspace --all-targets` tras actualizar TLS: 92
+  pruebas pasan y el soak prolongado permanece correctamente ignorado. El host
+  Windows enlaza con LLVM-MinGW al exponer las `libgcc`/`libgcc_eh`
+  autocontenidas de Rust mediante `LIBRARY_PATH`; CI Linux sigue siendo la
+  comprobación autoritativa multiplataforma.
 
 ## Cierre del registro
 

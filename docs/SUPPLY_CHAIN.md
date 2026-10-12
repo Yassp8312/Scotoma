@@ -19,6 +19,14 @@ expected wasm-bindgen wrapper changes or if final JavaScript contains direct
 copies together, regenerating both lockfiles, and rerunning the strict-CSP
 browser matrix; replacing one copy independently is prohibited.
 
+El probe aislado de TACEO incorpora datos de autoridades certificadoras de
+Mozilla mediante `webpki-root-certs` y `webpki-roots`. Esos datos usan
+`CDLA-Permissive-2.0`: permite usar, modificar y redistribuir la base de datos,
+conserva los avisos y no añade copyleft al código de SCOTOMA. La licencia está
+permitida exclusivamente porque estas dependencias son los certificados raíz
+del transporte TLS; su aparición en otro tipo de paquete exige una revisión
+nueva. El probe continúa fuera de los binarios y grafos de producción.
+
 `rust-toolchain.toml` pins Rust 1.96.0 for normal builds and `.flutter-version`
 records Flutter 3.47.2 / Dart 3.13.2. The fuzz workflow separately pins nightly
 2026-09-01 because libFuzzer requires nightly compiler support.
@@ -46,6 +54,9 @@ cargo audit --file Cargo.lock
 cargo audit --file packages/scotoma_bridge/rust/Cargo.lock
 cargo deny check
 cargo deny --manifest-path packages/scotoma_bridge/rust/Cargo.toml check
+cargo deny --manifest-path spikes/private_rendezvous_v3/Cargo.toml check
+cargo deny --manifest-path spikes/private_rendezvous_v3/taceo_probe/Cargo.toml check
+cargo deny --manifest-path spikes/private_rendezvous_v3/fuzz/Cargo.toml check
 ```
 
 Fuzzing uses Rust nightly because `cargo-fuzz` is built on libFuzzer:
@@ -80,6 +91,8 @@ with the exact commit and lockfile that produced it.
   license terms outside `deny.toml`.
 - Duplicate transitive versions are reported as warnings and reviewed during
   dependency updates; forcing a single version is not automatically safer.
+- Las dependencias locales también declaran una versión exacta junto a `path`;
+  así `cargo-deny` puede distinguirlas de una dependencia comodín.
 - A clean automated result does not replace source review or an independent
   cryptographic audit.
 - Production releases require a fresh scan and SBOM after the final lockfiles are
@@ -102,3 +115,15 @@ with the exact commit and lockfile that produced it.
 
 These results are a dated baseline. CI repeats the checks against each proposed
 change; a future result may differ as the advisory database changes.
+
+## Seguimiento — 2026-10-11
+
+Una repetición local de `cargo-deny` detectó `RUSTSEC-2026-0285` en
+`rustls 0.23.43`, tanto en el grafo principal como en el puente Flutter. Los dos
+lockfiles quedaron actualizados a la versión corregida `rustls 0.23.45` y los
+controles volvieron a aprobar. El mismo recorrido incorporó el grafo aislado de
+TACEO a la política: se documentó `CDLA-Permissive-2.0` para los datos de raíces
+TLS y se sustituyó una dependencia local comodín por la versión exacta `0.0.0`.
+El grafo de fuzzing admite además `NCSA`, licencia OSI del runtime
+`libfuzzer-sys`; las dos dependencias locales de ese arnés también quedaron
+fijadas a `0.0.0`.

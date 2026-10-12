@@ -12,8 +12,8 @@ resolver = "3"
 
 [dependencies]
 libfuzzer-sys = "=0.4.10"
-scotoma-private-rendezvous-v3-model = { path = ".." }
-scotoma-taceo-client-compile-probe = { path = "../taceo_probe" }
+scotoma-private-rendezvous-v3-model = { version = "=0.0.0", path = ".." }
+scotoma-taceo-client-compile-probe = { version = "=0.0.0", path = "../taceo_probe" }
 snow = "=0.10.0"
 taceo-ark-babyjubjub = "=0.6.0"
 

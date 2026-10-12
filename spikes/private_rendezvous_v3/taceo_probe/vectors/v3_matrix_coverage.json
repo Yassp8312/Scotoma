@@ -1,6 +1,6 @@
 {
   "schema": "scotoma-v3-matrix-coverage-v1",
-  "updated": "2026-10-11",
+  "updated": "2026-10-12",
   "scope": "Isolated v3 research only; this is not a production security claim.",
   "entries": [
     { "id": "V3-F01", "status": "verified_local", "evidence": "Canonical room/password encoding and deterministic RFC 9380 query tests." },
@@ -9,7 +9,7 @@
     { "id": "V3-F04", "status": "verified_local", "evidence": "Canonical credential framing preserves leading zeroes, so 0 and 00 remain distinct." },
     { "id": "V3-F05", "status": "verified_local", "evidence": "Canonical credential framing accepts both 1-digit and 128-digit room/password boundaries." },
     { "id": "V3-F06", "status": "verified_local", "evidence": "Empty and 129-digit inputs are rejected locally before any threshold or relay action." },
-    { "id": "V3-F07", "status": "partial", "evidence": "Canonical RFC 9380 vector agrees in Rust, Python, Node, Chrome, Edge, and Firefox; Android execution remains deferred." },
+    { "id": "V3-F07", "status": "partial", "evidence": "RFC 9380 query plus the frozen OPRF-output fixture, HKDF, prologue and synthetic confirmation transcript agree in Rust, Node, Chrome, Edge and Firefox; Web does not independently execute TACEO/Poseidon2 or Noise, and Android remains deferred." },
     { "id": "V3-F08", "status": "verified_local", "evidence": "Authenticated ACK removes only its matching pending message; invalid ACKs fail closed." },
     { "id": "V3-F09", "status": "verified_local", "evidence": "Authenticated BURN is terminal and clears pending messages, role, responses, and modeled key state." },
     { "id": "V3-F10", "status": "verified_local", "evidence": "Timeout terminates the modeled session and clears all provisional state." },
@@ -18,7 +18,7 @@
     { "id": "V3-A02", "status": "verified_local", "evidence": "An initiator rejects reflection of its own first Noise flight." },
     { "id": "V3-A03", "status": "verified_local", "evidence": "Mismatched epochs and transcript-bound nonce views fail the Noise handshake." },
     { "id": "V3-A04", "status": "verified_local", "evidence": "Replayed sequence numbers and responses from another epoch fail closed." },
-    { "id": "V3-A05", "status": "verified_local", "evidence": "Invalid or mismatched OPRF proofs and a malleated encrypted share are rejected." },
+    { "id": "V3-A05", "status": "verified_local", "evidence": "Invalid or mismatched OPRF proofs are rejected; a malleated encrypted share produces a bound, substantiated complaint and terminal cleanup before Ready." },
     { "id": "V3-A06", "status": "verified_local", "evidence": "Operator responses and ceremony messages from different manifests cannot be combined." },
     { "id": "V3-A07", "status": "verified_local", "evidence": "Registration is impossible before the required number of distinct operator responses is reached." },
     { "id": "V3-A08", "status": "verified_local", "evidence": "A third participant invalidates the complete provisional pair and clears its queued state." },

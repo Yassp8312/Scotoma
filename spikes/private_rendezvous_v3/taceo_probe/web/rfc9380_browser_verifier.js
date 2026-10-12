@@ -30,6 +30,33 @@
     return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
   }
 
+  function hexToBytes(value, expectedLength, label) {
+    if (
+      typeof value !== 'string'
+      || value.length !== expectedLength * 2
+      || !/^[0-9a-f]+$/.test(value)
+    ) {
+      throw new Error(`${label} must be ${expectedLength} canonical bytes`);
+    }
+    return Uint8Array.from(
+      value.match(/.{2}/g),
+      (pair) => Number.parseInt(pair, 16),
+    );
+  }
+
+  function u64be(value) {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new Error('epoch must be a non-negative safe integer');
+    }
+    let remaining = BigInt(value);
+    const result = new Uint8Array(8);
+    for (let index = result.length - 1; index >= 0; index -= 1) {
+      result[index] = Number(remaining & 0xffn);
+      remaining >>= 8n;
+    }
+    return result;
+  }
+
   function bytesToBigInt(bytes) {
     let value = 0n;
     for (const byte of bytes) {
@@ -87,6 +114,29 @@
     return concat(...blocks).slice(0, outputLength);
   }
 
+  async function hkdfSha256(ikm, salt, info) {
+    const key = await global.crypto.subtle.importKey(
+      'raw',
+      ikm,
+      'HKDF',
+      false,
+      ['deriveBits'],
+    );
+    const bits = await global.crypto.subtle.deriveBits(
+      { name: 'HKDF', hash: 'SHA-256', salt, info },
+      key,
+      256,
+    );
+    return new Uint8Array(bits);
+  }
+
+  function requireHex(actual, expected, label) {
+    const encoded = bytesToHex(actual);
+    if (encoded !== expected) {
+      throw new Error(`${label} mismatch: ${encoded}`);
+    }
+  }
+
   async function verifyVector(vector) {
     if (vector.schema !== 'scotoma-private-rendezvous-vector-v1') {
       throw new Error('unsupported vector schema');
@@ -124,5 +174,114 @@
     return { id: vector.id, query };
   }
 
-  global.ScotomaRfc9380 = Object.freeze({ verifyVector });
+  async function verifyCompositionVector(vector, hashToFieldVector) {
+    if (vector.schema !== 'scotoma-v3-composition-vector-v1') {
+      throw new Error('unsupported composition vector schema');
+    }
+    if (vector.classification !== 'TEST-ONLY') {
+      throw new Error('composition vector must be marked TEST-ONLY');
+    }
+    if (vector.context.handshake_hash_source !== 'fixed-test-input-not-derived-noise') {
+      throw new Error('composition vector must disclose its synthetic handshake hash');
+    }
+
+    const mapping = await verifyVector(hashToFieldVector);
+    if (
+      vector.credential.room !== hashToFieldVector.credential.room
+      || vector.credential.password !== hashToFieldVector.credential.password
+      || vector.credential.encoding_hex !== hashToFieldVector.credential.encoding_hex
+      || vector.credential.query_big_endian_hex !== mapping.query
+    ) {
+      throw new Error('composition credential does not match the RFC 9380 vector');
+    }
+
+    // WebCrypto begins at the frozen, Rust-verified TACEO output. It does not
+    // independently implement BabyJubJub/Poseidon2 or the threshold proof.
+    const oprfOutput = hexToBytes(
+      vector.oprf_fixture.output_big_endian_hex,
+      32,
+      'OPRF output',
+    );
+    const manifestHash = hexToBytes(vector.context.manifest_hash_hex, 32, 'manifest hash');
+    const epoch = u64be(vector.context.epoch);
+    const context = concat(encoder.encode('SCOTOMA-V3-CONTEXT'), manifestHash, epoch);
+    const salt = await sha256(concat(encoder.encode('SCOTOMA-V3-EXTRACT'), context));
+    const rendezvousTag = await hkdfSha256(
+      oprfOutput,
+      salt,
+      concat(encoder.encode('SCOTOMA-V3-RENDEZVOUS-TAG'), context),
+    );
+    const noisePsk = await hkdfSha256(
+      oprfOutput,
+      salt,
+      concat(encoder.encode('SCOTOMA-V3-NOISE-PSK'), context),
+    );
+    requireHex(rendezvousTag, vector.expected.rendezvous_tag_hex, 'rendezvous tag');
+    requireHex(noisePsk, vector.expected.noise_psk_hex, 'Noise PSK');
+
+    const prologue = concat(
+      encoder.encode('SCOTOMA-NOISE-PROLOGUE-v3'),
+      i2osp(3, 2),
+      manifestHash,
+      epoch,
+      rendezvousTag,
+      hexToBytes(vector.context.initiator_nonce_hex, 32, 'initiator nonce'),
+      hexToBytes(vector.context.responder_nonce_hex, 32, 'responder nonce'),
+    );
+    requireHex(prologue, vector.expected.noise_prologue_hex, 'Noise prologue');
+    const prologueHash = await sha256(prologue);
+    requireHex(
+      prologueHash,
+      vector.expected.noise_prologue_sha256_hex,
+      'Noise prologue hash',
+    );
+
+    const handshakeHash = hexToBytes(
+      vector.context.handshake_hash_hex,
+      32,
+      'handshake hash',
+    );
+    const confirmationDomain = encoder.encode('SCOTOMA-V3-KEY-CONFIRM-v1');
+    const initiatorConfirmation = concat(
+      confirmationDomain,
+      Uint8Array.of(1),
+      handshakeHash,
+      prologueHash,
+      hexToBytes(
+        vector.context.initiator_confirmation_nonce_hex,
+        32,
+        'initiator confirmation nonce',
+      ),
+    );
+    const responderConfirmation = concat(
+      confirmationDomain,
+      Uint8Array.of(2),
+      handshakeHash,
+      prologueHash,
+      hexToBytes(
+        vector.context.responder_confirmation_nonce_hex,
+        32,
+        'responder confirmation nonce',
+      ),
+    );
+    requireHex(
+      initiatorConfirmation,
+      vector.expected.initiator_confirmation_hex,
+      'initiator confirmation',
+    );
+    requireHex(
+      responderConfirmation,
+      vector.expected.responder_confirmation_hex,
+      'responder confirmation',
+    );
+
+    return {
+      id: vector.id,
+      oprfOutput: bytesToHex(oprfOutput),
+      rendezvousTag: bytesToHex(rendezvousTag),
+      prologueHash: bytesToHex(prologueHash),
+    };
+  }
+
+  global.ScotomaRfc9380 = Object.freeze({ verifyCompositionVector, verifyVector });
 }(globalThis));

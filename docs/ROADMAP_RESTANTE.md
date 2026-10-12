@@ -210,7 +210,7 @@ al workspace ni aparece en dependencias productivas. La regresión completa pas�
 Clippy, 92 pruebas Rust, análisis y 23 pruebas Flutter, supervisor de runtime y
 baseline de seguridad. Un probe separado confirmó que el cliente TACEO 0.10.8
 compila en Windows y Wasm sin arrastrar blockchain ni base de datos, pero la
-suite y operación siguen sin aprobar. El probe ya pasa 21 pruebas de VOPRF,
+suite y operación siguen sin aprobar. El probe ya pasa 23 pruebas de VOPRF,
 umbral sintético 2-de-3, DKG/reshare honesto, compromisos, HKDF y Noise; una
 verificación independiente rechazó el hash-to-field inicial por diferir de RFC
 9380 y un reemplazo RustCrypto reproduce el vector normativo en Rust, Node,
@@ -248,10 +248,56 @@ los casos normales y adversariales definidos en 5.1.
 
 ### Sprint 5.5 — Revisión independiente y corrección de hallazgos
 
-Estado: en curso. El primer bloque congeló 18 archivos de diseño/código/vectores
-por SHA-256 y convirtió R01–R12 en un ledger verificable con acción y condición
-de salida. CI invalida el paquete si cambia cualquier byte. No se ha contactado
-a terceros y el paquete aún carece de enlaces a un commit público estable.
+Estado: en curso. 5.5.1 congeló el primer paquete y 5.5.2 añadió el modelo
+aislado de manifiesto binario canónico firmado, raíz/hash inicial fijados,
+continuidad por secuencia/hash y quorum anterior. El vector coincide en Rust,
+Node, Chrome, Edge y Firefox. El snapshot contiene 40 archivos tras incorporar
+el vector de composición y CI lo invalida
+si cambia cualquier byte. Android, antirollback durable, recuperación de la
+clave release y revisión externa siguen pendientes. No se ha contactado a
+terceros y el paquete aún carece de enlaces al nuevo commit público estable.
+
+5.5.3 quedó completado localmente. Su primer corte reemplazó la confirmación Noise constante
+por un frame que vincula rol, transcript, contexto y nonce, y añadió 128 carreras
+concurrentes de tres participantes. R01 y R07 mejoran pero permanecen abiertos;
+un segundo corte añadió el vector de composición Rust/WebCrypto y recuperó la
+ejecución nativa de las 23 pruebas TACEO. R11 mejora pero continúa parcial porque
+Web no ejecuta TACEO/Poseidon2 ni Noise completo. R02/R03 necesitan operación
+real. El tercer corte separa compromiso/prueba, ciphertext y veredicto de
+receptor; quejas válidas o fraudulentas abortan y limpian el estado. R12 sigue
+bloqueado hasta reemplazar las precondiciones booleanas por PedPoP, firmas,
+evidencia verificable y consenso reales.
+
+El cuarto y último corte de 5.5.3 añade un modelo acotado de topología y admisión:
+rechaza dominios de control declarados como compartidos, no reduce el umbral
+ante compromisos, rota identificadores efímeros y limita conexiones, redes,
+desafíos y capacidad global. La simulación de NAT y atacante distribuido usa
+parámetros sintéticos; R02 permanece bloqueado y R03 parcial hasta desplegar y
+medir al menos dos operadores realmente independientes en Android y Web.
+
+5.5.4 está en curso. Su primer corte lanza dos operadores como procesos locales
+separados, verifica puzzles acotados dentro de cada proceso, rechaza desafíos
+cruzados y entradas malformadas, conserva el techo global y demuestra que el
+reinicio descarta todo el estado efímero. Esto no equivale a dominios
+administrativos independientes ni a mediciones de red/dispositivo reales.
+
+El segundo corte 5.5.4 añade TCP loopback con frames de longitud acotada y
+firmas Ed25519 vinculadas a operador, época, secuencia, reloj y contenido. Las
+pruebas rechazan replay, falsificación, contexto cruzado, expiración, frame
+enorme y conexión ociosa sin inutilizar el proceso. Las claves y comandos son
+fixtures locales; TLS, identidad real y ceremonia multiproceso siguen pendientes.
+
+El tercer corte 5.5.4 ejecuta la ceremonia firmada en dos coordinadores locales
+y exige dos votos `READY` idénticos de claves distintas para activar la rotación
+7→8. Partición/timeout, caída, queja sustentada y duplicación de voto no forman
+quorum. PedPoP, consenso durable e independencia administrativa permanecen como
+bloqueos explícitos; solo falta el corte de mediciones locales de 5.5.4.
+
+5.5.4 quedó completado localmente con un cuarto corte reproducible: JSON de
+latencia p50/p95/p99, throughput, puzzle sintético, NAT, evasión distribuida,
+saturación y working set. El CI ejecuta un smoke reducido y el baseline de esta
+PC queda en `V3_OPERATIONAL_BASELINE.md`. R03 no se cierra: siguen pendientes
+Android, Web, red pública, cold starts y operadores independientes.
 
 - Someter especificación, composición e implementación completas a revisión
   independiente comunitaria o pro bono.

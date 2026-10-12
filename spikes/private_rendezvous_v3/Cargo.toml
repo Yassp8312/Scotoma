@@ -10,5 +10,9 @@ publish = false
 [lib]
 path = "src/lib.rs"
 
+[dependencies]
+ed25519-dalek = { version = "2.2.0", default-features = false, features = ["std"] }
+sha2 = "0.10.9"
+
 [lints.rust]
 unsafe_code = "forbid"

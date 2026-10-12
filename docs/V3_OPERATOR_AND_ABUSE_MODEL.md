@@ -115,3 +115,110 @@ Antes de conectar este modelo al prototipo criptográfico se requieren:
   dominio;
 - runbook de compromiso y retirada de un operador;
 - advertencia visible para credenciales cortas.
+
+## 9. Ceremonia y quejas
+
+El modelo aislado 5.5.3 exige tres rondas distintas antes de activar una época:
+
+1. cada dealer publica un compromiso y una prueba ya verificada localmente;
+2. entrega un ciphertext vinculado al compromiso a cada receptor;
+3. cada receptor publica un veredicto autenticado que vincula dealer, receptor,
+   compromiso, ciphertext y evidencia.
+
+La ausencia de un solo veredicto termina por timeout. Una queja con evidencia
+válida aborta toda la ceremonia; una queja fraudulenta también aborta, porque
+continuar produciría participantes con vistas distintas. En ambos casos se
+borran compromisos, shares y verificaciones provisionales. Solo se conserva un
+registro público acotado de la queja para investigación operacional.
+
+Los booleanos `proof_valid`, `share_valid`, `evidence_valid` y `authenticated`
+son resultados abstractos de verificadores locales. No deben serializarse ni
+aceptarse como afirmaciones del peer. Sustituirlos exige una especificación
+PedPoP publicada, firmas de identidad, prueba de queja verificable por todos los
+operadores, reglas de exclusión/recuperación y consenso sobre la clave pública.
+
+## 10. Corte ejecutable 5.5.3
+
+El módulo aislado `operational.rs` convierte parte de este modelo en invariantes
+probables sin afirmar que puede verificar relaciones empresariales reales:
+
+- rechaza declaraciones donde operadores comparten proveedor, administrador,
+  raíz de credenciales o custodio de respaldo, o donde el relay comparte
+  infraestructura o administrador con un operador;
+- ante un compromiso declarado, exige rotación y nuevo manifiesto si aún existe
+  quorum; si no existe, detiene el servicio sin reducir el umbral;
+- limita conexiones, etiquetas de red efímeras, desafíos pendientes e intentos
+  globales antes de permitir crecimiento;
+- concede los primeros intentos configurados sin puzzle y luego emite desafíos
+  de un solo uso vinculados a operador, época, ventana, conexión y red;
+- consume también un desafío presentado desde un contexto incorrecto y borra
+  contadores, etiquetas y desafíos al rotar la ventana.
+
+La simulación determinista con parámetros exclusivamente sintéticos muestra la
+tensión prevista: de 16 primeras solicitudes detrás de un mismo NAT, 4 pasan y
+12 reciben desafío; con 16 redes distintas, 8 pasan y el techo global rechaza
+8. No son parámetros recomendados ni benchmarks. Falta medir tráfico real,
+latencias, coste del puzzle, falsos positivos y evasión distribuida en Android,
+Web y al menos dos dominios administrativos independientes.
+
+## 11. Frontera entre procesos 5.5.4
+
+El primer corte 5.5.4 ejecuta dos nodos de operador como procesos del sistema
+operativo separados. Cada uno mantiene su propia clave efímera, contadores,
+desafíos y techo global. El protocolo de prueba verifica localmente un puzzle
+SHA-256 acotado; no confía en un booleano recibido, rechaza entradas malformadas
+sin terminar el proceso y no persiste estado al reiniciar.
+
+Las pruebas confirman que un desafío emitido por O1 no se acepta en O2, que el
+techo global sigue aplicándose con redes distintas y que un reinicio elimina
+contadores y desafíos. Esto mejora la evidencia de aislamiento entre procesos,
+pero ambos siguen ejecutándose en la misma máquina, checkout y dominio
+administrativo. El protocolo de líneas, claves derivadas y parámetros son solo
+un arnés `TEST_ONLY`, no un servicio de red ni el puzzle seleccionado.
+
+## 12. Transporte loopback autenticado 5.5.4
+
+El segundo corte incorpora framing binario con longitud máxima previa a la
+asignación y firmas Ed25519 en solicitudes y respuestas. La firma vincula
+operador, época, secuencia, tiempo y contenido; el receptor fija la clave del
+cliente, exige secuencias crecientes y una ventana temporal acotada. El proceso
+solo escucha en `127.0.0.1`, aplica timeout de lectura/escritura y cierra sin
+respuesta cualquier frame que no llegue autenticado.
+
+La prueba de integración rechaza replay, firma modificada, operador incorrecto,
+solicitud vencida, longitud excesiva y cliente ocioso, y luego confirma que el
+proceso sigue aceptando una solicitud válida con respuesta firmada. Las claves
+son fixtures deterministas y el canal no cifra: su único objetivo es comprobar
+framing, autenticidad, contexto y disponibilidad local antes de modelar la
+ceremonia multiproceso.
+
+## 13. Ceremonia multiproceso y quorum 5.5.4
+
+El tercer corte ejecuta dos coordinadores loopback separados. Tres identidades
+de participante firman compromiso, share y veredicto; el coordinador deriva el
+`sender_id` de la clave que verifica la firma, aplica replay por identidad y
+alimenta la máquina de ceremonia. Una rotación honesta 7→8 solo se considera
+activable cuando dos claves de coordinador distintas firman exactamente el
+mismo reporte `READY` para la misma época.
+
+Las pruebas impiden formar quorum duplicando un voto, ante partición seguida de
+timeout, caída de un proceso o queja sustentada. Estos escenarios terminan sin
+certificado de activación. `TEST_TIMEOUT` y los validadores de prueba/veredicto
+son controles del arnés; todavía no existen PedPoP, evidencia serializada,
+protocolo de consenso ni identidades administradas fuera del mismo equipo.
+
+## 14. Baseline operacional local 5.5.4
+
+El cuarto corte añade un benchmark `release` reproducible con JSON y working set
+muestreado desde otro proceso. En el host documentado, 20 000 iteraciones dieron
+p50/p95/p99 de 1,9/2,6/3,1 µs para admisión en memoria y
+169,5/335,2/494,5 µs para firmar y verificar request/response completos. El pico
+observado fue 7,27 MiB.
+
+Los escenarios confirman límites y costes: un NAT con 1 000 clientes y límite
+100 desafía a 900; 1 000 fuentes distribuidas alcanzan el techo 500 y las otras
+500 son rechazadas; una capacidad de 4 096 conserva exactamente 4 096 entradas
+ante 8 192 intentos. Son fixtures sintéticos. El puzzle de 8 bits es demasiado
+barato para seguridad real y las cifras no incluyen TCP/TLS, TOPRF, Noise, cold
+starts, Android, navegador ni proveedor público. El detalle reproducible vive en
+`V3_OPERATIONAL_BASELINE.md`.
