@@ -1,7 +1,7 @@
 {
   "schema": "scotoma-v3-review-snapshot-v2",
   "created": "2026-10-12",
-  "git_base": "d3ca34ee22affe66c3565b8e086878d88dc3d889",
+  "git_base": "527ea6a80d2110ebf02be54eb247d10ee9d7c778",
   "working_tree": "dirty-intentional",
   "warning": "Review these exact bytes. This snapshot is not a release, audit, endorsement, or production protocol.",
   "files": [
@@ -223,7 +223,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/run_platform_builds.sh",
-      "sha256": "ec2fde57a82aa71d5b7e05bb4fa75683598ed3e86ee91fdf3962fdaf710db732"
+      "sha256": "7b021592fece04bc2b3a3d8b80333ab2f22abd46a30b22f5caedc8f1244c1415"
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/verify_vector.ps1",

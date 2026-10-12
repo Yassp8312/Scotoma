@@ -51,7 +51,9 @@ build_android() {
   local output="$work_dir/vector-$compiler"
   (
     cd "$work_dir/libsodium-android"
-    NDK_PLATFORM="android-$ANDROID_API" ./dist-build/$sodium_script
+    LIBSODIUM_FULL_BUILD=1 \
+      NDK_PLATFORM="android-$ANDROID_API" \
+      ./dist-build/$sodium_script
   )
   "$ndk_bin/$compiler$ANDROID_API-clang" -std=c11 -O2 -Wall -Wextra \
     -fPIE -pie -I"$work_dir/liboprf/src" \
