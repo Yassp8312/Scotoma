@@ -95,7 +95,7 @@
     },
     {
       "path": "docs/review/V3_INFRASTRUCTURE_PROBE.json",
-      "sha256": "fed232d179c1039f5e499825af86558b4775e00b54834d1ca3e47183b8279800"
+      "sha256": "983f3926d14a317cb604189e31c910cfb23ad79fd7bec0e9267882de06669796"
     },
     {
       "path": "spikes/private_rendezvous_v3/Cargo.toml",
@@ -255,7 +255,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/README.md",
-      "sha256": "669c0d7d8aaaceba5dd1fc037b550f99989e65930c0fd571f939e76ca14839ff"
+      "sha256": "d781cd68961065aea611205c558f8b2d59bc617d0aae686f8aa92c48b90aa7c9"
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/compose.local-simulation.yml",

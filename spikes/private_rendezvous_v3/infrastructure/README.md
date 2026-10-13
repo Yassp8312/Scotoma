@@ -97,3 +97,16 @@ El plan gratuito de Render se duerme después de inactividad y puede tardar cerc
 de un minuto en despertar. Sirve para el ejercicio de investigación, no para
 afirmar disponibilidad de producción. Documentación oficial:
 `https://render.com/docs/free` y `https://render.com/docs/web-services`.
+
+### Estado público del operador A
+
+El 13 de octubre de 2026 se verificó el operador 303, época 51, en
+`https://scotoma-v3-probe-operator.onrender.com`: `/healthz` devolvió
+`RESEARCH_ONLY`, la solicitud y el recibo firmados pasaron la verificación y la
+clave pública anunciada coincidió con la derivación local. La evidencia exacta
+está en `docs/review/V3_INFRASTRUCTURE_PROBE.json`.
+
+Esto demuestra únicamente transporte HTTPS y firmas para un operador. El tramo
+continúa abierto hasta desplegar y probar un segundo operador administrado por
+otra persona en otra cuenta, además de los ejercicios de caída, recuperación,
+censura y rotación.

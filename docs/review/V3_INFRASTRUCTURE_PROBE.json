@@ -1,7 +1,8 @@
 {
   "schema": "scotoma-v3-independent-infrastructure-probe-v1",
   "created": "2026-10-12",
-  "status": "local-foundation-only",
+  "updated": "2026-10-13",
+  "status": "one-public-operator-verified",
   "surface": "signed-availability-probe",
   "excludes": [
     "private-rendezvous",
@@ -20,12 +21,32 @@
     "manifest-independence-contract",
     "unprivileged-container-definition"
   ],
+  "public_operator_a": {
+    "provider": "render-free",
+    "endpoint": "https://scotoma-v3-probe-operator.onrender.com/probe",
+    "health_endpoint": "https://scotoma-v3-probe-operator.onrender.com/healthz",
+    "source_commit": "f34a40eb6ee6736833f24bc28fe22cb77ea7bae5",
+    "operator": 303,
+    "epoch": 51,
+    "operator_public_key": "b2053f1da7b289be58f83cb45608258002b1edcc2d89dfaa26bc3a71c12c9a76",
+    "probe_client_public_key": "3197775f2971cf6936af61e34c2d37ffbe43936e56f957ac6dc052d66907876a",
+    "health_status": 200,
+    "health_body": "RESEARCH_ONLY",
+    "probe_http_status": 200,
+    "latency_millis": 778.49,
+    "receipt_sha256": "eb7fe87f50e69f46e7163adcab7b2943f2235eb45839c783a2063bb7b4ba97bf",
+    "result": "pass"
+  },
+  "completed_external_gates": [
+    "one-public-operator-over-https",
+    "signed-request-and-receipt-verification"
+  ],
   "external_gates_pending": [
     "two-independent-human-administrators",
     "two-independent-provider-accounts",
-    "public-internet-measurement",
+    "second-independent-operator-public-internet-measurement",
     "rotation-and-censorship-drill",
-    "durable-public-evidence"
+    "two-operator-durable-public-evidence"
   ],
   "decision": "NO-GO",
   "warning": "This artifact is not an audit, endorsement, deployment attestation, or production protocol."
