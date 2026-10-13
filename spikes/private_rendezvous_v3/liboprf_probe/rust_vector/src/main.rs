@@ -4,6 +4,11 @@ use blake2::Blake2b512;
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
 use sha2::{Digest as _, Sha512};
 
+#[cfg(test)]
+use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
+#[cfg(test)]
+use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+
 const CREDENTIAL: &[u8] = b"scotoma-v3-vector-room-password";
 const SSID: &[u8] = b"SCOTOMA-v3|manifest=7f1d|epoch=19|evaluation=0001";
 const HASH_TO_GROUP_DST: &[u8] = b"HashToGroup-OPRFV1-\0-ristretto255-SHA512";
@@ -61,6 +66,182 @@ fn encode_liboprf_share(index: u8, scalar: Scalar) -> [u8; 33] {
     encoded[0] = index;
     encoded[1..].copy_from_slice(&scalar.to_bytes());
     encoded
+}
+
+#[cfg(test)]
+const ZERO_SHARING_DOMAIN: &[u8] = b"SCOTOMA-v3-ZERO-SHARING-v1\0";
+#[cfg(test)]
+const ACTIVATION_DOMAIN: &[u8] = b"SCOTOMA-v3-ACTIVATION-v1\0";
+
+#[cfg(test)]
+#[derive(Clone)]
+struct ZeroDealerContribution {
+    dealer_id: u16,
+    context_digest: [u8; 64],
+    constant_commitment: RistrettoPoint,
+    linear_commitment: RistrettoPoint,
+    linear_coefficient: Scalar,
+}
+
+#[cfg(test)]
+impl ZeroDealerContribution {
+    fn honest(dealer_id: u16, context_digest: [u8; 64], coefficient: u64) -> Self {
+        let linear_coefficient = Scalar::from(coefficient);
+        Self {
+            dealer_id,
+            context_digest,
+            constant_commitment: RistrettoPoint::default(),
+            linear_commitment: RISTRETTO_BASEPOINT_POINT * linear_coefficient,
+            linear_coefficient,
+        }
+    }
+
+    fn with_hidden_constant(
+        dealer_id: u16,
+        context_digest: [u8; 64],
+        constant: u64,
+        coefficient: u64,
+    ) -> Self {
+        let linear_coefficient = Scalar::from(coefficient);
+        Self {
+            dealer_id,
+            context_digest,
+            constant_commitment: RISTRETTO_BASEPOINT_POINT * Scalar::from(constant),
+            linear_commitment: RISTRETTO_BASEPOINT_POINT * linear_coefficient,
+            linear_coefficient,
+        }
+    }
+
+    fn private_share_for(&self, recipient_id: u16) -> Scalar {
+        self.linear_coefficient * Scalar::from(u64::from(recipient_id))
+    }
+
+    fn verifies_share(&self, recipient_id: u16, share: Scalar) -> bool {
+        self.constant_commitment == RistrettoPoint::default()
+            && RISTRETTO_BASEPOINT_POINT * share
+                == self.linear_commitment * Scalar::from(u64::from(recipient_id))
+    }
+}
+
+#[cfg(test)]
+fn zero_sharing_context(
+    deployment_id: &[u8],
+    manifest_hash: [u8; 32],
+    epoch: u64,
+    operator_set_hash: [u8; 32],
+    threshold: u16,
+) -> [u8; 64] {
+    let mut digest = Sha512::new();
+    digest.update(ZERO_SHARING_DOMAIN);
+    digest.update((deployment_id.len() as u16).to_be_bytes());
+    digest.update(deployment_id);
+    digest.update(manifest_hash);
+    digest.update(epoch.to_be_bytes());
+    digest.update(operator_set_hash);
+    digest.update(threshold.to_be_bytes());
+    digest.finalize().into()
+}
+
+#[cfg(test)]
+fn aggregate_zero_shares(
+    expected_context: [u8; 64],
+    contributions: &[ZeroDealerContribution],
+    recipients: &[u16],
+) -> Result<Vec<(u64, Scalar)>, &'static str> {
+    if contributions.len() < 2 || recipients.len() < 2 {
+        return Err("threshold not met");
+    }
+    let mut dealer_ids = std::collections::BTreeSet::new();
+    for contribution in contributions {
+        if contribution.dealer_id == 0 || !dealer_ids.insert(contribution.dealer_id) {
+            return Err("invalid dealer set");
+        }
+        if contribution.context_digest != expected_context {
+            return Err("mixed zero-sharing context");
+        }
+        if contribution.constant_commitment != RistrettoPoint::default() {
+            return Err("nonzero constant commitment");
+        }
+    }
+
+    recipients
+        .iter()
+        .map(|recipient_id| {
+            if *recipient_id == 0 {
+                return Err("invalid recipient");
+            }
+            let mut aggregate = Scalar::ZERO;
+            for contribution in contributions {
+                let share = contribution.private_share_for(*recipient_id);
+                if !contribution.verifies_share(*recipient_id, share) {
+                    return Err("invalid private share");
+                }
+                aggregate += share;
+            }
+            Ok((u64::from(*recipient_id), aggregate))
+        })
+        .collect()
+}
+
+#[cfg(test)]
+fn zero_transcript_digest(context: [u8; 64], contributions: &[ZeroDealerContribution]) -> [u8; 64] {
+    let mut digest = Sha512::new();
+    digest.update(ZERO_SHARING_DOMAIN);
+    digest.update(context);
+    for contribution in contributions {
+        digest.update(contribution.dealer_id.to_be_bytes());
+        digest.update(contribution.constant_commitment.compress().as_bytes());
+        digest.update(contribution.linear_commitment.compress().as_bytes());
+    }
+    digest.finalize().into()
+}
+
+#[cfg(test)]
+fn activation_digest(
+    context: [u8; 64],
+    key_certificate_digest: [u8; 32],
+    zero_transcript_digest: [u8; 64],
+) -> [u8; 64] {
+    let mut digest = Sha512::new();
+    digest.update(ACTIVATION_DOMAIN);
+    digest.update(context);
+    digest.update(key_certificate_digest);
+    digest.update(zero_transcript_digest);
+    digest.finalize().into()
+}
+
+#[cfg(test)]
+fn verify_activation_quorum(
+    activation: [u8; 64],
+    threshold: usize,
+    operators: &[(u16, VerifyingKey)],
+    signatures: &[(u16, Signature)],
+) -> Result<(), &'static str> {
+    if threshold == 0 || threshold > operators.len() {
+        return Err("invalid activation threshold");
+    }
+    let operator_keys = operators
+        .iter()
+        .cloned()
+        .collect::<std::collections::BTreeMap<_, _>>();
+    if operator_keys.len() != operators.len() || operator_keys.contains_key(&0) {
+        return Err("invalid activation operator set");
+    }
+    let mut accepted = std::collections::BTreeSet::new();
+    for (operator_id, signature) in signatures {
+        if !accepted.insert(*operator_id) {
+            return Err("duplicate activation signer");
+        }
+        let key = operator_keys
+            .get(operator_id)
+            .ok_or("unknown activation signer")?;
+        key.verify(&activation, signature)
+            .map_err(|_| "invalid activation signature")?;
+    }
+    if accepted.len() < threshold {
+        return Err("activation quorum not met");
+    }
+    Ok(())
 }
 
 fn encode_hex(bytes: &[u8]) -> String {
@@ -169,5 +350,118 @@ mod compatibility_tests {
     #[should_panic(expected = "one-based")]
     fn zero_identifier_is_rejected_by_the_adapter_contract() {
         let _ = encode_liboprf_share(0, Scalar::ONE);
+    }
+
+    fn candidate_context() -> [u8; 64] {
+        zero_sharing_context(b"scotoma-test-deployment", [0x53; 32], 19, [0xa7; 32], 2)
+    }
+
+    fn honest_contributions() -> Vec<ZeroDealerContribution> {
+        vec![
+            ZeroDealerContribution::honest(1, candidate_context(), 13),
+            ZeroDealerContribution::honest(2, candidate_context(), 29),
+            ZeroDealerContribution::honest(3, candidate_context(), 47),
+        ]
+    }
+
+    #[test]
+    fn distributed_contributions_reconstruct_zero_for_every_two_of_three_quorum() {
+        let shares =
+            aggregate_zero_shares(candidate_context(), &honest_contributions(), &[1, 2, 3])
+                .expect("honest zero-sharing must aggregate");
+
+        for &(left, right) in &[(0_usize, 1_usize), (0, 2), (1, 2)] {
+            assert_eq!(
+                combine_scalar_pair(shares[left], shares[right]),
+                Scalar::ZERO
+            );
+        }
+    }
+
+    #[test]
+    fn nonzero_constant_commitment_is_rejected_before_share_aggregation() {
+        let mut contributions = honest_contributions();
+        contributions[1] =
+            ZeroDealerContribution::with_hidden_constant(2, candidate_context(), 9, 29);
+
+        assert_eq!(
+            aggregate_zero_shares(candidate_context(), &contributions, &[1, 2, 3]),
+            Err("nonzero constant commitment")
+        );
+    }
+
+    #[test]
+    fn tampered_private_share_fails_its_public_commitment() {
+        let contribution = ZeroDealerContribution::honest(1, candidate_context(), 13);
+        let tampered = contribution.private_share_for(2) + Scalar::ONE;
+
+        assert!(!contribution.verifies_share(2, tampered));
+    }
+
+    #[test]
+    fn mixed_manifest_or_epoch_context_is_rejected() {
+        let mut contributions = honest_contributions();
+        contributions[2].context_digest =
+            zero_sharing_context(b"scotoma-test-deployment", [0x99; 32], 20, [0xa7; 32], 2);
+
+        assert_eq!(
+            aggregate_zero_shares(candidate_context(), &contributions, &[1, 2, 3]),
+            Err("mixed zero-sharing context")
+        );
+    }
+
+    #[test]
+    fn joint_activation_requires_distinct_valid_operator_signatures() {
+        let contributions = honest_contributions();
+        let zero_digest = zero_transcript_digest(candidate_context(), &contributions);
+        let activation = activation_digest(candidate_context(), [0x6b; 32], zero_digest);
+        let signing_keys = [
+            SigningKey::from_bytes(&[0x11; 32]),
+            SigningKey::from_bytes(&[0x22; 32]),
+            SigningKey::from_bytes(&[0x33; 32]),
+        ];
+        let operators = signing_keys
+            .iter()
+            .enumerate()
+            .map(|(index, key)| ((index + 1) as u16, key.verifying_key()))
+            .collect::<Vec<_>>();
+        let signatures = vec![
+            (1, signing_keys[0].sign(&activation)),
+            (3, signing_keys[2].sign(&activation)),
+        ];
+
+        assert_eq!(
+            verify_activation_quorum(activation, 2, &operators, &signatures),
+            Ok(())
+        );
+        assert_eq!(
+            verify_activation_quorum(activation, 2, &operators, &signatures[..1]),
+            Err("activation quorum not met")
+        );
+        assert_eq!(
+            verify_activation_quorum(
+                activation,
+                2,
+                &operators,
+                &[(1, signatures[0].1), (1, signatures[0].1)],
+            ),
+            Err("duplicate activation signer")
+        );
+    }
+
+    #[test]
+    fn activation_signature_cannot_be_reused_for_another_key_certificate() {
+        let contributions = honest_contributions();
+        let zero_digest = zero_transcript_digest(candidate_context(), &contributions);
+        let original = activation_digest(candidate_context(), [0x6b; 32], zero_digest);
+        let substituted = activation_digest(candidate_context(), [0x7c; 32], zero_digest);
+        let signing_key = SigningKey::from_bytes(&[0x11; 32]);
+        let operators = vec![(1, signing_key.verifying_key())];
+        let signature = signing_key.sign(&original);
+
+        assert_eq!(
+            verify_activation_quorum(substituted, 1, &operators, &[(1, signature)]),
+            Err("invalid activation signature")
+        );
     }
 }

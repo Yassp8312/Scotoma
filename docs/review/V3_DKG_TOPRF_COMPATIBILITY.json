@@ -15,9 +15,10 @@
   ],
   "incompatible_or_missing": [
     "COCKTAIL-DKG produces a sharing of a random nonzero group secret, not the zero sharing required by 3HashTDH",
-    "no reviewed joint activation certificate binds key shares and zero shares to the same operator set, threshold and epoch",
+    "the executable joint activation certificate is a single-process candidate and has not been independently reviewed",
     "no security argument transfers COCKTAIL's FROST-oriented proof to the complete 3HashTDH construction",
-    "no malicious-secure zero-sharing implementation has been selected"
+    "no maintained malicious-secure zero-sharing implementation has been selected",
+    "encrypted share transport, consistent broadcast, complaints, exclusion and recovery remain unimplemented"
   ],
   "required_context_fields": [
     "protocol_version",
@@ -30,7 +31,20 @@
   ],
   "executable_evidence": {
     "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs",
-    "tests": 5
+    "tests": 11,
+    "zero_sharing_candidate": {
+      "construction": "sum of dealer-generated zero-constant linear polynomials with Feldman share checks",
+      "activation": "threshold Ed25519 signatures over the key-certificate and zero-sharing transcript digests",
+      "verified": [
+        "all 2-of-3 quorums reconstruct zero",
+        "nonzero constant commitment rejected",
+        "tampered private share rejected",
+        "mixed context rejected",
+        "insufficient or duplicate signer rejected",
+        "key-certificate substitution rejected"
+      ],
+      "status": "single-process-algebraic-model-only"
+    }
   },
-  "next_gate": "Select and review a malicious-secure distributed zero-sharing ceremony, then bind it and COCKTAIL-DKG under one activation transcript."
+  "next_gate": "Add authenticated encrypted share delivery, consistent broadcast, complaint/exclusion/recovery and operational randomness around the zero-sharing candidate, then review its composition with COCKTAIL-DKG and 3HashTDH."
 }

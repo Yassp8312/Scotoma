@@ -34,6 +34,7 @@ $expectedPaths = @(
     'docs/adr/0066-cross-platform-3hashtdh-probe.md',
     'docs/adr/0067-independent-public-operator-probe.md',
     'docs/adr/0068-freeze-cocktail-dkg-specification-candidate.md',
+    'docs/adr/0069-model-distributed-zero-sharing-candidate.md',
     'docs/review/V3_CRYPTO_SELECTION.json',
     'docs/review/V3_CEREMONY_PROBE.json',
     'docs/review/V3_DKG_SELECTION.json',

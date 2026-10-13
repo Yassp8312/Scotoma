@@ -1,6 +1,7 @@
 # Compatibilidad COCKTAIL-DKG y 3HashTDH
 
-Estado: **compatibilidad parcial demostrada; composición completa bloqueada**.
+Estado: **compatibilidad parcial y candidato de zero-sharing demostrados;
+composición completa bloqueada**.
 
 ## Resultado
 
@@ -52,10 +53,37 @@ La ceremonia de zero sharing necesita otro dominio
 `purpose=toprf-zero`, pero ambos resultados deben quedar certificados juntos
 por un transcript de activación. No se reutilizará una share entre épocas.
 
+## Primer candidato ejecutable de zero-sharing
+
+El gate aislado añade un modelo algebraico para la topología inicial 2-de-3.
+Cada dealer aporta un polinomio lineal `f_i(x)=a_i*x`, publica el compromiso
+Feldman `A_i=a_i*B` y un compromiso de constante que debe ser exactamente la
+identidad. Cada receptor verifica `share_ij*B == j*A_i` antes de sumar las
+contribuciones aceptadas. La suma sigue siendo un polinomio aleatorio de
+constante cero si al menos un dealer honesto elige `a_i` impredecible.
+
+El transcript incluye dominio, deployment, manifiesto, época, conjunto de
+operadores y umbral. Su digest se combina con el certificado de key sharing y
+la activación requiere firmas Ed25519 distintas hasta alcanzar el umbral. Once
+pruebas independientes cubren los adaptadores anteriores y, además:
+
+- reconstrucción a cero para los tres quórums 2-de-3;
+- rechazo de una constante no cero;
+- rechazo de una share privada alterada;
+- rechazo de manifiesto o época mezclados;
+- quórum de activación, duplicación de firmante y sustitución del certificado
+  de clave.
+
+Esto es un **modelo candidato**, no una ceremonia desplegable. Todavía deriva
+las shares dentro de un solo proceso y no implementa aleatoriedad operacional,
+cifrado punto a punto, broadcast consistente, denuncias, defensa, exclusión,
+recuperación ni borrado seguro. Tampoco aporta una demostración de composición
+con COCKTAIL/3HashTDH. Esas propiedades permanecen como puertas obligatorias.
+
 ## Decisión
 
 La adaptación scalar/índice queda demostrada en el probe independiente Rust.
-La composición permanece **NO-GO** hasta seleccionar o implementar una
-ceremonia malicious-secure de zero sharing, demostrar su composición con
-COCKTAIL y 3HashTDH, y ejecutar vectores adversarios e interoperables. No se ha
-añadido ninguna dependencia ni clave a la aplicación de producción.
+La composición permanece **NO-GO** hasta convertir el modelo en una ceremonia
+malicious-secure mantenida o revisada, demostrar su composición con COCKTAIL y
+3HashTDH, y ejecutar vectores adversarios e interoperables. No se ha añadido
+ninguna dependencia ni clave a la aplicación de producción.

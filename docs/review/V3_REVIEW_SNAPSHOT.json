@@ -35,7 +35,7 @@
     },
     {
       "path": "docs/V3_COCKTAIL_3HASHTDH_COMPATIBILITY.md",
-      "sha256": "fcf0095a04aac86ccf1681836bc5bb55759051735d441687c899712c87e01047"
+      "sha256": "170f714e74ed16b7de471d5e7bf1406549bd9e8068f9ecbb764e69a1daf28f1b"
     },
     {
       "path": "docs/V3_OPERATOR_AND_ABUSE_MODEL.md",
@@ -90,6 +90,10 @@
       "sha256": "328a0063f0a52a660338dbe5479e3b8504d48c268258b95712c969c233518730"
     },
     {
+      "path": "docs/adr/0069-model-distributed-zero-sharing-candidate.md",
+      "sha256": "90be90f2c6854bf1bdb22a3e958647f1ca12b90cb1f54a00c0e9568370baef45"
+    },
+    {
       "path": "docs/review/V3_CRYPTO_SELECTION.json",
       "sha256": "f114266f19a597aa7d8aca6bca79b9b62d5eacd49119b9111ea4e306e7b24c9a"
     },
@@ -103,7 +107,7 @@
     },
     {
       "path": "docs/review/V3_DKG_TOPRF_COMPATIBILITY.json",
-      "sha256": "6e6ba8c1befb64882d0f4e85054e98e734f7b550831c0b4a17566d871ca2f8f0"
+      "sha256": "7c98e5287e902f88f3ca8d46849d574abe7eac98491791200ad2aa27042c7280"
     },
     {
       "path": "docs/review/V3_PLATFORM_PROBE.json",
@@ -123,7 +127,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/README.md",
-      "sha256": "78205768259b03d17d85994204ceba098fa257807801140e68ffbb98d75936ab"
+      "sha256": "85c69d022be086b538efc5054e0041ed215f6504a89c120fb557800f914c8f27"
     },
     {
       "path": "spikes/private_rendezvous_v3/fuzz/Cargo.toml",
@@ -339,19 +343,19 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml",
-      "sha256": "75ea9dc69ceacca6362650f03b66debfb7d398f1f11dbeeb4b71130d29b66d73"
+      "sha256": "10dcc1921c8a56cd64a020559217731b1c9eac1b4052edb6a4eae761786bd6d5"
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.lock",
-      "sha256": "6adb10295fc2c9748d37df59f18415ca08881cfe7eb6d7ede3091acb9bba833c"
+      "sha256": "57eccd16470b45066758574d24715497e7aca6d0e43d6dd26efc5e12f8e0d4f1"
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs",
-      "sha256": "827a8248dd9c58bf891876d3976c9673d4168a7b81b8da54d0f2539c269e954f"
+      "sha256": "6999ceb1e274e98437a091967ab07ac9ea6debcfc0a9b7717da3ea17e3fafa83"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_crypto_selection.ps1",
-      "sha256": "f0d6b5729bcec907df669c84bad8052aca233c86ec6a18902ae992dbe36ffe0b"
+      "sha256": "4446b48c6c4a08d7d3fbffb90d577921570e6493a14c77746596a4230c061a7d"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_dkg_sources.ps1",
@@ -363,7 +367,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_review_snapshot.ps1",
-      "sha256": "42e3b1ea2a94d3f1daef009eaa5daba29ee6db9d5df8375bd7ea89b1e9766948"
+      "sha256": "cb4ea1d0fdb7a3715b096ffb8728a7fcb2f3b047c947d29938530604aa9bdc0e"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_supply_chain.ps1",

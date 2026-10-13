@@ -384,6 +384,15 @@ ceremonia COCKTAIL no satisface ese requisito. El cierre del tramo 2 requiere
 una ceremonia malicious-secure de zero sharing y un certificado conjunto de
 activación ligado a operadores, umbral, manifiesto y época.
 
+La fase 1 añade el primer candidato ejecutable de esa pieza: dealers aportan
+polinomios lineales con constante públicamente forzada a cero, los receptores
+verifican cada share contra compromisos Feldman y un quórum Ed25519 liga el
+transcript agregado al certificado de key sharing. Once pruebas cubren los tres
+quórums y los negativos de constante, share, contexto, firmante y sustitución.
+Sigue siendo un modelo monoproceso: cifrado entre operadores, broadcast,
+denuncias, exclusión, recuperación, aleatoriedad operacional y revisión de la
+composición continúan pendientes, por lo que no cambia el NO-GO.
+
 El tramo 3 queda implementado y su gate multiplataforma pasó en CI. Un vector
 determinista 3HashTDH es reproducido por una
 implementación safe Rust independiente y debe coincidir byte a byte con liboprf
