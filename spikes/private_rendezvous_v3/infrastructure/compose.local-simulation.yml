@@ -1,0 +1,68 @@
+services:
+  operator-a:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile
+    environment:
+      SCOTOMA_V3_OPERATOR_SEED_FILE: /run/secrets/operator_seed
+    secrets:
+      - source: operator_a_seed
+        target: operator_seed
+    command:
+      - --operator
+      - "101"
+      - --epoch
+      - "41"
+      - --bind
+      - 0.0.0.0:8789
+      - --client-key
+      - ${SCOTOMA_V3_PROBE_CLIENT_PUBLIC_KEY:?set a probe client public key}
+      - --timeout-ms
+      - "1500"
+    ports:
+      - 127.0.0.1:18789:8789
+    read_only: true
+    tmpfs:
+      - /tmp:size=4m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  operator-b:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile
+    environment:
+      SCOTOMA_V3_OPERATOR_SEED_FILE: /run/secrets/operator_seed
+    secrets:
+      - source: operator_b_seed
+        target: operator_seed
+    command:
+      - --operator
+      - "202"
+      - --epoch
+      - "41"
+      - --bind
+      - 0.0.0.0:8789
+      - --client-key
+      - ${SCOTOMA_V3_PROBE_CLIENT_PUBLIC_KEY:?set a probe client public key}
+      - --timeout-ms
+      - "1500"
+    ports:
+      - 127.0.0.1:18790:8789
+    read_only: true
+    tmpfs:
+      - /tmp:size=4m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+secrets:
+  operator_a_seed:
+    file: ./secrets/operator-a.seed
+  operator_b_seed:
+    file: ./secrets/operator-b.seed

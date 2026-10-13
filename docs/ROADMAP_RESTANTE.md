@@ -367,14 +367,23 @@ Para cerrar el tramo 2 todavía hay que seleccionar y revisar una ceremonia que
 satisfaga el requisito malicious-secure, probar exclusión y recuperación entre
 procesos y decidir si el diseño de actualización upstream puede conservarse.
 
-El tramo 3 queda implementado como gate multiplataforma, todavía pendiente de
-su primera ejecución CI. Un vector determinista 3HashTDH es reproducido por una
+El tramo 3 queda implementado y su gate multiplataforma pasó en CI. Un vector
+determinista 3HashTDH es reproducido por una
 implementación safe Rust independiente y debe coincidir byte a byte con liboprf
 C nativo y WebAssembly. El mismo source se cruza para Android ARM64, ARMv7 y
 x86_64 con NDK/API fijados. La ejecución Android física se conserva para la fase
 ADB; Node cubre Wasm inicialmente y Chrome/Edge/Firefox quedan por repetir. No
 se empaqueta ninguna biblioteca nueva en la app y el transcript Noise completo
 sigue pendiente.
+
+El tramo 4 incorpora un probe público firmado, imagen OCI sin privilegios,
+manifiesto de operadores y medición reproducible. Localmente pasan separación de
+identidades, rechazo de clave cruzada, caída individual, continuidad del nodo
+restante, fallo acotado por partición y recuperación sin estado efímero. No es un
+servicio de encuentro ni transporta secretos. Para cerrar el tramo todavía se
+requieren al menos dos administradores/cuentas de proveedor realmente distintos,
+despliegue en Internet público y evidencia de operación, caída, recuperación,
+censura, rotación y pérdida de operador. La decisión permanece NO-GO.
 
 - Someter especificación, composición e implementación completas a revisión
   independiente comunitaria o pro bono.

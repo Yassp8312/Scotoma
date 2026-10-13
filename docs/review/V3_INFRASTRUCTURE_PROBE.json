@@ -1,0 +1,30 @@
+{
+  "schema": "scotoma-v3-independent-infrastructure-probe-v1",
+  "created": "2026-10-12",
+  "status": "local-foundation-only",
+  "surface": "signed-availability-probe",
+  "excludes": [
+    "private-rendezvous",
+    "toprf",
+    "noise-transcript",
+    "user-messages",
+    "production-v2"
+  ],
+  "local_gates": [
+    "two-distinct-signing-identities",
+    "crossed-identity-rejected",
+    "single-operator-failure-contained",
+    "operator-recovery-without-ephemeral-state",
+    "manifest-independence-contract",
+    "unprivileged-container-definition"
+  ],
+  "external_gates_pending": [
+    "two-independent-human-administrators",
+    "two-independent-provider-accounts",
+    "public-internet-measurement",
+    "rotation-and-censorship-drill",
+    "durable-public-evidence"
+  ],
+  "decision": "NO-GO",
+  "warning": "This artifact is not an audit, endorsement, deployment attestation, or production protocol."
+}

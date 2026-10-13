@@ -8,6 +8,8 @@ artifacts/soak/
 **/key.properties
 **/*.jks
 **/*.keystore
+**/infrastructure/secrets/
+**/infrastructure/operator-set.json
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies

@@ -372,3 +372,17 @@ R11 continúa parcial: Android solo se compila hasta recuperar ADB, Wasm se
 ejecuta inicialmente en Node y aún faltan los tres navegadores y el transcript
 Noise real completo. La coincidencia de un vector público tampoco revisa la
 composición ni la ceremonia. La decisión permanece NO-GO.
+
+## Seguimiento 5.5.6.4 — infraestructura independiente
+
+Se añadió un servicio de disponibilidad firmado, separado del encuentro y sin
+entrada de credenciales. Carga la semilla del operador desde un archivo secreto,
+autentica al cliente de medición y liga cada recibo a operador, época y secuencia.
+La prueba multiproceso cubre claves independientes, identidad cruzada, caída,
+partición acotada, continuidad del superviviente y recuperación sin estado.
+
+Esto no resuelve R02/R12: la independencia administrativa no puede demostrarse
+con dos procesos locales ni reemplaza una ceremonia malicious-secure. R03 solo
+avanza cuando dos administradores y cuentas de proveedor distintos desplieguen
+la misma imagen revisada y se conserven mediciones públicas de rotación, censura,
+caída y pérdida. El probe no implementa TOPRF/Noise y la decisión sigue NO-GO.

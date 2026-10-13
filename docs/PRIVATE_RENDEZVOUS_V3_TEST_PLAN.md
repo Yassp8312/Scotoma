@@ -221,6 +221,28 @@ Node; Chrome, Edge y Firefox permanecen pendientes para este módulo nuevo.
 Safari/iPhone siguen diferidos. Ningún resultado permite empaquetar todavía el
 código en Flutter ni afirmar interoperabilidad del transcript Noise completo.
 
+### Infraestructura independiente 5.5.6.4
+
+`v3_public_probe_operator` y `v3_public_probe_client` ejercitan únicamente un
+canal TCP autenticado para medir disponibilidad. Cada operador firma su recibo
+con una identidad distinta y acepta una clave de sonda explícita; el cliente
+rechaza operador, época, secuencia o firma equivocados. No circulan room,
+contraseña, TOPRF, material Noise ni mensajes de usuario.
+
+`independent_operator_probe` arranca dos procesos con secretos separados,
+comprueba el rechazo de una identidad cruzada, mata un operador, verifica que el
+otro continúa disponible y recupera el caído con la misma identidad pero sin
+estado efímero heredado. El manifiesto exige dos dominios administrativos, dos
+cuentas de proveedor, endpoints y claves distintos, además de una atestación
+por operador. La imagen sin privilegios y Compose solo prueban empaquetado y
+aislamiento local: dos contenedores en el mismo equipo no demuestran
+independencia.
+
+El gate externo permanece abierto hasta desplegar con al menos dos
+administradores reales, ejecutar rondas sobre Internet público y conservar la
+evidencia de caída, rotación, recuperación y censura. Un resultado verde mide
+disponibilidad del arnés; no valida el encuentro privado ni cambia el NO-GO.
+
 ## 6. Controles de recursos
 
 El arnés medirá, sin convertirlo todavía en promesa de producción:

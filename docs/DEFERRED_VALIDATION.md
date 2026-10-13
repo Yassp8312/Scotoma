@@ -111,10 +111,10 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 - [x] Seleccionar para validación aislada 3HashTDH publicado mediante
   `stef/liboprf v0.9.4`/`ba452048...d641`, Ristretto255/SHA-512 y dos-de-tres;
   no implementar una primitiva propia ni incorporarla aún al producto.
-- [ ] Demostrar compilación reproducible de liboprf/libsodium para Android y
-  Wasm y cerrar el análisis LGPL antes de conservar la selección. El gate
-  5.5.6.3 ya fija NDK/emsdk y prepara ARM64, ARMv7, x86_64 y Wasm; su primera
-  ejecución autoritativa espera CI y todavía no incorpora artefactos al APK/Web.
+- [x] Demostrar compilación reproducible de liboprf/libsodium para Android y
+  Wasm. El gate 5.5.6.3 pasó con NDK/emsdk fijados, ARM64, ARMv7, x86_64 y Wasm;
+  no incorpora artefactos al APK/Web. El análisis de distribución LGPL sigue
+  abierto antes de conservar la selección para una integración real.
 - [x] Crear vectores sintéticos interoperables Rust/WebCrypto y ejecutarlos en
   Node, Chrome, Edge y Firefox. La segunda versión cubre una salida OPRF fija,
   HKDF, prologue y confirmaciones, con negativos de época/salida/transcript.
@@ -135,7 +135,9 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
   receptor, con timeout y aborto/purga ante quejas válidas o fraudulentas. Los
   verificadores PedPoP, firmas y evidencias serializadas siguen pendientes.
 - [ ] Medir intentos online, disponibilidad y coste operacional con al menos dos
-  operadores verdaderamente independientes.
+  operadores verdaderamente independientes. 5.5.6.4 ya aporta imagen OCI,
+  identidades firmadas, validador de independencia y runner de medición; falta
+  que dos administradores externos lo desplieguen y firmen la evidencia pública.
 - [ ] Medir límites por conexión/red, capacidad global y puzzle adaptativo en
   Android y Web, incluyendo NAT compartido y adversarios distribuidos.
 - [x] Modelar límites estrictos de conexiones, redes efímeras, desafíos y

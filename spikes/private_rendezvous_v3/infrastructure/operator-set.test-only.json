@@ -1,0 +1,25 @@
+{
+  "schema": "scotoma-v3-independent-operator-set-v1",
+  "epoch": 41,
+  "threshold": 2,
+  "independence_attested": true,
+  "warning": "TEST ONLY. These operators, keys, accounts and attestations do not exist.",
+  "operators": [
+    {
+      "id": 101,
+      "endpoint": "operator-a.test.invalid:8789",
+      "public_key": "1111111111111111111111111111111111111111111111111111111111111111",
+      "administrative_domain": "test-admin-a",
+      "provider_account": "test-provider-account-a",
+      "attestation_reference": "test-fixture:a"
+    },
+    {
+      "id": 202,
+      "endpoint": "operator-b.test.invalid:8789",
+      "public_key": "2222222222222222222222222222222222222222222222222222222222222222",
+      "administrative_domain": "test-admin-b",
+      "provider_account": "test-provider-account-b",
+      "attestation_reference": "test-fixture:b"
+    }
+  ]
+}

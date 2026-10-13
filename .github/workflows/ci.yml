@@ -98,6 +98,22 @@ jobs:
           --manifest-path spikes/private_rendezvous_v3/Cargo.toml
           --example operational_benchmark
 
+      - name: Verify independent operator deployment contract
+        shell: pwsh
+        run: >-
+          ./spikes/private_rendezvous_v3/infrastructure/verify_operator_set.ps1
+          -ManifestPath
+          ./spikes/private_rendezvous_v3/infrastructure/operator-set.test-only.json
+
+      - name: Build isolated public operator probe image
+        run: |
+          docker compose \
+            -f spikes/private_rendezvous_v3/infrastructure/compose.local-simulation.yml \
+            config --no-interpolate >/dev/null
+          docker build \
+            --file spikes/private_rendezvous_v3/infrastructure/Dockerfile \
+            spikes/private_rendezvous_v3
+
       - name: Prove v3 remains outside production graphs and artifacts
         shell: pwsh
         run: ./spikes/private_rendezvous_v3/verify_isolation.ps1

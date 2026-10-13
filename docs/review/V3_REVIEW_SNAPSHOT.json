@@ -1,13 +1,17 @@
 {
   "schema": "scotoma-v3-review-snapshot-v2",
   "created": "2026-10-12",
-  "git_base": "cc17b81eae1e2d591b7d7c5f294c323c6a4ac9a4",
+  "git_base": "f8b8b6bc3f93096783768248616e3517c4fe33f5",
   "working_tree": "dirty-intentional",
   "warning": "Review these exact bytes. This snapshot is not a release, audit, endorsement, or production protocol.",
   "files": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "e89fa3662e7c51f4a2d00141244782291e99fde9266f5f5b6ca1f8122a1e7e36"
+      "sha256": "4e1f011767e695619219ab3a222bd279d5077fcd5920b90fb310bc1a26a2d04e"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "a726077ffb18578ed18afd7c324cfddcfd83238adf7d6e26683dcad12d28b1c9"
     },
     {
       "path": "docs/SUPPLY_CHAIN.md",
@@ -39,11 +43,11 @@
     },
     {
       "path": "docs/INTERNAL_V3_SECURITY_REVIEW.md",
-      "sha256": "47640c1110eabda911861c48cf39b69b4c48194ab0e940ef9bbd1999f589db18"
+      "sha256": "cfc74ea3d9646c76b31589f622b2b3aa6be9a165503975052a08948e19f80e96"
     },
     {
       "path": "docs/PRIVATE_RENDEZVOUS_V3_TEST_PLAN.md",
-      "sha256": "fdb86b8a669d9c9b4e101942c1545981b0a913c33221ad798274796438a466e9"
+      "sha256": "a0256cd7a625abc0b86611e2cc7262587111997d22b6aaf1b3a0cc78c25390a5"
     },
     {
       "path": "docs/V3_OPERATIONAL_BASELINE.md",
@@ -74,6 +78,10 @@
       "sha256": "61f62e1ab442975def4df8fb5592e39e56649bd2f7764d3d5d8e6d81f02aac94"
     },
     {
+      "path": "docs/adr/0067-independent-public-operator-probe.md",
+      "sha256": "396f69fdd47135b108a107d60cbd70a0a4aeb1c19887571bfaa337f7884e1196"
+    },
+    {
       "path": "docs/review/V3_CRYPTO_SELECTION.json",
       "sha256": "f114266f19a597aa7d8aca6bca79b9b62d5eacd49119b9111ea4e306e7b24c9a"
     },
@@ -86,12 +94,20 @@
       "sha256": "495bff168f70aeb837895248fd98c7fac6e5900e3809941f94f500f6ec0cba12"
     },
     {
+      "path": "docs/review/V3_INFRASTRUCTURE_PROBE.json",
+      "sha256": "8b32c1f0bdf94c4e2e6c4802e4cbf9228f18d63b83b6dd0b4c5c390db0d2d797"
+    },
+    {
       "path": "spikes/private_rendezvous_v3/Cargo.toml",
       "sha256": "c5c8435bf641d64df54cbb579fca9dec3ac23b77180feedf0889d5403bef98ab"
     },
     {
       "path": "spikes/private_rendezvous_v3/Cargo.lock",
       "sha256": "07ca0206cbe9028a555f2fbb162918b1a49fe0a5e67621e72dce37ffc0d240d0"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/README.md",
+      "sha256": "6c60b269c66ff4c9a9eeaebccec2432479974440822e6ad10e2a8e0dac29acd8"
     },
     {
       "path": "spikes/private_rendezvous_v3/fuzz/Cargo.toml",
@@ -170,6 +186,14 @@
       "sha256": "3ad53a316c16c9deb75534860a8179edba44eda8eb289ed41ecf87007907b654"
     },
     {
+      "path": "spikes/private_rendezvous_v3/src/bin/v3_public_probe_client.rs",
+      "sha256": "e1f182076ac4e0ee077a64a18f2353fc8bda6bd0ca15a984fb327d3fb2eff742"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/bin/v3_public_probe_operator.rs",
+      "sha256": "c36854a045b0238d5b87ac2139d183d2982e2aa03c6ab107fd0c5bb63a188df7"
+    },
+    {
       "path": "spikes/private_rendezvous_v3/tests/hardening.rs",
       "sha256": "b4cbe46459375da0f930b58d519592b878603a595f7c063598935f60097d9068"
     },
@@ -190,6 +214,10 @@
       "sha256": "e9cd1911894e41c6e8c1cdffe9b1a3b48b4dd2088c038b01767e8498f0850338"
     },
     {
+      "path": "spikes/private_rendezvous_v3/tests/independent_operator_probe.rs",
+      "sha256": "8ca849512dcc31010998285f271b3a454b64527d85a48fc06eb5808f4f7cdcb6"
+    },
+    {
       "path": "spikes/private_rendezvous_v3/examples/operational_benchmark.rs",
       "sha256": "673a5c6b25c1bd080ea7049a6e1429cc79d7e339618e0e9b6bd4adbacff6f2ac"
     },
@@ -204,6 +232,38 @@
     {
       "path": "spikes/private_rendezvous_v3/run_operational_benchmark.ps1",
       "sha256": "6e812b7c1822d0add1a65d8f58318a384f64f3f1ae191b314e54bad1aa4f64c5"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/Dockerfile",
+      "sha256": "0a1de90655587350e3a239f53751d29caf2a3f4caab021eea0cb3accb3a259a3"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/Dockerfile.dockerignore",
+      "sha256": "9b5d2d2c498249c4652600f1b19ff530002cf78f98e7ecede385a5895c6a6e35"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/README.md",
+      "sha256": "883324f13aadbc240fe98a813b9525c0f68b53b639c26f40181c3bd2abb8e676"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/compose.local-simulation.yml",
+      "sha256": "26681b53997088f3934630b9ee89038e7331a116c696a7287026310c8904bb1d"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/operator-set.example.json",
+      "sha256": "cfdb524c7943a6aa13bc7aa9b9923303bb64c606bd292d44fa21cda8b1c2e2e6"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/operator-set.test-only.json",
+      "sha256": "2890119697e6269ba34b3d7d27e6337c8ddd51e77d0fc762422b2d2e197ad394"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/run_public_probe.ps1",
+      "sha256": "ec17beb2536176ab8b91bfc5f1010e9a807fd8ec5f7c7a9083b9b631cddd4157"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/verify_operator_set.ps1",
+      "sha256": "7eb97af5eb8c727411b0362dc88642772d4be20aa2fdcfa4f7c10950ad7e791b"
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/README.md",
@@ -251,7 +311,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_review_snapshot.ps1",
-      "sha256": "049be745c37693dcbc0c8341331f1b745d059517a1ccd83220b26eaa24bf0946"
+      "sha256": "f2edb6da3564db125ab29114329d789bd9f5cdaa1280a3934c86d195df293348"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_supply_chain.ps1",

@@ -148,6 +148,14 @@ emit the same bytes, then cross-links Android ARM64, ARMv7 and x86_64 research
 executables with pinned NDK and source inputs. Physical Android and browser
 execution remain deferred; none of these artifacts enters Flutter or v2.
 
+Tranche 4 adds `infrastructure/`, a deployable but research-only signed
+availability probe. Two local processes prove key separation, bounded failure,
+single-node continuity and stateless identity recovery. The OCI image, operator-
+set validator and public measurement runner are ready for independent hosts;
+actual administrative independence and Internet measurements require separate
+human operators and remain pending. The probe handles no rendezvous credentials
+or messages and is not a v3 production service.
+
 It must not become a dependency of the application, bridge or relay. Its values
 are synthetic test fixtures and must never be used as operational keys,
 credentials or production security evidence.

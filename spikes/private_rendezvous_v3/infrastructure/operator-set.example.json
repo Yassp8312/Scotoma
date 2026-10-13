@@ -1,0 +1,25 @@
+{
+  "schema": "scotoma-v3-independent-operator-set-v1",
+  "epoch": 41,
+  "threshold": 2,
+  "independence_attested": false,
+  "warning": "Template only. Replace every example value and obtain attestations from genuinely independent administrators.",
+  "operators": [
+    {
+      "id": 101,
+      "endpoint": "operator-a.example.invalid:8789",
+      "public_key": "REPLACE_WITH_64_HEX_CHARACTERS",
+      "administrative_domain": "independent-admin-a",
+      "provider_account": "independent-provider-account-a",
+      "attestation_reference": "TODO"
+    },
+    {
+      "id": 202,
+      "endpoint": "operator-b.example.invalid:8789",
+      "public_key": "REPLACE_WITH_64_HEX_CHARACTERS",
+      "administrative_domain": "independent-admin-b",
+      "provider_account": "independent-provider-account-b",
+      "attestation_reference": "TODO"
+    }
+  ]
+}
