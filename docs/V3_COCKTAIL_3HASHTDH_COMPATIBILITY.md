@@ -65,8 +65,9 @@ constante cero si al menos un dealer honesto elige `a_i` impredecible.
 El transcript incluye dominio, deployment, manifiesto, época, conjunto de
 operadores y umbral. Su digest se combina con el certificado de key sharing y
 la activación requiere firmas Ed25519 distintas hasta alcanzar el umbral.
-Diecisiete pruebas independientes (catorce unitarias y tres de integración
-multiproceso) cubren los adaptadores anteriores y, además:
+Veinte pruebas independientes (catorce unitarias, tres de integración
+multiproceso firmada y tres multiproceso cifrada) cubren los adaptadores
+anteriores y, además:
 
 - reconstrucción a cero para los tres quórums 2-de-3;
 - rechazo de una constante no cero;
@@ -81,14 +82,21 @@ multiproceso) cubren los adaptadores anteriores y, además:
   Ed25519 fijada, contexto firmado, shares canónicas y compromisos verificables;
 - rechazo de identidad cruzada, época cruzada o payload firmado alterado antes
   de agregar contribuciones.
+- coeficientes generados dentro de cada dealer con el RNG del sistema y
+  envelopes Noise N distintos por receptor;
+- descifrado exclusivo del receptor, enlace de su clave Noise exacta, rechazo
+  de ciphertext/contexto/clave alterado y ausencia de la share en claro en el
+  envelope;
+- digest único de broadcast por dealer, denuncia y defensa firmadas,
+  retransmisión ligada, exclusión y aborto si la segunda falla pierde el umbral.
 
 Esto es un **modelo candidato**, no una ceremonia desplegable. Todavía deriva
-cada contribución en un proceso separado, pero usa coeficientes deterministas
-de fixture y entrega sus shares en texto claro al arnés padre. No implementa
-aleatoriedad operacional, cifrado punto a punto, broadcast consistente,
-transporte de denuncias, defensa, recuperación ni borrado seguro. Tampoco aporta
-una demostración de composición con COCKTAIL/3HashTDH. Esas propiedades
-permanecen como puertas obligatorias.
+cada contribución en un proceso separado y ya cifra cada share con Noise para
+una clave de receptor distinta. Sin embargo, el ledger de broadcast y el canal
+de control siguen en un único arnés local; las identidades son fixtures y no hay
+red independiente, reliable broadcast, persistencia, timeout, anti-rollback,
+borrado seguro ni prueba de composición con COCKTAIL/3HashTDH. La fase 1 del
+modelo queda cerrada, no la ceremonia de producción.
 
 ## Decisión
 

@@ -103,11 +103,12 @@ if ($compatibility.schema -cne 'scotoma-v3-dkg-toprf-compatibility-v1' -or
     $compatibility.compatible.Count -lt 4 -or
     $compatibility.incompatible_or_missing.Count -lt 4 -or
     $compatibility.required_context_fields.Count -lt 7 -or
-    $compatibility.executable_evidence.tests -ne 17 -or
-    $compatibility.executable_evidence.zero_sharing_candidate.status -cne 'authenticated-multiprocess-fixture-only' -or
-    $compatibility.executable_evidence.zero_sharing_candidate.verified.Count -lt 10 -or
-    $compatibility.executable_evidence.zero_sharing_candidate.integration_path -cne 'spikes/private_rendezvous_v3/liboprf_probe/rust_vector/tests/zero_sharing_process.rs' -or
-    -not $compatibility.executable_evidence.zero_sharing_candidate.transport.Contains('neither confidential nor deployable', [StringComparison]::Ordinal) -or
+    $compatibility.executable_evidence.tests -ne 20 -or
+    $compatibility.executable_evidence.zero_sharing_candidate.status -cne 'phase-one-encrypted-multiprocess-model-complete' -or
+    $compatibility.executable_evidence.zero_sharing_candidate.verified.Count -lt 13 -or
+    $compatibility.executable_evidence.zero_sharing_candidate.integration_paths.Count -ne 2 -or
+    -not ($compatibility.executable_evidence.zero_sharing_candidate.integration_paths -contains 'spikes/private_rendezvous_v3/liboprf_probe/rust_vector/tests/secure_zero_sharing_process.rs') -or
+    -not $compatibility.executable_evidence.zero_sharing_candidate.transport.Contains('non-deployable', [StringComparison]::Ordinal) -or
     -not $compatibility.next_gate.Contains('zero-sharing', [StringComparison]::Ordinal)) {
     $errors.Add('the DKG/TOPRF compatibility boundary or zero-sharing gate changed')
 }

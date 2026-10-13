@@ -384,7 +384,8 @@ ceremonia COCKTAIL no satisface ese requisito. El cierre del tramo 2 requiere
 una ceremonia malicious-secure de zero sharing y un certificado conjunto de
 activación ligado a operadores, umbral, manifiesto y época.
 
-La fase 1 añade el primer candidato ejecutable de esa pieza: dealers aportan
+Los primeros tres subtramos de la fase 1 añaden el candidato ejecutable de esa
+pieza: dealers aportan
 polinomios lineales con constante públicamente forzada a cero, los receptores
 verifican cada share contra compromisos Feldman y un quórum Ed25519 liga el
 transcript agregado al certificado de key sharing. Diecisiete pruebas —catorce
@@ -392,10 +393,22 @@ unitarias y tres multiproceso— cubren los tres quórums, shares recibidas,
 exclusión y los negativos de constante, share, umbral, contexto, firmante,
 sustitución, identidad/época cruzadas y payload firmado alterado. Tres dealers
 se lanzan como procesos separados con identidades Ed25519 de fixture.
-Las shares aún viajan en texto claro por stdout al arnés y los coeficientes son
-deterministas: cifrado entre operadores, broadcast, transporte de denuncias,
-defensa, recuperación, aleatoriedad operacional y revisión de la composición
-continúan pendientes, por lo que no cambia el NO-GO.
+En ese límite intermedio las shares todavía viajaban en texto claro por stdout
+al arnés y los coeficientes eran deterministas.
+
+El cuarto subtramo cierra la fase 1 del modelo. Cada dealer genera su coeficiente
+con el RNG del sistema y conserva el material dentro de su proceso; las shares
+salen únicamente en envelopes `Noise_N_25519_ChaChaPoly_SHA256` específicos del
+receptor, firmados y ligados a un broadcast. El arnés rechaza equivocation,
+contexto/identificador/clave Noise/ciphertext cruzado y ejecuta denuncia,
+defensa, retransmisión,
+exclusión y aborto bajo umbral. El gate suma veinte pruebas.
+
+Este cierre no convierte el modelo en ceremonia desplegable: identidades,
+ledger de broadcast y canal de control continúan como fixtures locales, sin
+hosts independientes, reliable broadcast, persistencia, anti-rollback, borrado
+seguro ni prueba de composición. La siguiente fase debe sustituir esas piezas
+por una construcción malicious-secure mantenida o revisada; el NO-GO permanece.
 
 El tramo 3 queda implementado y su gate multiplataforma pasó en CI. Un vector
 determinista 3HashTDH es reproducido por una

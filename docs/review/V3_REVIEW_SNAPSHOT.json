@@ -35,7 +35,7 @@
     },
     {
       "path": "docs/V3_COCKTAIL_3HASHTDH_COMPATIBILITY.md",
-      "sha256": "353bb6db9931ce0423a7ae9bb969afcd910f8aee020d390ff8997f2b3a99a5fe"
+      "sha256": "2f6a4204c08372be61565a3c9bda49b348c39de740a0f9503258d804284e61ed"
     },
     {
       "path": "docs/V3_OPERATOR_AND_ABUSE_MODEL.md",
@@ -91,7 +91,11 @@
     },
     {
       "path": "docs/adr/0069-model-distributed-zero-sharing-candidate.md",
-      "sha256": "560deec9881c16f226939cc9847a58bc8243f922d1e6b9f88a5633ce714de5eb"
+      "sha256": "e8043225e2fa7a189b652d8edbca864aeb386882be902cbe01764cdb5eb6c406"
+    },
+    {
+      "path": "docs/adr/0070-close-zero-sharing-phase-one.md",
+      "sha256": "e4ba29765c2d323f1ef5e3a4ab9eee354c559144ae92d213995d6a5c6f63ba7e"
     },
     {
       "path": "docs/review/V3_CRYPTO_SELECTION.json",
@@ -107,7 +111,7 @@
     },
     {
       "path": "docs/review/V3_DKG_TOPRF_COMPATIBILITY.json",
-      "sha256": "0d252858ed23750aa286690ceca23c5a68de014fc781651dee16f0c3e28b7e27"
+      "sha256": "10f49443f10668b11b464140716f00e7e11b9f2370d82136c7b4029bb7946ca0"
     },
     {
       "path": "docs/review/V3_PLATFORM_PROBE.json",
@@ -127,7 +131,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/README.md",
-      "sha256": "d5d384c082ad73c9ba85287385f21603b33bf73c1a9cf697c6bb9f5fac314e98"
+      "sha256": "3bed15cc016524bf38143b02c6a13058135ee35902d101f9f86a0696fe4cdd09"
     },
     {
       "path": "spikes/private_rendezvous_v3/fuzz/Cargo.toml",
@@ -343,15 +347,19 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml",
-      "sha256": "10dcc1921c8a56cd64a020559217731b1c9eac1b4052edb6a4eae761786bd6d5"
+      "sha256": "b0538de5e48dbbb8ee45db3e544df1deeb350753ff2caad7d2e59747bdec32de"
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.lock",
-      "sha256": "57eccd16470b45066758574d24715497e7aca6d0e43d6dd26efc5e12f8e0d4f1"
+      "sha256": "437d0da51e6fdc5f8e171d4b863affa5049446911ba01dc513601da03116a457"
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs",
-      "sha256": "6cc806d6de03116d6d8792d1bfdfc057fa4a9e3cbb9dcc1b5fc5df80abb4b967"
+      "sha256": "467e7e8672ec53cbfa6d81cfa4ecf0ad739ab056178130645704f49ebac47717"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/tests/secure_zero_sharing_process.rs",
+      "sha256": "359ac39200be1a4f1c0d5cf7fca01ba8a350fa5cb208d6b911c415eb0825aeb5"
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/tests/zero_sharing_process.rs",
@@ -359,7 +367,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_crypto_selection.ps1",
-      "sha256": "c24bf7faaf9f7d76f94be796b9388861525c62b907b6f82d906a24137310351a"
+      "sha256": "8153cc478163e739ffc6bbb02cc8c8cbe2d6b905c29ac9a0468f0a869b6b3b37"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_dkg_sources.ps1",
@@ -371,7 +379,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_review_snapshot.ps1",
-      "sha256": "67f52b46885239352f48a7e39dda0413e75b8e3f61b3d9cb8ed886e972fff7cc"
+      "sha256": "332cdc8f91526c1a45b99be4727e6159307307d2727efd26813c582666e523f0"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_supply_chain.ps1",

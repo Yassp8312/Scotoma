@@ -6,6 +6,7 @@ use curve25519_dalek::{
 };
 use ed25519_dalek::{Signer, SigningKey};
 use sha2::{Digest as _, Sha512};
+use std::io::{BufRead as _, Write as _};
 
 #[cfg(test)]
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
@@ -71,6 +72,10 @@ fn encode_liboprf_share(index: u8, scalar: Scalar) -> [u8; 33] {
 
 const ZERO_SHARING_DOMAIN: &[u8] = b"SCOTOMA-v3-ZERO-SHARING-v1\0";
 const ZERO_DEALER_DOMAIN: &[u8] = b"SCOTOMA-v3-ZERO-DEALER-v1\0";
+const ZERO_SECURE_BROADCAST_DOMAIN: &[u8] = b"SCOTOMA-v3-ZERO-BROADCAST-v1\0";
+const ZERO_SECURE_ENVELOPE_DOMAIN: &[u8] = b"SCOTOMA-v3-ZERO-ENVELOPE-v1\0";
+const ZERO_DEFENSE_DOMAIN: &[u8] = b"SCOTOMA-v3-ZERO-DEFENSE-v1\0";
+const ZERO_NOISE_PATTERN: &str = "Noise_N_25519_ChaChaPoly_SHA256";
 #[cfg(test)]
 const ACTIVATION_DOMAIN: &[u8] = b"SCOTOMA-v3-ACTIVATION-v1\0";
 
@@ -223,6 +228,214 @@ fn run_zero_dealer(args: &[String]) -> Result<(), &'static str> {
         encode_hex(&signing_key.verifying_key().to_bytes()),
         encode_hex(&signature.to_bytes())
     );
+    Ok(())
+}
+
+fn secure_broadcast_payload(
+    dealer_id: u16,
+    context: [u8; 64],
+    constant_commitment: [u8; 32],
+    linear_commitment: [u8; 32],
+) -> Vec<u8> {
+    let mut payload = Vec::new();
+    payload.extend_from_slice(ZERO_SECURE_BROADCAST_DOMAIN);
+    payload.extend_from_slice(&dealer_id.to_be_bytes());
+    payload.extend_from_slice(&context);
+    payload.extend_from_slice(&constant_commitment);
+    payload.extend_from_slice(&linear_commitment);
+    payload
+}
+
+fn secure_envelope_payload(
+    broadcast_digest: [u8; 64],
+    dealer_id: u16,
+    recipient_id: u16,
+    recipient_public: [u8; 32],
+    ciphertext: &[u8],
+) -> Vec<u8> {
+    let mut payload = Vec::new();
+    payload.extend_from_slice(ZERO_SECURE_ENVELOPE_DOMAIN);
+    payload.extend_from_slice(&broadcast_digest);
+    payload.extend_from_slice(&dealer_id.to_be_bytes());
+    payload.extend_from_slice(&recipient_id.to_be_bytes());
+    payload.extend_from_slice(&recipient_public);
+    payload.extend_from_slice(&(ciphertext.len() as u16).to_be_bytes());
+    payload.extend_from_slice(ciphertext);
+    payload
+}
+
+fn defense_payload(
+    broadcast_digest: [u8; 64],
+    complaint_digest: [u8; 64],
+    dealer_id: u16,
+    recipient_id: u16,
+    recipient_public: [u8; 32],
+    ciphertext: &[u8],
+) -> Vec<u8> {
+    let mut payload = Vec::new();
+    payload.extend_from_slice(ZERO_DEFENSE_DOMAIN);
+    payload.extend_from_slice(&broadcast_digest);
+    payload.extend_from_slice(&complaint_digest);
+    payload.extend_from_slice(&dealer_id.to_be_bytes());
+    payload.extend_from_slice(&recipient_id.to_be_bytes());
+    payload.extend_from_slice(&recipient_public);
+    payload.extend_from_slice(&(ciphertext.len() as u16).to_be_bytes());
+    payload.extend_from_slice(ciphertext);
+    payload
+}
+
+fn noise_encrypt_share(
+    recipient_public: [u8; 32],
+    prologue: [u8; 64],
+    share: [u8; 32],
+) -> Result<Vec<u8>, &'static str> {
+    let params = ZERO_NOISE_PATTERN
+        .parse()
+        .map_err(|_| "invalid Noise pattern")?;
+    let mut initiator = snow::Builder::new(params)
+        .prologue(&prologue)
+        .map_err(|_| "invalid Noise prologue")?
+        .remote_public_key(&recipient_public)
+        .map_err(|_| "invalid Noise recipient key")?
+        .build_initiator()
+        .map_err(|_| "Noise initiator failed")?;
+    let mut ciphertext = vec![0_u8; 256];
+    let length = initiator
+        .write_message(&share, &mut ciphertext)
+        .map_err(|_| "Noise encryption failed")?;
+    ciphertext.truncate(length);
+    Ok(ciphertext)
+}
+
+fn random_nonzero_scalar() -> Result<Scalar, &'static str> {
+    loop {
+        let mut wide = [0_u8; 64];
+        getrandom::fill(&mut wide).map_err(|_| "operational randomness unavailable")?;
+        let scalar = Scalar::from_bytes_mod_order_wide(&wide);
+        if scalar != Scalar::ZERO {
+            return Ok(scalar);
+        }
+    }
+}
+
+fn run_secure_zero_dealer(args: &[String]) -> Result<(), &'static str> {
+    if args.len() != 5 && args.len() != 6 {
+        return Err(
+            "usage: zero-dealer-secure <dealer-id> <epoch> <recipient-1-pub> <recipient-2-pub> <recipient-3-pub> [corrupt-recipient]",
+        );
+    }
+    let dealer_id = args[0].parse::<u16>().map_err(|_| "invalid dealer")?;
+    let epoch = args[1].parse::<u64>().map_err(|_| "invalid epoch")?;
+    if !(1..=3).contains(&dealer_id) || epoch == 0 {
+        return Err("invalid secure dealer argument");
+    }
+    let recipient_public = [
+        decode_hex_array(&args[2])?,
+        decode_hex_array(&args[3])?,
+        decode_hex_array(&args[4])?,
+    ];
+    let corrupt_recipient = args
+        .get(5)
+        .map(|value| {
+            value
+                .parse::<u16>()
+                .map_err(|_| "invalid corrupt recipient")
+        })
+        .transpose()?;
+    if corrupt_recipient.is_some_and(|recipient| !(1..=3).contains(&recipient)) {
+        return Err("invalid corrupt recipient");
+    }
+
+    let context =
+        zero_sharing_context(b"scotoma-test-deployment", [0x53; 32], epoch, [0xa7; 32], 2);
+    let coefficient = random_nonzero_scalar()?;
+    let constant_commitment = RistrettoPoint::default().compress().to_bytes();
+    let linear_commitment = (RISTRETTO_BASEPOINT_POINT * coefficient)
+        .compress()
+        .to_bytes();
+    let signing_key = zero_dealer_fixture_signing_key(dealer_id);
+    let broadcast =
+        secure_broadcast_payload(dealer_id, context, constant_commitment, linear_commitment);
+    let broadcast_digest: [u8; 64] = Sha512::digest(&broadcast).into();
+    let broadcast_signature = signing_key.sign(&broadcast);
+
+    let mut envelope_fields = Vec::new();
+    for recipient_id in 1_u16..=3 {
+        let mut share = coefficient * Scalar::from(u64::from(recipient_id));
+        if corrupt_recipient == Some(recipient_id) {
+            share += Scalar::ONE;
+        }
+        let ciphertext = noise_encrypt_share(
+            recipient_public[usize::from(recipient_id - 1)],
+            broadcast_digest,
+            share.to_bytes(),
+        )?;
+        let signature = signing_key.sign(&secure_envelope_payload(
+            broadcast_digest,
+            dealer_id,
+            recipient_id,
+            recipient_public[usize::from(recipient_id - 1)],
+            &ciphertext,
+        ));
+        envelope_fields.push(format!(
+            "{recipient_id} {} {} {}",
+            encode_hex(&recipient_public[usize::from(recipient_id - 1)]),
+            encode_hex(&ciphertext),
+            encode_hex(&signature.to_bytes())
+        ));
+    }
+    println!(
+        "ZERO_DEALER_SECURE_V1 {dealer_id} {} {} {} {} {} {}",
+        encode_hex(&context),
+        encode_hex(&constant_commitment),
+        encode_hex(&linear_commitment),
+        encode_hex(&signing_key.verifying_key().to_bytes()),
+        encode_hex(&broadcast_signature.to_bytes()),
+        envelope_fields.join(" ")
+    );
+    std::io::stdout()
+        .flush()
+        .map_err(|_| "secure dealer flush failed")?;
+
+    for line in std::io::stdin().lock().lines() {
+        let line = line.map_err(|_| "defense input failed")?;
+        let fields = line.split_ascii_whitespace().collect::<Vec<_>>();
+        if fields.len() != 3 || fields[0] != "DEFEND" {
+            return Err("invalid defense request");
+        }
+        let recipient_id = fields[1]
+            .parse::<u16>()
+            .map_err(|_| "invalid defense recipient")?;
+        if !(1..=3).contains(&recipient_id) {
+            return Err("invalid defense recipient");
+        }
+        let complaint_digest = decode_hex_array(fields[2])?;
+        let share = (coefficient * Scalar::from(u64::from(recipient_id))).to_bytes();
+        let ciphertext = noise_encrypt_share(
+            recipient_public[usize::from(recipient_id - 1)],
+            broadcast_digest,
+            share,
+        )?;
+        let signature = signing_key.sign(&defense_payload(
+            broadcast_digest,
+            complaint_digest,
+            dealer_id,
+            recipient_id,
+            recipient_public[usize::from(recipient_id - 1)],
+            &ciphertext,
+        ));
+        println!(
+            "ZERO_DEFENSE_V1 {dealer_id} {recipient_id} {} {} {} {} {}",
+            encode_hex(&broadcast_digest),
+            encode_hex(&complaint_digest),
+            encode_hex(&recipient_public[usize::from(recipient_id - 1)]),
+            encode_hex(&ciphertext),
+            encode_hex(&signature.to_bytes())
+        );
+        std::io::stdout()
+            .flush()
+            .map_err(|_| "defense flush failed")?;
+    }
     Ok(())
 }
 
@@ -412,11 +625,33 @@ fn encode_hex(bytes: &[u8]) -> String {
     output
 }
 
+fn decode_hex_array<const N: usize>(value: &str) -> Result<[u8; N], &'static str> {
+    if value.len() != N * 2 {
+        return Err("invalid hex length");
+    }
+    let mut output = [0_u8; N];
+    for (index, byte) in output.iter_mut().enumerate() {
+        *byte =
+            u8::from_str_radix(&value[index * 2..index * 2 + 2], 16).map_err(|_| "invalid hex")?;
+    }
+    Ok(output)
+}
+
 fn main() {
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     if args.first().is_some_and(|command| command == "zero-dealer") {
         if let Err(error) = run_zero_dealer(&args[1..]) {
             eprintln!("zero dealer failed: {error}");
+            std::process::exit(2);
+        }
+        return;
+    }
+    if args
+        .first()
+        .is_some_and(|command| command == "zero-dealer-secure")
+    {
+        if let Err(error) = run_secure_zero_dealer(&args[1..]) {
+            eprintln!("secure zero dealer failed: {error}");
             std::process::exit(2);
         }
         return;

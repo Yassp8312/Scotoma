@@ -51,6 +51,8 @@ rotación. Los compromisos y firmas prueban invariantes ejecutables, no una
 demostración de seguridad de la composición completa. Ningún código o
 dependencia entra en Android, Web, bridge o relay de producción.
 
-La siguiente puerta debe reutilizar primitivas mantenidas para transportar y
-verificar esas contribuciones entre procesos, y someter la composición
-COCKTAIL/zero-sharing/3HashTDH a revisión antes de cambiar el NO-GO.
+La entrega cifrada, aleatoriedad y flujo ejecutable de denuncia/defensa que
+cierran la fase 1 se especifican en ADR 0070. Todavía debe sustituirse el
+coordinador local y las identidades fixture por una ceremonia mantenida o
+revisada y someter la composición COCKTAIL/zero-sharing/3HashTDH a revisión
+antes de cambiar el NO-GO.

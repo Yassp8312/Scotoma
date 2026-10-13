@@ -158,21 +158,34 @@ actual administrative independence and Internet measurements require separate
 human operators and remain pending. The probe handles no rendezvous credentials
 or messages and is not a v3 production service.
 
-The first phase-1 zero-sharing gate extends the independent Rust vector to 17
-tests: 14 unit tests and 3 multiprocess integration tests. A 2-of-3 algebraic
+The completed phase-1 zero-sharing gate extends the independent Rust vector to
+20 tests: 14 unit tests, 3 signed multiprocess tests and 3 encrypted
+multiprocess tests. A 2-of-3 algebraic
 model sums dealer-generated zero-constant linear
 polynomials, verifies each share against a Feldman commitment, binds the result
 to the key-certificate digest and requires distinct threshold Ed25519
 signatures for activation. It rejects a hidden nonzero constant, altered share,
 mixed context, duplicate signer and key-certificate substitution; submitted
 shares can exclude one corrupt dealer while loss of threshold fails closed.
-Three separately launched dealer processes authenticate their context-bound
-contributions with pinned TEST_ONLY Ed25519 identities; identity/epoch crossing
-and signed-payload mutation fail closed. Shares still cross plaintext stdout,
-and coefficients remain deterministic fixtures: operational randomness,
-encrypted delivery, consistent broadcast, complaint transport, defense,
-recovery and a composition proof are not implemented, so the decision remains
-NO-GO.
+The first three cuts launch separate dealer processes and authenticate their
+context-bound contributions with pinned TEST_ONLY Ed25519 identities;
+identity/epoch crossing and signed-payload mutation fail closed. At that
+intermediate boundary shares still crossed plaintext stdout and coefficients
+were deterministic fixtures.
+
+The fourth phase-1 cut keeps each OS-random coefficient inside its dealer
+process and emits only recipient-specific `Noise_N_25519_ChaChaPoly_SHA256`
+envelopes. Dealer Ed25519 signatures bind broadcasts, exact recipient Noise
+keys and ciphertexts; recipient signatures bind complaints, and a dealer can
+issue one complaint-bound encrypted
+recovery before exclusion. A coordinator ledger rejects two signed broadcast
+digests for one dealer and activation aborts below two qualified dealers.
+
+This closes the executable phase-1 model, not the production ceremony. The
+broadcast ledger and control channel are local, identities are fixtures, and
+there is no independent network deployment, reliable broadcast, durable state,
+secure deletion or composition proof. None of the added dependencies enters a
+product package.
 
 It must not become a dependency of the application, bridge or relay. Its values
 are synthetic test fixtures and must never be used as operational keys,

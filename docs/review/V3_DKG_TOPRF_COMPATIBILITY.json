@@ -18,7 +18,7 @@
     "the executable joint activation certificate and dealer identities are research fixtures and have not been independently reviewed",
     "no security argument transfers COCKTAIL's FROST-oriented proof to the complete 3HashTDH construction",
     "no maintained malicious-secure zero-sharing implementation has been selected",
-    "dealer subprocess output is authenticated but plaintext; encrypted share transport, consistent broadcast, complaint transport, defense and recovery remain unimplemented"
+    "the phase-1 encrypted subprocess model still uses a single-process broadcast ledger, fixture identities and local control channels; reliable broadcast, independent hosts, durable recovery and secure deletion remain unimplemented"
   ],
   "required_context_fields": [
     "protocol_version",
@@ -31,7 +31,7 @@
   ],
   "executable_evidence": {
     "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs",
-    "tests": 17,
+    "tests": 20,
     "zero_sharing_candidate": {
       "construction": "sum of dealer-generated zero-constant linear polynomials with Feldman share checks",
       "activation": "threshold Ed25519 signatures over the key-certificate and zero-sharing transcript digests",
@@ -45,12 +45,18 @@
         "substantiated invalid-share complaint excludes one dealer while preserving zero reconstruction",
         "exclusion below threshold and missing or duplicate shares fail closed",
         "three separate dealer processes emit independently authenticated context-bound contributions",
-        "crossed dealer identity, crossed epoch and mutated signed payload fail closed"
+        "crossed dealer identity, crossed epoch and mutated signed payload fail closed",
+        "OS-random coefficients and recipient-specific Noise N envelopes keep submitted shares out of plaintext process output",
+        "crossed recipient identifier, recipient Noise key, context and ciphertext fail closed",
+        "signed complaint and bound defense recover one dealer; equivocation and a second unresolved failure abort below threshold"
       ],
-      "status": "authenticated-multiprocess-fixture-only",
-      "integration_path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/tests/zero_sharing_process.rs",
-      "transport": "TEST_ONLY parent-process stdout; authenticated but neither confidential nor deployable"
+      "status": "phase-one-encrypted-multiprocess-model-complete",
+      "integration_paths": [
+        "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/tests/zero_sharing_process.rs",
+        "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/tests/secure_zero_sharing_process.rs"
+      ],
+      "transport": "TEST_ONLY recipient-authenticated Noise N envelopes plus dealer Ed25519 signatures; local control channel and coordinator ledger remain non-deployable"
     }
   },
-  "next_gate": "Add authenticated encrypted share delivery, consistent broadcast, complaint/exclusion/recovery and operational randomness around the zero-sharing candidate, then review its composition with COCKTAIL-DKG and 3HashTDH."
+  "next_gate": "Replace the phase-1 zero-sharing coordinator ledger and fixture identities with an independently deployable malicious-secure ceremony or maintained implementation, then review its composition with COCKTAIL-DKG and 3HashTDH."
 }
