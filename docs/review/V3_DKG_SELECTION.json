@@ -60,7 +60,9 @@
     },
     "scotoma_ci_probe": {
       "path": "spikes/private_rendezvous_v3/run_cocktail_dkg_probe.sh",
-      "status": "configured-pending-first-run",
+      "status": "passed",
+      "verified_commit": "dc806d63dbd5a2f7637b6152ccaa6df254f0b7fd",
+      "workflow_run": "https://github.com/Yassp8312/Scotoma/actions/runs/38429420842",
       "scope": "Fetch the immutable upstream commit, verify the exact Ristretto vector and execute only its COCKTAIL-DKG tests on Linux."
     },
     "disposition": "rejected-for-integration"

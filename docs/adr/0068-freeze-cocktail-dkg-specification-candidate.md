@@ -52,9 +52,10 @@ dependencia mantenida o evidencia de interoperabilidad con SCOTOMA.
 
 Para eliminar la limitación local de `dlltool`, CI dispone de un probe Linux
 aislado: descarga solamente el commit inmutable, verifica el SHA-256 del vector
-y ejecuta los dos tests COCKTAIL-DKG de Ristretto255. Su primer resultado sigue
-pendiente hasta publicar estos cambios; incluso un resultado correcto será
-evidencia de la implementación candidata, no autorización para producción.
+y ejecuta los dos tests COCKTAIL-DKG de Ristretto255. El workflow
+`38429420842` pasó ese probe para el commit SCOTOMA `dc806d63...254f0b7fd`;
+esto constituye evidencia de la implementación candidata, no autorización para
+producción.
 
 La siguiente implementación candidata deberá:
 

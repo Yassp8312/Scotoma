@@ -1,0 +1,36 @@
+{
+  "schema": "scotoma-v3-dkg-toprf-compatibility-v1",
+  "date": "2026-10-13",
+  "production_decision": "NO-GO",
+  "inputs": {
+    "dkg": "COCKTAIL-DKG 0.2.1 / COCKTAIL(Ristretto255, SHA-512)",
+    "toprf": "3HashTDH / stef-liboprf-v0.9.4",
+    "topology": "2-of-3"
+  },
+  "compatible": [
+    "prime-order Ristretto255 scalar field",
+    "canonical 32-byte little-endian scalar payload",
+    "contiguous participant identifiers 1 through 3",
+    "Shamir key-share reconstruction at x=0"
+  ],
+  "incompatible_or_missing": [
+    "COCKTAIL-DKG produces a sharing of a random nonzero group secret, not the zero sharing required by 3HashTDH",
+    "no reviewed joint activation certificate binds key shares and zero shares to the same operator set, threshold and epoch",
+    "no security argument transfers COCKTAIL's FROST-oriented proof to the complete 3HashTDH construction",
+    "no malicious-secure zero-sharing implementation has been selected"
+  ],
+  "required_context_fields": [
+    "protocol_version",
+    "deployment_id",
+    "manifest_hash",
+    "epoch",
+    "operator_set_hash",
+    "threshold",
+    "purpose"
+  ],
+  "executable_evidence": {
+    "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs",
+    "tests": 5
+  },
+  "next_gate": "Select and review a malicious-secure distributed zero-sharing ceremony, then bind it and COCKTAIL-DKG under one activation transcript."
+}

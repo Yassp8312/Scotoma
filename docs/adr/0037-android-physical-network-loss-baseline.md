@@ -1,6 +1,6 @@
 # ADR 0037 — Android physical network-loss baseline
 
-Status: Implemented for waiting-state relay and LTE loss
+Status: Implemented for waiting-state relay and LTE loss; further radio tests restricted
 
 Date: 2026-09-06
 
@@ -37,9 +37,15 @@ LTE connectivity returned.
 - Real LTE loss produced the same terminal state through public WSS. Mobile
   data returned to enabled, Android reported LTE connected, and the application
   still did not resume its waiting session.
-- The debug build was removed after the test. The signed ARM64 release
-  release was restored, launched and verified as `arm64-v8a` with
+- The debug build was removed after the test. The signed ARM64 release was
+  restored, launched and verified as `arm64-v8a` with
   `FLAG_SECURE` effective. It was left on an empty entry form.
+
+On 2026-10-13 the terminal public-WSS case was reproduced with an instrumented
+Flutter test. The execution exposed an operational constraint not recorded by
+the original baseline: the TECNO BF7 is the household Internet gateway. An
+airplane-mode cut therefore interrupted shared connectivity and ADB. The radios
+were restored manually and the official release was reinstalled.
 
 ## Limits
 
@@ -47,3 +53,9 @@ This proves fail-closed behavior for relay and real radio loss while waiting on
 one Android 12 device. It does not cover Wi-Fi-to-cellular handoff, captive
 portals, loss during Noise handshake or an established chat, other
 manufacturers, or newer Android versions.
+
+No further test may change airplane mode, mobile data, Wi-Fi or hotspot on this
+device while it is the shared gateway. Those remaining cases require a second
+device or an independent Internet connection. The integration test only waits
+for an externally caused loss; it must not be interpreted as authorization for
+an ADB harness to modify radios in the current environment.

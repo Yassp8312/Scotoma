@@ -1,6 +1,6 @@
 # Registro consolidado de validaciones pendientes
 
-Fecha de corte: 2026-10-11.
+Fecha de corte: 2026-10-13.
 
 Este documento reúne comprobaciones que no deben perderse cuando el desarrollo
 continúe sin el dispositivo, plataforma o ejecutor necesario. Una tarea anotada
@@ -30,9 +30,12 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 
 ## Android y ADB
 
-- [ ] Repetir instalación limpia, apertura, entrada, conexión, chat, ACK, BURN y
-  cierre en el dispositivo ARM64 físico.
-- [ ] Verificar que una desconexión termina la sesión sin reconexión ni reenvío.
+- [x] Repetir instalación, apertura, entrada, conexión, chat, ACK, BURN y cierre
+  en el TECNO BF7 ARM64 físico contra el WSS público. El APK release oficial se
+  restauró al terminar; la prueba de integración usó un build instrumentado.
+- [x] Verificar que una desconexión durante espera termina la sesión sin
+  reconexión ni reenvío. No repetir cortes ni ejecutar handoff/handshake/chat
+  activo mientras este teléfono proporcione Internet a la casa.
 - [ ] Verificar icono, nombre, splash, permisos y ausencia de restos de Flutter.
 - [ ] Capturar evidencia de consumo de memoria y estabilidad en una conversación
   prolongada.
@@ -45,7 +48,9 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 
 - [ ] Repetir Chrome, Edge y Firefox con el artefacto exacto que se vaya a
   distribuir.
-- [ ] Confirmar Android↔Web contra WSS público después de cada despliegue.
+- [x] Confirmar Android↔Web contra WSS público en la ejecución del 2026-10-13,
+  con mensaje Android, ACK y BURN autenticado observado en Chrome. Debe repetirse
+  después de cada despliegue futuro.
 - [ ] Verificar que Cloudflare Pages sirve el build actual y no el artefacto
   histórico anterior.
 - [ ] Mantener Safari e iOS aplazados hasta disponer de Mac/iPhone adecuados.

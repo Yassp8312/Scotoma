@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "test:public-alpha": "playwright test test/public_alpha_release.spec.mjs --workers=1 --reporter=line",
-    "test:public-browsers": "playwright test test/public_browser_matrix.spec.mjs --workers=1 --reporter=line"
+    "test:public-browsers": "playwright test test/public_browser_matrix.spec.mjs --workers=1 --reporter=line",
+    "test:android-peer": "playwright test test/android_physical_peer.spec.mjs --workers=1 --reporter=line"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"

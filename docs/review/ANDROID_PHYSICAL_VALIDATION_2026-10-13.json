@@ -1,0 +1,46 @@
+{
+  "schema": "scotoma.android-physical-validation.v1",
+  "date": "2026-10-13",
+  "device": {
+    "manufacturer_model": "TECNO BF7",
+    "android": "12",
+    "api": 31,
+    "abi": "arm64-v8a",
+    "adb_serial": "redacted"
+  },
+  "release": {
+    "application_id": "app.scotoma.scotoma",
+    "version_name": "0.1.0-alpha.1",
+    "version_code": 2002,
+    "apk_sha256": "74613733B0401854D5D25E45621956362AE1F0FA3D55FC6826D6D559A69C4A37",
+    "official_release_restored": true
+  },
+  "public_endpoints": {
+    "web": "https://scotoma.pages.dev/",
+    "transport": "public WSS"
+  },
+  "passed": [
+    "release install and launch",
+    "Android-to-Chrome pairing",
+    "Android message delivery",
+    "authenticated ACK",
+    "authenticated Android BURN observed by web",
+    "empty credential form after terminal flow",
+    "exact synthetic room/password/message absent from process logcat",
+    "typed synthetic room not restored after force-stop and relaunch",
+    "FLAG_SECURE caused adb screencap to return zero bytes",
+    "waiting-state network loss was terminal with no automatic reconnect"
+  ],
+  "limits": [
+    "the instrumented chat test uses a debug test build; the signed release was restored afterward",
+    "no full ARMv7 or x86_64 runtime conversation was executed",
+    "no Android 13+ recent-task test was possible",
+    "no prolonged memory run, captive portal, active-handshake loss or active-chat loss was executed",
+    "this evidence does not validate or integrate the isolated v3 research protocol"
+  ],
+  "safety_constraint": {
+    "device_is_household_gateway": true,
+    "automated_radio_changes_allowed": false,
+    "deferred_until": "a second device or independent Internet connection is available"
+  }
+}

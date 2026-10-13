@@ -375,6 +375,15 @@ implementación Rust mantenida continúa en desarrollo y todavía debe demostrar
 que sus shares y transcript son compatibles con 3HashTDH sin reutilizar la
 demostración de seguridad escrita para FROST.
 
+La revisión de composición demuestra compatibilidad mecánica de la key share:
+ambas construcciones usan scalars Ristretto255 canónicos de 32 bytes y los
+identificadores 1..3 caben en el prefijo de `liboprf`. También identifica un
+bloqueo estructural: 3HashTDH necesita, además, un sharing distribuido de cero,
+mientras COCKTAIL genera un secreto grupal aleatorio no nulo. Una segunda
+ceremonia COCKTAIL no satisface ese requisito. El cierre del tramo 2 requiere
+una ceremonia malicious-secure de zero sharing y un certificado conjunto de
+activación ligado a operadores, umbral, manifiesto y época.
+
 El tramo 3 queda implementado y su gate multiplataforma pasó en CI. Un vector
 determinista 3HashTDH es reproducido por una
 implementación safe Rust independiente y debe coincidir byte a byte con liboprf

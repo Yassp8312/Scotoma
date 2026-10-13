@@ -7,7 +7,7 @@
   "files": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "7448ad080d82c367119da691f45b82d66e52a2a752def8c7139493c0d2f892b2"
+      "sha256": "6d24b7c5221f2bfd8e9641d4421e57d84cb9e52cd412072660ad71db776abf0b"
     },
     {
       "path": ".gitignore",
@@ -32,6 +32,10 @@
     {
       "path": "docs/V3_TOPRF_NOISE_COMPOSITION.md",
       "sha256": "8ee97b7f8076b1bf465e6e9cffe04efd8cd5e846aaec23f402db4d2d223e73f7"
+    },
+    {
+      "path": "docs/V3_COCKTAIL_3HASHTDH_COMPATIBILITY.md",
+      "sha256": "fcf0095a04aac86ccf1681836bc5bb55759051735d441687c899712c87e01047"
     },
     {
       "path": "docs/V3_OPERATOR_AND_ABUSE_MODEL.md",
@@ -83,7 +87,7 @@
     },
     {
       "path": "docs/adr/0068-freeze-cocktail-dkg-specification-candidate.md",
-      "sha256": "992de721afb020a2d1d49d07f50ddc9f35f5bab04a93c76d206009d59174120f"
+      "sha256": "328a0063f0a52a660338dbe5479e3b8504d48c268258b95712c969c233518730"
     },
     {
       "path": "docs/review/V3_CRYPTO_SELECTION.json",
@@ -95,7 +99,11 @@
     },
     {
       "path": "docs/review/V3_DKG_SELECTION.json",
-      "sha256": "1d2918ceed9570aae74d68ab03a6f3439ea94173bbe398ecfb96044b6cc15a18"
+      "sha256": "e0d9c45a852be38eef1ca0c37a94a7b81237f8f687d54de5f6087f2f832daace"
+    },
+    {
+      "path": "docs/review/V3_DKG_TOPRF_COMPATIBILITY.json",
+      "sha256": "6e6ba8c1befb64882d0f4e85054e98e734f7b550831c0b4a17566d871ca2f8f0"
     },
     {
       "path": "docs/review/V3_PLATFORM_PROBE.json",
@@ -339,11 +347,11 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs",
-      "sha256": "2caf9ab928dbaa8e228813500be0b823e242de2f2bc662c8efae74ce7bdae9a2"
+      "sha256": "827a8248dd9c58bf891876d3976c9673d4168a7b81b8da54d0f2539c269e954f"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_crypto_selection.ps1",
-      "sha256": "aab633341a85992cb2275cd4bae228e94321efcd886724e2fbad3efbb47a8e4d"
+      "sha256": "f0d6b5729bcec907df669c84bad8052aca233c86ec6a18902ae992dbe36ffe0b"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_dkg_sources.ps1",
@@ -355,7 +363,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_review_snapshot.ps1",
-      "sha256": "33aa0cae9352c3578ec9b1e55e583477a0c8b2a637368de4f24bc82878f76c07"
+      "sha256": "42e3b1ea2a94d3f1daef009eaa5daba29ee6db9d5df8375bd7ea89b1e9766948"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_supply_chain.ps1",

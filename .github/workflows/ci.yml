@@ -69,6 +69,7 @@ jobs:
         run: |
           cargo fmt --manifest-path spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml --all -- --check
           cargo clippy --manifest-path spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml --all-targets -- -D warnings
+          cargo test --manifest-path spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml --all-targets
           cargo run --quiet --manifest-path spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml
 
       - name: Verify frozen 3HashTDH vector contract

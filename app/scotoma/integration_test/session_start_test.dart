@@ -4,6 +4,12 @@ import 'package:integration_test/integration_test.dart';
 import 'package:scotoma/src/app.dart';
 import 'package:scotoma/src/session/rust_session_backend.dart';
 
+Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -14,7 +20,7 @@ void main() {
     await tester.pumpWidget(ScotomaApp(backend: backend));
     await tester.enterText(find.byKey(const Key('room-field')), '00013');
     await tester.enterText(find.byKey(const Key('password-field')), '001370');
-    await tester.tap(find.byKey(const Key('continue-button')));
+    await tapVisible(tester, find.byKey(const Key('continue-button')));
 
     for (var second = 0; second < 30; second++) {
       await tester.pump(const Duration(seconds: 1));
@@ -30,7 +36,7 @@ void main() {
     expect(find.text('00013'), findsNothing);
     expect(find.text('001370'), findsNothing);
 
-    await tester.tap(find.byKey(const Key('cancel-session-button')));
+    await tapVisible(tester, find.byKey(const Key('cancel-session-button')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('room-field')), findsOneWidget);
     expect(find.byKey(const Key('password-field')), findsOneWidget);

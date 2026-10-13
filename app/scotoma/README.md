@@ -144,6 +144,16 @@ authenticated ACKs and authenticated Android BURN observed by web. Both clients
 returned to empty credential forms. An independent two-person usability run
 remains part of the closed-alpha work rather than this engineering gate.
 
+The public Android↔web flow was repeated on 2026-10-13 with an instrumented
+ARM64 build and Chrome: Android sent the synthetic message, received its
+authenticated ACK and issued the authenticated BURN observed by web. Exact
+synthetic values were absent from process `logcat`; force-stop did not restore
+the entered room and ADB capture remained blocked. The official signed
+`0.1.0-alpha.1` release was restored afterward. This TECNO BF7 currently
+provides shared household Internet, so automated changes to airplane mode,
+mobile data, Wi-Fi or hotspot are prohibited; remaining transition tests need
+another device or an independent connection.
+
 The official signed release replaced the earlier debug-signed installation on
 the TECNO BF7 and launched successfully on 2026-09-04. APK/AAB signature,
 release manifest, ARM64 Rust library and absence of the diagnostic bridge were

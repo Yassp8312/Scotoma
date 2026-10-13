@@ -6,10 +6,12 @@ $repositoryRoot = (Resolve-Path (Join-Path $spikeRoot '../..')).Path
 $selectionPath = Join-Path $repositoryRoot 'docs/review/V3_CRYPTO_SELECTION.json'
 $ceremonyPath = Join-Path $repositoryRoot 'docs/review/V3_CEREMONY_PROBE.json'
 $dkgPath = Join-Path $repositoryRoot 'docs/review/V3_DKG_SELECTION.json'
+$compatibilityPath = Join-Path $repositoryRoot 'docs/review/V3_DKG_TOPRF_COMPATIBILITY.json'
 $platformPath = Join-Path $repositoryRoot 'docs/review/V3_PLATFORM_PROBE.json'
 $selection = Get-Content -LiteralPath $selectionPath -Raw | ConvertFrom-Json
 $ceremony = Get-Content -LiteralPath $ceremonyPath -Raw | ConvertFrom-Json
 $dkg = Get-Content -LiteralPath $dkgPath -Raw | ConvertFrom-Json
+$compatibility = Get-Content -LiteralPath $compatibilityPath -Raw | ConvertFrom-Json
 $platform = Get-Content -LiteralPath $platformPath -Raw | ConvertFrom-Json
 $errors = [Collections.Generic.List[string]]::new()
 
@@ -90,9 +92,20 @@ if ($dkg.evaluated_implementation.repository -cne 'ZcashFoundation/frost' -or
     $dkg.evaluated_implementation.ristretto_vector.matches_frozen_0_2_1_vector -ne $true -or
     $dkg.evaluated_implementation.local_test_attempt.result -cne 'not-executed-environment-blocked' -or
     $dkg.evaluated_implementation.scotoma_ci_probe.path -cne 'spikes/private_rendezvous_v3/run_cocktail_dkg_probe.sh' -or
-    $dkg.evaluated_implementation.scotoma_ci_probe.status -cne 'configured-pending-first-run' -or
+    $dkg.evaluated_implementation.scotoma_ci_probe.status -cne 'passed' -or
+    $dkg.evaluated_implementation.scotoma_ci_probe.verified_commit -cne 'dc806d63dbd5a2f7637b6152ccaa6df254f0b7fd' -or
     $dkg.evaluated_implementation.disposition -cne 'rejected-for-integration') {
     $errors.Add('the evaluated DKG implementation evidence or disposition changed')
+}
+if ($compatibility.schema -cne 'scotoma-v3-dkg-toprf-compatibility-v1' -or
+    $compatibility.production_decision -cne 'NO-GO' -or
+    $compatibility.inputs.topology -cne '2-of-3' -or
+    $compatibility.compatible.Count -lt 4 -or
+    $compatibility.incompatible_or_missing.Count -lt 4 -or
+    $compatibility.required_context_fields.Count -lt 7 -or
+    $compatibility.executable_evidence.tests -ne 5 -or
+    -not $compatibility.next_gate.Contains('zero-sharing', [StringComparison]::Ordinal)) {
+    $errors.Add('the DKG/TOPRF compatibility boundary or zero-sharing gate changed')
 }
 
 if ($platform.schema -ne 'scotoma-v3-platform-probe-v1' -or
@@ -173,6 +186,7 @@ if ($errors.Count -ne 0) {
     ceremony_probe_checks = $ceremony.executable_checks.Count
     dkg_candidate = "$($dkg.selected.protocol)@$($dkg.selected.specification.commit)"
     dkg_blocking_gates = $dkg.blocking_gates.Count
+    dkg_toprf_compatibility = 'partial-zero-sharing-blocked'
     platform_probe_gates = $platform.ci_gates.Count
     production_inputs_verified = $productionInputs.Count
     production_decision = $selection.production_decision

@@ -49,6 +49,20 @@ fn coefficient_at_zero(index: u64, other: u64) -> Scalar {
     -Scalar::from(other) * (Scalar::from(index) - Scalar::from(other)).invert()
 }
 
+#[cfg(test)]
+fn combine_scalar_pair(left: (u64, Scalar), right: (u64, Scalar)) -> Scalar {
+    left.1 * coefficient_at_zero(left.0, right.0) + right.1 * coefficient_at_zero(right.0, left.0)
+}
+
+#[cfg(test)]
+fn encode_liboprf_share(index: u8, scalar: Scalar) -> [u8; 33] {
+    assert_ne!(index, 0, "liboprf share identifiers are one-based");
+    let mut encoded = [0_u8; 33];
+    encoded[0] = index;
+    encoded[1..].copy_from_slice(&scalar.to_bytes());
+    encoded
+}
+
 fn encode_hex(bytes: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
     let mut output = String::with_capacity(bytes.len() * 2);
@@ -110,4 +124,50 @@ fn main() {
         encode_hex(expected.compress().as_bytes()),
         encode_hex(&final_output),
     );
+}
+
+#[cfg(test)]
+mod compatibility_tests {
+    use super::*;
+
+    #[test]
+    fn cocktail_ristretto_scalar_has_the_liboprf_share_payload_encoding() {
+        let scalar = Scalar::from(7_u64);
+        let encoded = encode_liboprf_share(1, scalar);
+
+        assert_eq!(encoded[0], 1);
+        assert_eq!(&encoded[1..], scalar.to_bytes());
+        assert_eq!(encoded.len(), 33);
+    }
+
+    #[test]
+    fn cocktail_style_key_shares_reconstruct_the_3hashtdh_key_scalar() {
+        let left = (1, linear_share(7, 11, 1));
+        let right = (3, linear_share(7, 11, 3));
+
+        assert_eq!(combine_scalar_pair(left, right), Scalar::from(7_u64));
+    }
+
+    #[test]
+    fn an_independent_nonzero_dkg_cannot_replace_the_zero_sharing() {
+        let left = (1, linear_share(17, 13, 1));
+        let right = (2, linear_share(17, 13, 2));
+
+        assert_eq!(combine_scalar_pair(left, right), Scalar::from(17_u64));
+        assert_ne!(combine_scalar_pair(left, right), Scalar::ZERO);
+    }
+
+    #[test]
+    fn a_zero_constant_polynomial_supplies_the_required_zero_sharing() {
+        let left = (2, linear_share(0, 13, 2));
+        let right = (3, linear_share(0, 13, 3));
+
+        assert_eq!(combine_scalar_pair(left, right), Scalar::ZERO);
+    }
+
+    #[test]
+    #[should_panic(expected = "one-based")]
+    fn zero_identifier_is_rejected_by_the_adapter_contract() {
+        let _ = encode_liboprf_share(0, Scalar::ONE);
+    }
 }

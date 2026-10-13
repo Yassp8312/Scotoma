@@ -4,6 +4,12 @@ import 'package:integration_test/integration_test.dart';
 import 'package:scotoma/src/app.dart';
 import 'package:scotoma/src/session/rust_session_backend.dart';
 
+Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -14,7 +20,7 @@ void main() {
     await tester.pumpWidget(ScotomaApp(backend: backend));
     await tester.enterText(find.byKey(const Key('room-field')), '424242');
     await tester.enterText(find.byKey(const Key('password-field')), '1370');
-    await tester.tap(find.byKey(const Key('continue-button')));
+    await tapVisible(tester, find.byKey(const Key('continue-button')));
 
     for (var tick = 0; tick < 600; tick++) {
       await tester.pump(const Duration(milliseconds: 100));
@@ -29,7 +35,7 @@ void main() {
       find.byKey(const Key('message-field')),
       'desde telefono',
     );
-    await tester.tap(find.byKey(const Key('send-message-button')));
+    await tapVisible(tester, find.byKey(const Key('send-message-button')));
     for (var tick = 0; tick < 300; tick++) {
       await tester.pump(const Duration(milliseconds: 100));
       if (find.byIcon(Icons.done_all_rounded).evaluate().isNotEmpty) break;
@@ -37,7 +43,7 @@ void main() {
     expect(find.text('desde telefono'), findsOneWidget);
     expect(find.byIcon(Icons.done_all_rounded), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('burn-session-button')));
+    await tapVisible(tester, find.byKey(const Key('burn-session-button')));
     for (var tick = 0; tick < 100; tick++) {
       await tester.pump(const Duration(milliseconds: 100));
       if (find.byKey(const Key('room-field')).evaluate().isNotEmpty) break;
