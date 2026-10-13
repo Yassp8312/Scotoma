@@ -1,0 +1,25 @@
+{
+  "schema": "scotoma-v3-independent-operator-set-v1",
+  "transport": "https",
+  "epoch": 51,
+  "threshold": 2,
+  "independence_attested": false,
+  "operators": [
+    {
+      "id": 303,
+      "endpoint": "https://REPLACE-OPERATOR-A.onrender.com/probe",
+      "public_key": "REPLACE_WITH_64_HEX_CHARACTERS",
+      "administrative_domain": "REPLACE_WITH_ADMIN_A",
+      "provider_account": "REPLACE_WITH_ACCOUNT_A",
+      "attestation_reference": "TODO"
+    },
+    {
+      "id": 404,
+      "endpoint": "https://REPLACE-OPERATOR-B.onrender.com/probe",
+      "public_key": "REPLACE_WITH_64_HEX_CHARACTERS",
+      "administrative_domain": "REPLACE_WITH_ADMIN_B",
+      "provider_account": "REPLACE_WITH_ACCOUNT_B",
+      "attestation_reference": "TODO"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 {
   "schema": "scotoma-v3-independent-operator-set-v1",
+  "transport": "tcp",
   "epoch": 41,
   "threshold": 2,
   "independence_attested": false,

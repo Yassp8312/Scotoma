@@ -1,0 +1,25 @@
+{
+  "schema": "scotoma-v3-independent-operator-set-v1",
+  "transport": "https",
+  "epoch": 51,
+  "threshold": 2,
+  "independence_attested": true,
+  "operators": [
+    {
+      "id": 303,
+      "endpoint": "https://operator-a.invalid/probe",
+      "public_key": "3333333333333333333333333333333333333333333333333333333333333333",
+      "administrative_domain": "test-admin-http-a",
+      "provider_account": "test-provider-http-a",
+      "attestation_reference": "test-only://operator-http-a"
+    },
+    {
+      "id": 404,
+      "endpoint": "https://operator-b.invalid/probe",
+      "public_key": "4444444444444444444444444444444444444444444444444444444444444444",
+      "administrative_domain": "test-admin-http-b",
+      "provider_account": "test-provider-http-b",
+      "attestation_reference": "test-only://operator-http-b"
+    }
+  ]
+}

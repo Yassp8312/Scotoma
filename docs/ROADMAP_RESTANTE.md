@@ -377,7 +377,9 @@ se empaqueta ninguna biblioteca nueva en la app y el transcript Noise completo
 sigue pendiente.
 
 El tramo 4 incorpora un probe público firmado, imagen OCI sin privilegios,
-manifiesto de operadores y medición reproducible. Localmente pasan separación de
+transportes TCP y HTTP/HTTPS, manifiesto de operadores y medición reproducible.
+El adaptador HTTP permite usar hosts web gratuitos sin delegar la autenticidad
+del recibo al TLS del proveedor. Localmente pasan separación de
 identidades, rechazo de clave cruzada, caída individual, continuidad del nodo
 restante, fallo acotado por partición y recuperación sin estado efímero. No es un
 servicio de encuentro ni transporta secretos. Para cerrar el tramo todavía se

@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: scotoma-v3-probe-operator
+    runtime: docker
+    plan: free
+    dockerContext: ./spikes/private_rendezvous_v3
+    dockerfilePath: ./spikes/private_rendezvous_v3/infrastructure/Dockerfile
+    dockerCommand: /usr/local/bin/v3-public-probe-http-operator --render-env
+    healthCheckPath: /healthz
+    envVars:
+      - key: SCOTOMA_V3_OPERATOR_SEED_FILE
+        value: /etc/secrets/operator.seed
+      - key: SCOTOMA_V3_OPERATOR_ID
+        sync: false
+      - key: SCOTOMA_V3_EPOCH
+        sync: false
+      - key: SCOTOMA_V3_PROBE_CLIENT_PUBLIC_KEY
+        sync: false
+      - key: SCOTOMA_V3_TIMEOUT_MS
+        value: "1500"

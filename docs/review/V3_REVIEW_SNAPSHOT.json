@@ -1,13 +1,13 @@
 {
   "schema": "scotoma-v3-review-snapshot-v2",
   "created": "2026-10-12",
-  "git_base": "f8b8b6bc3f93096783768248616e3517c4fe33f5",
+  "git_base": "98f04171225ad6f53e0a60bb756e358120ff2514",
   "working_tree": "dirty-intentional",
   "warning": "Review these exact bytes. This snapshot is not a release, audit, endorsement, or production protocol.",
   "files": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "4e1f011767e695619219ab3a222bd279d5077fcd5920b90fb310bc1a26a2d04e"
+      "sha256": "ecbd71db302742dff8a270376db2bd0374d399ee344286b09a201e58154626b0"
     },
     {
       "path": ".gitignore",
@@ -47,7 +47,7 @@
     },
     {
       "path": "docs/PRIVATE_RENDEZVOUS_V3_TEST_PLAN.md",
-      "sha256": "a0256cd7a625abc0b86611e2cc7262587111997d22b6aaf1b3a0cc78c25390a5"
+      "sha256": "327946664bb36dcb74273041b31529e26c92914ee6d7063fb084e1bdab8aa0bd"
     },
     {
       "path": "docs/V3_OPERATIONAL_BASELINE.md",
@@ -79,7 +79,7 @@
     },
     {
       "path": "docs/adr/0067-independent-public-operator-probe.md",
-      "sha256": "396f69fdd47135b108a107d60cbd70a0a4aeb1c19887571bfaa337f7884e1196"
+      "sha256": "6280ec8edba63b436455eb6b21fbd91920b86259f3f26b7cc086654ca1ef6a38"
     },
     {
       "path": "docs/review/V3_CRYPTO_SELECTION.json",
@@ -95,7 +95,7 @@
     },
     {
       "path": "docs/review/V3_INFRASTRUCTURE_PROBE.json",
-      "sha256": "8b32c1f0bdf94c4e2e6c4802e4cbf9228f18d63b83b6dd0b4c5c390db0d2d797"
+      "sha256": "fed232d179c1039f5e499825af86558b4775e00b54834d1ca3e47183b8279800"
     },
     {
       "path": "spikes/private_rendezvous_v3/Cargo.toml",
@@ -107,7 +107,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/README.md",
-      "sha256": "6c60b269c66ff4c9a9eeaebccec2432479974440822e6ad10e2a8e0dac29acd8"
+      "sha256": "78205768259b03d17d85994204ceba098fa257807801140e68ffbb98d75936ab"
     },
     {
       "path": "spikes/private_rendezvous_v3/fuzz/Cargo.toml",
@@ -190,6 +190,14 @@
       "sha256": "e1f182076ac4e0ee077a64a18f2353fc8bda6bd0ca15a984fb327d3fb2eff742"
     },
     {
+      "path": "spikes/private_rendezvous_v3/src/bin/v3_public_probe_http_client.rs",
+      "sha256": "ec2e28c4152f85cecfbf611d2c844f39108777118ed7bfdeae771d54b45c445a"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/src/bin/v3_public_probe_http_operator.rs",
+      "sha256": "88d189b8d6f8baf47be99e0327174e2488b17998fc97d086f97130bfc7057bd6"
+    },
+    {
       "path": "spikes/private_rendezvous_v3/src/bin/v3_public_probe_operator.rs",
       "sha256": "c36854a045b0238d5b87ac2139d183d2982e2aa03c6ab107fd0c5bb63a188df7"
     },
@@ -218,6 +226,10 @@
       "sha256": "8ca849512dcc31010998285f271b3a454b64527d85a48fc06eb5808f4f7cdcb6"
     },
     {
+      "path": "spikes/private_rendezvous_v3/tests/http_operator_probe.rs",
+      "sha256": "ac35a4b0b015f2088883a0d211026214bc46de46ba30b06218ec9d894405619c"
+    },
+    {
       "path": "spikes/private_rendezvous_v3/examples/operational_benchmark.rs",
       "sha256": "673a5c6b25c1bd080ea7049a6e1429cc79d7e339618e0e9b6bd4adbacff6f2ac"
     },
@@ -235,7 +247,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/Dockerfile",
-      "sha256": "0a1de90655587350e3a239f53751d29caf2a3f4caab021eea0cb3accb3a259a3"
+      "sha256": "1413c213d3ca68765cd876689ea97d3a37d25bf4a93cd25bc26a3cfa0992e2ec"
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/Dockerfile.dockerignore",
@@ -243,7 +255,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/README.md",
-      "sha256": "883324f13aadbc240fe98a813b9525c0f68b53b639c26f40181c3bd2abb8e676"
+      "sha256": "994b3cff452a2947e543aaeadaa38e325d1e9eaabf9b36a3eaae5e3b42fe49bb"
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/compose.local-simulation.yml",
@@ -251,19 +263,35 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/operator-set.example.json",
-      "sha256": "cfdb524c7943a6aa13bc7aa9b9923303bb64c606bd292d44fa21cda8b1c2e2e6"
+      "sha256": "6283a156968ff1938b8d4ade3712d2eb30f9f865e8005ba356b7c9a416829302"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/operator-set-http.example.json",
+      "sha256": "c392419d5a9a96b2abddca224162e80b427a71c522923ae68a1240229499dbd8"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/operator-set-http.test-only.json",
+      "sha256": "3e5602cee579b05d3f8efb239fa2976d3f6d71d79fcce8f9ed583d5bbf671958"
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/operator-set.test-only.json",
-      "sha256": "2890119697e6269ba34b3d7d27e6337c8ddd51e77d0fc762422b2d2e197ad394"
+      "sha256": "8c9282a31418545e875c653d8fd549dff11847de672e8527daab03fcfa95e444"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/render.operator.example.yaml",
+      "sha256": "c889dc39f93c7256d772846db4bd84d3e82a3e31255551550c01857159ed4b2b"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/infrastructure/run_public_http_probe.ps1",
+      "sha256": "0a74a8616dc17bb33fb66880126f02dd5e0ce72e305e6d84b1a4723bddd8a2bd"
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/run_public_probe.ps1",
-      "sha256": "ec17beb2536176ab8b91bfc5f1010e9a807fd8ec5f7c7a9083b9b631cddd4157"
+      "sha256": "6cd0a15b9cf253e93acf8ada52de1a65f2ec0583ad1232b1eaba78fdf273d5db"
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/verify_operator_set.ps1",
-      "sha256": "7eb97af5eb8c727411b0362dc88642772d4be20aa2fdcfa4f7c10950ad7e791b"
+      "sha256": "0ac3f2d710a11f253e330ed899dda7497d43a8f462775e55cea21ea3f1b14183"
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/README.md",
@@ -311,7 +339,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_review_snapshot.ps1",
-      "sha256": "f2edb6da3564db125ab29114329d789bd9f5cdaa1280a3934c86d195df293348"
+      "sha256": "e6757901537a727275fa235697146d1827bd55bca265c8e0e95af18c47b8b6be"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_supply_chain.ps1",

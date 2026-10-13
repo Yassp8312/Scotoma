@@ -10,6 +10,9 @@ $errors = [Collections.Generic.List[string]]::new()
 if ($manifest.schema -ne 'scotoma-v3-independent-operator-set-v1') {
     $errors.Add('unexpected operator-set schema')
 }
+if ([string]$manifest.transport -notin @('tcp', 'https')) {
+    $errors.Add('transport must be tcp or https')
+}
 if ([uint64]$manifest.epoch -eq 0) {
     $errors.Add('epoch must be positive')
 }
@@ -36,13 +39,23 @@ foreach ($operator in $operators) {
     } elseif (-not $keys.Add([string]$operator.public_key)) {
         $errors.Add("operator $($operator.id) reuses a public key")
     }
-    if ([string]$operator.endpoint -notmatch '^[A-Za-z0-9.-]+:[1-9][0-9]{0,4}$') {
+    if ($manifest.transport -eq 'tcp' -and
+        [string]$operator.endpoint -notmatch '^[A-Za-z0-9.-]+:[1-9][0-9]{0,4}$') {
         $errors.Add("operator $($operator.id) has an invalid host:port endpoint")
-    } else {
+    } elseif ($manifest.transport -eq 'tcp') {
         $port = [int]([string]$operator.endpoint).Substring(([string]$operator.endpoint).LastIndexOf(':') + 1)
         if ($port -gt 65535) {
             $errors.Add("operator $($operator.id) has a port above 65535")
         } elseif (-not $endpoints.Add([string]$operator.endpoint)) {
+            $errors.Add("operator $($operator.id) reuses an endpoint")
+        }
+    } elseif ($manifest.transport -eq 'https') {
+        $endpoint = [string]$operator.endpoint
+        if ($endpoint -notmatch '^https://[A-Za-z0-9.-]+(?::(?<port>[1-9][0-9]{0,4}))?/probe$') {
+            $errors.Add("operator $($operator.id) has an invalid HTTPS probe endpoint")
+        } elseif ($Matches.port -and [int]$Matches.port -gt 65535) {
+            $errors.Add("operator $($operator.id) has an HTTPS port above 65535")
+        } elseif (-not $endpoints.Add($endpoint)) {
             $errors.Add("operator $($operator.id) reuses an endpoint")
         }
     }
@@ -68,6 +81,7 @@ if ($errors.Count -ne 0) {
 [ordered]@{
     schema = 'scotoma-v3-independent-operator-set-check-v1'
     epoch = [uint64]$manifest.epoch
+    transport = [string]$manifest.transport
     operators = $operators.Count
     threshold = [int]$manifest.threshold
     distinct_admin_domains = $admins.Count

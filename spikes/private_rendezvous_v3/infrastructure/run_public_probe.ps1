@@ -16,6 +16,9 @@ $spikeRoot = Split-Path -Parent $infraRoot
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
+if ($manifest.transport -ne 'tcp') {
+    throw 'run_public_probe.ps1 requires a tcp operator manifest; use run_public_http_probe.ps1 for https'
+}
 $seedPath = (Resolve-Path -LiteralPath $ClientSeedPath).Path
 $binaryName = if ($IsWindows) { 'v3_public_probe_client.exe' } else { 'v3_public_probe_client' }
 $binary = Join-Path $spikeRoot "target/release/$binaryName"

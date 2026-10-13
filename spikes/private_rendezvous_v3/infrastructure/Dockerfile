@@ -5,16 +5,22 @@ COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 RUN cargo build --locked --release \
     --bin v3_public_probe_operator \
-    --bin v3_public_probe_client
+    --bin v3_public_probe_client \
+    --bin v3_public_probe_http_operator \
+    --bin v3_public_probe_http_client
 
 FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171 AS runtime
 
 RUN groupadd --system --gid 10001 scotoma \
-    && useradd --system --uid 10001 --gid scotoma --no-create-home scotoma
+    && secret_group="$(getent group 1000 | cut -d: -f1)" \
+    && if [ -z "$secret_group" ]; then groupadd --system --gid 1000 render-secrets; secret_group=render-secrets; fi \
+    && useradd --system --uid 10001 --gid scotoma --groups "$secret_group" --no-create-home scotoma
 COPY --from=builder /workspace/target/release/v3_public_probe_operator /usr/local/bin/v3-public-probe-operator
 COPY --from=builder /workspace/target/release/v3_public_probe_client /usr/local/bin/v3-public-probe-client
+COPY --from=builder /workspace/target/release/v3_public_probe_http_operator /usr/local/bin/v3-public-probe-http-operator
+COPY --from=builder /workspace/target/release/v3_public_probe_http_client /usr/local/bin/v3-public-probe-http-client
 
 USER 10001:10001
 EXPOSE 8789
 
-ENTRYPOINT ["/usr/local/bin/v3-public-probe-operator"]
+ENTRYPOINT ["/usr/local/bin/v3-public-probe-http-operator"]

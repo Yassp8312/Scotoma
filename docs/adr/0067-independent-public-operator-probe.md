@@ -22,6 +22,12 @@ capacidades Linux. Un manifiesto de medición exige endpoints, claves, dominios
 administrativos, cuentas de proveedor y referencias de atestación distintos.
 Esa declaración es evidencia auditable, no una prueba técnica de propiedad.
 
+Como los servicios gratuitos disponibles publican HTTP/HTTPS y no un socket TCP
+arbitrario, se conserva el transporte TCP para hosts capaces y se añade un
+adaptador HTTP aislado. La solicitud y el recibo siguen firmados extremo a
+extremo dentro del body; el TLS puede terminar en el proveedor y no sustituye
+la verificación Ed25519. `/healthz` no contiene estado ni datos sensibles.
+
 La prueba local exige que dos identidades respondan, que una respuesta no valide
 con la clave de la otra, que la caída de un nodo no afecte al restante y que el
 nodo caído pueda recuperar su identidad sin recuperar estado efímero.
@@ -30,6 +36,8 @@ nodo caído pueda recuperar su identidad sin recuperar estado efímero.
 
 - No se envían habitación, contraseña, salida OPRF, claves Noise ni mensajes.
 - El socket no sustituye TLS; solo transporta datos públicos firmados del probe.
+- El adaptador HTTP no altera la construcción candidata ni entra en Flutter,
+  relay o v2; solo hace desplegable la sonda en servicios web gratuitos.
 - La autenticación ocurre después de aceptar TCP: el firewall debe limitar el
   puerto a las direcciones de las sondas para evitar agotamiento por clientes
   anónimos lentos. El binario no es una defensa pública contra DoS.

@@ -15,6 +15,8 @@
     "crossed-identity-rejected",
     "single-operator-failure-contained",
     "operator-recovery-without-ephemeral-state",
+    "https-body-signature-and-replay-rejection",
+    "free-web-service-deployment-template",
     "manifest-independence-contract",
     "unprivileged-container-definition"
   ],

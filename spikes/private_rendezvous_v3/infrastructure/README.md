@@ -27,6 +27,11 @@ El socket es deliberadamente un probe firmado sin datos sensibles. El cifrado de
 transporte, la ceremonia malicious-secure y el protocolo de aplicación siguen
 bloqueados; este arnés no autoriza exponer v3 a usuarios.
 
+Render y otros web services gratuitos solo publican HTTP/HTTPS. Para ellos,
+`v3_public_probe_http_operator` recibe el frame firmado como hexadecimal en
+`POST /probe`; TLS termina en el proveedor, pero la firma del body se verifica de
+forma independiente. `GET /healthz` devuelve únicamente `RESEARCH_ONLY`.
+
 ## Construcción y simulación local
 
 Desde `spikes/private_rendezvous_v3`:
@@ -69,3 +74,22 @@ Para cerrar el tramo todavía deben ejecutarse y conservarse mediciones pública
 de operación normal, caída individual, recuperación, partición/censura, rotación
 de época y pérdida definitiva de un operador. Los resultados deben incluir el
 commit exacto y conservar la decisión `NO-GO` hasta la revisión del tramo 5.
+
+## Opción gratuita mediante Render
+
+`render.operator.example.yaml` describe **un** operador HTTP. Cada administrador
+debe importar su propia copia desde una cuenta/workspace separado, cargar un
+secret file llamado `operator.seed` y rellenar ID, época y clave pública del
+cliente. Reutilizar nuestra misma cuenta para ambos operadores no satisface el
+requisito de independencia.
+
+Después se completa `operator-set-http.example.json` y se ejecuta:
+
+```text
+./run_public_http_probe.ps1 -ManifestPath operator-set.json -ClientSeedPath probe-client.seed -Scenario baseline -Rounds 20
+```
+
+El plan gratuito de Render se duerme después de inactividad y puede tardar cerca
+de un minuto en despertar. Sirve para el ejercicio de investigación, no para
+afirmar disponibilidad de producción. Documentación oficial:
+`https://render.com/docs/free` y `https://render.com/docs/web-services`.

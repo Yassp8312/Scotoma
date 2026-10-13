@@ -229,6 +229,11 @@ con una identidad distinta y acepta una clave de sonda explícita; el cliente
 rechaza operador, época, secuencia o firma equivocados. No circulan room,
 contraseña, TOPRF, material Noise ni mensajes de usuario.
 
+El par `v3_public_probe_http_operator`/`client` encapsula exactamente esos
+frames firmados como hexadecimal en `POST /probe`, permitiendo HTTPS terminado
+por un proveedor web gratuito. El test de proceso comprueba respuesta firmada,
+hash durable del recibo y rechazo de replay; `GET /healthz` es solo readiness.
+
 `independent_operator_probe` arranca dos procesos con secretos separados,
 comprueba el rechazo de una identidad cruzada, mata un operador, verifica que el
 otro continúa disponible y recupera el caído con la misma identidad pero sin

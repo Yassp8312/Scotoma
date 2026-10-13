@@ -151,7 +151,9 @@ execution remain deferred; none of these artifacts enters Flutter or v2.
 Tranche 4 adds `infrastructure/`, a deployable but research-only signed
 availability probe. Two local processes prove key separation, bounded failure,
 single-node continuity and stateless identity recovery. The OCI image, operator-
-set validator and public measurement runner are ready for independent hosts;
+set validator and TCP/HTTPS measurement runners are ready for independent hosts.
+The HTTPS adapter preserves signed request/receipt bodies for free web hosts and
+adds no dependency to the application;
 actual administrative independence and Internet measurements require separate
 human operators and remain pending. The probe handles no rendezvous credentials
 or messages and is not a v3 production service.

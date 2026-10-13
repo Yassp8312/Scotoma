@@ -100,10 +100,11 @@ jobs:
 
       - name: Verify independent operator deployment contract
         shell: pwsh
-        run: >-
-          ./spikes/private_rendezvous_v3/infrastructure/verify_operator_set.ps1
-          -ManifestPath
-          ./spikes/private_rendezvous_v3/infrastructure/operator-set.test-only.json
+        run: |
+          ./spikes/private_rendezvous_v3/infrastructure/verify_operator_set.ps1 `
+            -ManifestPath ./spikes/private_rendezvous_v3/infrastructure/operator-set.test-only.json
+          ./spikes/private_rendezvous_v3/infrastructure/verify_operator_set.ps1 `
+            -ManifestPath ./spikes/private_rendezvous_v3/infrastructure/operator-set-http.test-only.json
 
       - name: Build isolated public operator probe image
         run: |
