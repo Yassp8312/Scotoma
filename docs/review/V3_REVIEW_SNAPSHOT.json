@@ -35,7 +35,7 @@
     },
     {
       "path": "docs/V3_COCKTAIL_3HASHTDH_COMPATIBILITY.md",
-      "sha256": "170f714e74ed16b7de471d5e7bf1406549bd9e8068f9ecbb764e69a1daf28f1b"
+      "sha256": "cd508308f158b554432201d59248ff98ec96b92db9822e5abff4630f411ed389"
     },
     {
       "path": "docs/V3_OPERATOR_AND_ABUSE_MODEL.md",
@@ -91,7 +91,7 @@
     },
     {
       "path": "docs/adr/0069-model-distributed-zero-sharing-candidate.md",
-      "sha256": "90be90f2c6854bf1bdb22a3e958647f1ca12b90cb1f54a00c0e9568370baef45"
+      "sha256": "d3f5a89c3b3f83983272e48fb3d7050d0f093c6e37e55c7d437f6774991b1748"
     },
     {
       "path": "docs/review/V3_CRYPTO_SELECTION.json",
@@ -107,7 +107,7 @@
     },
     {
       "path": "docs/review/V3_DKG_TOPRF_COMPATIBILITY.json",
-      "sha256": "7c98e5287e902f88f3ca8d46849d574abe7eac98491791200ad2aa27042c7280"
+      "sha256": "40bccaa34e3917aabd6a5d192f97054bccd5a25d7bdc51324bc8fa483ed9f88d"
     },
     {
       "path": "docs/review/V3_PLATFORM_PROBE.json",
@@ -127,7 +127,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/README.md",
-      "sha256": "85c69d022be086b538efc5054e0041ed215f6504a89c120fb557800f914c8f27"
+      "sha256": "39061473fe9583bd0b837dc491959e68ec88887df2fd764aa365bced253c30f1"
     },
     {
       "path": "spikes/private_rendezvous_v3/fuzz/Cargo.toml",
@@ -351,11 +351,11 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs",
-      "sha256": "6999ceb1e274e98437a091967ab07ac9ea6debcfc0a9b7717da3ea17e3fafa83"
+      "sha256": "810b8340db78de96f3198812e54437133e74b4619ad52aaf015c8a108ed0eb33"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_crypto_selection.ps1",
-      "sha256": "4446b48c6c4a08d7d3fbffb90d577921570e6493a14c77746596a4230c061a7d"
+      "sha256": "785dca42ce4daf5e157d19713a7e413cbd9a9a3fc78e539c9ff7863b1e61a308"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_dkg_sources.ps1",

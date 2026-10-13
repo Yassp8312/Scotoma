@@ -31,7 +31,7 @@
   ],
   "executable_evidence": {
     "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs",
-    "tests": 11,
+    "tests": 14,
     "zero_sharing_candidate": {
       "construction": "sum of dealer-generated zero-constant linear polynomials with Feldman share checks",
       "activation": "threshold Ed25519 signatures over the key-certificate and zero-sharing transcript digests",
@@ -41,7 +41,9 @@
         "tampered private share rejected",
         "mixed context rejected",
         "insufficient or duplicate signer rejected",
-        "key-certificate substitution rejected"
+        "key-certificate substitution rejected",
+        "substantiated invalid-share complaint excludes one dealer while preserving zero reconstruction",
+        "exclusion below threshold and missing or duplicate shares fail closed"
       ],
       "status": "single-process-algebraic-model-only"
     }

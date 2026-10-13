@@ -64,7 +64,7 @@ constante cero si al menos un dealer honesto elige `a_i` impredecible.
 
 El transcript incluye dominio, deployment, manifiesto, época, conjunto de
 operadores y umbral. Su digest se combina con el certificado de key sharing y
-la activación requiere firmas Ed25519 distintas hasta alcanzar el umbral. Once
+la activación requiere firmas Ed25519 distintas hasta alcanzar el umbral. Catorce
 pruebas independientes cubren los adaptadores anteriores y, además:
 
 - reconstrucción a cero para los tres quórums 2-de-3;
@@ -72,11 +72,14 @@ pruebas independientes cubren los adaptadores anteriores y, además:
 - rechazo de una share privada alterada;
 - rechazo de manifiesto o época mezclados;
 - quórum de activación, duplicación de firmante y sustitución del certificado
-  de clave.
+  de clave;
+- exclusión de un dealer cuya share denunciada no verifica, conservando la
+  reconstrucción a cero con los dos dealers restantes;
+- aborto si las exclusiones rompen el umbral, o faltan o se duplican shares.
 
 Esto es un **modelo candidato**, no una ceremonia desplegable. Todavía deriva
 las shares dentro de un solo proceso y no implementa aleatoriedad operacional,
-cifrado punto a punto, broadcast consistente, denuncias, defensa, exclusión,
+cifrado punto a punto, broadcast consistente, transporte de denuncias, defensa,
 recuperación ni borrado seguro. Tampoco aporta una demostración de composición
 con COCKTAIL/3HashTDH. Esas propiedades permanecen como puertas obligatorias.
 

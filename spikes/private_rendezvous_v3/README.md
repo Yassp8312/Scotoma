@@ -158,15 +158,17 @@ actual administrative independence and Internet measurements require separate
 human operators and remain pending. The probe handles no rendezvous credentials
 or messages and is not a v3 production service.
 
-The first phase-1 zero-sharing gate extends the independent Rust vector to 11
+The first phase-1 zero-sharing gate extends the independent Rust vector to 14
 tests. A 2-of-3 algebraic model sums dealer-generated zero-constant linear
 polynomials, verifies each share against a Feldman commitment, binds the result
 to the key-certificate digest and requires distinct threshold Ed25519
 signatures for activation. It rejects a hidden nonzero constant, altered share,
-mixed context, duplicate signer and key-certificate substitution. This remains
-a single-process research contract: operational randomness, encrypted delivery,
-consistent broadcast, complaints, exclusion, recovery and a composition proof
-are not implemented, so the decision remains NO-GO.
+mixed context, duplicate signer and key-certificate substitution; submitted
+shares can exclude one corrupt dealer while loss of threshold fails closed.
+This remains a single-process research contract: operational randomness,
+encrypted delivery, consistent broadcast, complaint transport, defense,
+recovery and a composition proof are not implemented, so the decision remains
+NO-GO.
 
 It must not become a dependency of the application, bridge or relay. Its values
 are synthetic test fixtures and must never be used as operational keys,

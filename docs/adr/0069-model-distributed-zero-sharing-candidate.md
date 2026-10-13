@@ -32,16 +32,17 @@ refresh de shares para el caso inicial 2-de-3:
 
 ## Evidencia
 
-El gate pasa once tests. Se conservan las cinco comprobaciones de compatibilidad
-anteriores y se añaden reconstrucción para los tres quórums, rechazo de
-constante no cero, share alterada, contexto mezclado, firmante duplicado,
-quórum insuficiente y sustitución del certificado de clave.
+El gate pasa catorce tests. Se conservan las cinco comprobaciones de
+compatibilidad anteriores y se añaden reconstrucción para los tres quórums,
+rechazo de constante no cero, share alterada, contexto mezclado, firmante
+duplicado, quórum insuficiente, sustitución del certificado de clave, exclusión
+de un dealer corrupto y aborto por pérdida de umbral o shares incompletas.
 
 ## Límites
 
 El modelo conoce los coeficientes en un proceso. No implementa RNG operacional,
-canales Noise, cifrado de shares, broadcast consistente, denuncias, defensa,
-exclusión, recuperación, persistencia, borrado ni rotación. Los compromisos y
+canales Noise, cifrado de shares, broadcast consistente, transporte de
+denuncias, defensa, recuperación, persistencia, borrado ni rotación. Los compromisos y
 firmas prueban invariantes ejecutables, no una demostración de seguridad de la
 composición completa. Ningún código o dependencia entra en Android, Web, bridge
 o relay de producción.

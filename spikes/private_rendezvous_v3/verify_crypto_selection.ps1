@@ -103,9 +103,9 @@ if ($compatibility.schema -cne 'scotoma-v3-dkg-toprf-compatibility-v1' -or
     $compatibility.compatible.Count -lt 4 -or
     $compatibility.incompatible_or_missing.Count -lt 4 -or
     $compatibility.required_context_fields.Count -lt 7 -or
-    $compatibility.executable_evidence.tests -ne 11 -or
+    $compatibility.executable_evidence.tests -ne 14 -or
     $compatibility.executable_evidence.zero_sharing_candidate.status -cne 'single-process-algebraic-model-only' -or
-    $compatibility.executable_evidence.zero_sharing_candidate.verified.Count -lt 6 -or
+    $compatibility.executable_evidence.zero_sharing_candidate.verified.Count -lt 8 -or
     -not $compatibility.next_gate.Contains('zero-sharing', [StringComparison]::Ordinal)) {
     $errors.Add('the DKG/TOPRF compatibility boundary or zero-sharing gate changed')
 }

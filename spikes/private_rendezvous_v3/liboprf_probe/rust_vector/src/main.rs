@@ -84,6 +84,21 @@ struct ZeroDealerContribution {
 }
 
 #[cfg(test)]
+#[derive(Clone, Copy)]
+struct SubmittedZeroShare {
+    dealer_id: u16,
+    recipient_id: u16,
+    share: Scalar,
+}
+
+#[cfg(test)]
+#[derive(Debug, PartialEq)]
+struct AggregatedZeroSharing {
+    shares: Vec<(u64, Scalar)>,
+    excluded_dealers: Vec<u16>,
+}
+
+#[cfg(test)]
 impl ZeroDealerContribution {
     fn honest(dealer_id: u16, context_digest: [u8; 64], coefficient: u64) -> Self {
         let linear_coefficient = Scalar::from(coefficient);
@@ -181,6 +196,80 @@ fn aggregate_zero_shares(
             Ok((u64::from(*recipient_id), aggregate))
         })
         .collect()
+}
+
+#[cfg(test)]
+fn aggregate_submitted_zero_shares(
+    expected_context: [u8; 64],
+    threshold: usize,
+    contributions: &[ZeroDealerContribution],
+    submitted: &[SubmittedZeroShare],
+    recipients: &[u16],
+) -> Result<AggregatedZeroSharing, &'static str> {
+    if threshold == 0 || contributions.len() < threshold || recipients.len() < threshold {
+        return Err("threshold not met");
+    }
+    let contributions_by_id = contributions
+        .iter()
+        .map(|contribution| (contribution.dealer_id, contribution))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    if contributions_by_id.len() != contributions.len()
+        || contributions_by_id.contains_key(&0)
+        || contributions
+            .iter()
+            .any(|contribution| contribution.context_digest != expected_context)
+    {
+        return Err("invalid contribution set");
+    }
+
+    let mut share_map = std::collections::BTreeMap::new();
+    let mut excluded = std::collections::BTreeSet::new();
+    for submission in submitted {
+        let contribution = contributions_by_id
+            .get(&submission.dealer_id)
+            .ok_or("unknown dealer")?;
+        if submission.recipient_id == 0 || !recipients.contains(&submission.recipient_id) {
+            return Err("unknown recipient");
+        }
+        if share_map
+            .insert(
+                (submission.dealer_id, submission.recipient_id),
+                submission.share,
+            )
+            .is_some()
+        {
+            return Err("duplicate submitted share");
+        }
+        if !contribution.verifies_share(submission.recipient_id, submission.share) {
+            excluded.insert(submission.dealer_id);
+        }
+    }
+
+    let qualified = contributions_by_id
+        .keys()
+        .copied()
+        .filter(|dealer_id| !excluded.contains(dealer_id))
+        .collect::<Vec<_>>();
+    if qualified.len() < threshold {
+        return Err("qualified dealer threshold not met");
+    }
+
+    let shares = recipients
+        .iter()
+        .map(|recipient_id| {
+            let mut aggregate = Scalar::ZERO;
+            for dealer_id in &qualified {
+                aggregate += share_map
+                    .get(&(*dealer_id, *recipient_id))
+                    .ok_or("missing submitted share")?;
+            }
+            Ok((u64::from(*recipient_id), aggregate))
+        })
+        .collect::<Result<Vec<_>, &'static str>>()?;
+    Ok(AggregatedZeroSharing {
+        shares,
+        excluded_dealers: excluded.into_iter().collect(),
+    })
 }
 
 #[cfg(test)]
@@ -364,6 +453,19 @@ mod compatibility_tests {
         ]
     }
 
+    fn submitted_shares(contributions: &[ZeroDealerContribution]) -> Vec<SubmittedZeroShare> {
+        contributions
+            .iter()
+            .flat_map(|contribution| {
+                (1_u16..=3).map(move |recipient_id| SubmittedZeroShare {
+                    dealer_id: contribution.dealer_id,
+                    recipient_id,
+                    share: contribution.private_share_for(recipient_id),
+                })
+            })
+            .collect()
+    }
+
     #[test]
     fn distributed_contributions_reconstruct_zero_for_every_two_of_three_quorum() {
         let shares =
@@ -462,6 +564,87 @@ mod compatibility_tests {
         assert_eq!(
             verify_activation_quorum(substituted, 1, &operators, &[(1, signature)]),
             Err("invalid activation signature")
+        );
+    }
+
+    #[test]
+    fn substantiated_complaint_excludes_one_dealer_and_preserves_zero_sharing() {
+        let contributions = honest_contributions();
+        let mut submitted = submitted_shares(&contributions);
+        let tampered = submitted
+            .iter_mut()
+            .find(|share| share.dealer_id == 2 && share.recipient_id == 3)
+            .unwrap();
+        tampered.share += Scalar::ONE;
+
+        let result = aggregate_submitted_zero_shares(
+            candidate_context(),
+            2,
+            &contributions,
+            &submitted,
+            &[1, 2, 3],
+        )
+        .expect("two honest dealers must preserve the threshold");
+
+        assert_eq!(result.excluded_dealers, vec![2]);
+        for &(left, right) in &[(0_usize, 1_usize), (0, 2), (1, 2)] {
+            assert_eq!(
+                combine_scalar_pair(result.shares[left], result.shares[right]),
+                Scalar::ZERO
+            );
+        }
+    }
+
+    #[test]
+    fn exclusions_that_break_the_dealer_threshold_abort() {
+        let contributions = honest_contributions();
+        let mut submitted = submitted_shares(&contributions);
+        for share in submitted
+            .iter_mut()
+            .filter(|share| share.recipient_id == 1 && share.dealer_id != 1)
+        {
+            share.share += Scalar::ONE;
+        }
+
+        assert_eq!(
+            aggregate_submitted_zero_shares(
+                candidate_context(),
+                2,
+                &contributions,
+                &submitted,
+                &[1, 2, 3],
+            ),
+            Err("qualified dealer threshold not met")
+        );
+    }
+
+    #[test]
+    fn missing_or_duplicate_submitted_share_fails_closed() {
+        let contributions = honest_contributions();
+        let mut missing = submitted_shares(&contributions);
+        missing.pop();
+        assert_eq!(
+            aggregate_submitted_zero_shares(
+                candidate_context(),
+                2,
+                &contributions,
+                &missing,
+                &[1, 2, 3],
+            ),
+            Err("missing submitted share")
+        );
+
+        let mut duplicated = submitted_shares(&contributions);
+        duplicated.push(duplicated[0]);
+        assert_eq!(
+            aggregate_submitted_zero_shares(
+                candidate_context(),
+                2,
+                &contributions,
+                &duplicated,
+                &[1, 2, 3],
+            ),
+            Err("duplicate submitted share")
         );
     }
 }
