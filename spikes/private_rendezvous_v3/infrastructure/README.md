@@ -83,6 +83,10 @@ secret file llamado `operator.seed` y rellenar ID, época y clave pública del
 cliente. Reutilizar nuestra misma cuenta para ambos operadores no satisface el
 requisito de independencia.
 
+La clave pública del cliente se deriva sin imprimir la semilla mediante
+`v3_public_probe_http_client public-key`, con
+`SCOTOMA_V3_PROBE_CLIENT_SEED_FILE` apuntando al archivo local.
+
 Después se completa `operator-set-http.example.json` y se ejecuta:
 
 ```text

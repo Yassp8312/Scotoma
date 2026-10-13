@@ -1,7 +1,7 @@
 {
   "schema": "scotoma-v3-review-snapshot-v2",
   "created": "2026-10-12",
-  "git_base": "98f04171225ad6f53e0a60bb756e358120ff2514",
+  "git_base": "2146ae420fcc1c63fa097fd07663f38608afc4d1",
   "working_tree": "dirty-intentional",
   "warning": "Review these exact bytes. This snapshot is not a release, audit, endorsement, or production protocol.",
   "files": [
@@ -191,7 +191,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/src/bin/v3_public_probe_http_client.rs",
-      "sha256": "ec2e28c4152f85cecfbf611d2c844f39108777118ed7bfdeae771d54b45c445a"
+      "sha256": "5e38a3b5567e61f1ad1daca8ccd9755273e65337ee18ddb7b039f177feabbe9c"
     },
     {
       "path": "spikes/private_rendezvous_v3/src/bin/v3_public_probe_http_operator.rs",
@@ -255,7 +255,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/README.md",
-      "sha256": "994b3cff452a2947e543aaeadaa38e325d1e9eaabf9b36a3eaae5e3b42fe49bb"
+      "sha256": "f3e45c4b9f381e4b73aa4bbf9d01722a171ab1a947ea52cb411f19e2f3522ad4"
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/compose.local-simulation.yml",

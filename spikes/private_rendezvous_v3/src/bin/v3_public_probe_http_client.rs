@@ -26,10 +26,17 @@ fn main() {
 fn run() -> Result<(), String> {
     let args = env::args().skip(1).collect::<Vec<_>>();
     match args.first().map(String::as_str) {
+        Some("public-key") if args.len() == 1 => print_public_key(),
         Some("request") => make_request(&args[1..]),
         Some("verify") => verify_receipt(&args[1..]),
         _ => Err(usage()),
     }
+}
+
+fn print_public_key() -> Result<(), String> {
+    let client_key = load_signing_key(KEY_ENVIRONMENT_VARIABLE)?;
+    println!("{}", encode_hex(client_key.verifying_key().to_bytes()));
+    Ok(())
 }
 
 fn make_request(args: &[String]) -> Result<(), String> {
@@ -105,7 +112,7 @@ fn parse_context(args: &[String]) -> Result<(u16, u64, u64, &[String]), String> 
 }
 
 fn usage() -> String {
-    "usage: request --operator <u16> --epoch <u64> --sequence <u64> OR verify --operator <u16> --epoch <u64> --sequence <u64> --operator-key <hex32> --response-hex <hex>".to_owned()
+    "usage: public-key OR request --operator <u16> --epoch <u64> --sequence <u64> OR verify --operator <u16> --epoch <u64> --sequence <u64> --operator-key <hex32> --response-hex <hex>".to_owned()
 }
 
 fn load_signing_key(variable: &str) -> Result<SigningKey, String> {
