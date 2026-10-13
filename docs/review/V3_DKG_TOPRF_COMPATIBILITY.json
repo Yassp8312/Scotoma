@@ -15,10 +15,10 @@
   ],
   "incompatible_or_missing": [
     "COCKTAIL-DKG produces a sharing of a random nonzero group secret, not the zero sharing required by 3HashTDH",
-    "the executable joint activation certificate is a single-process candidate and has not been independently reviewed",
+    "the executable joint activation certificate and dealer identities are research fixtures and have not been independently reviewed",
     "no security argument transfers COCKTAIL's FROST-oriented proof to the complete 3HashTDH construction",
     "no maintained malicious-secure zero-sharing implementation has been selected",
-    "encrypted share transport, consistent broadcast, complaints, exclusion and recovery remain unimplemented"
+    "dealer subprocess output is authenticated but plaintext; encrypted share transport, consistent broadcast, complaint transport, defense and recovery remain unimplemented"
   ],
   "required_context_fields": [
     "protocol_version",
@@ -31,7 +31,7 @@
   ],
   "executable_evidence": {
     "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs",
-    "tests": 14,
+    "tests": 17,
     "zero_sharing_candidate": {
       "construction": "sum of dealer-generated zero-constant linear polynomials with Feldman share checks",
       "activation": "threshold Ed25519 signatures over the key-certificate and zero-sharing transcript digests",
@@ -43,9 +43,13 @@
         "insufficient or duplicate signer rejected",
         "key-certificate substitution rejected",
         "substantiated invalid-share complaint excludes one dealer while preserving zero reconstruction",
-        "exclusion below threshold and missing or duplicate shares fail closed"
+        "exclusion below threshold and missing or duplicate shares fail closed",
+        "three separate dealer processes emit independently authenticated context-bound contributions",
+        "crossed dealer identity, crossed epoch and mutated signed payload fail closed"
       ],
-      "status": "single-process-algebraic-model-only"
+      "status": "authenticated-multiprocess-fixture-only",
+      "integration_path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/tests/zero_sharing_process.rs",
+      "transport": "TEST_ONLY parent-process stdout; authenticated but neither confidential nor deployable"
     }
   },
   "next_gate": "Add authenticated encrypted share delivery, consistent broadcast, complaint/exclusion/recovery and operational randomness around the zero-sharing candidate, then review its composition with COCKTAIL-DKG and 3HashTDH."

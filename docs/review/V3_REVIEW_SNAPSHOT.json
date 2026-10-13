@@ -35,7 +35,7 @@
     },
     {
       "path": "docs/V3_COCKTAIL_3HASHTDH_COMPATIBILITY.md",
-      "sha256": "cd508308f158b554432201d59248ff98ec96b92db9822e5abff4630f411ed389"
+      "sha256": "353bb6db9931ce0423a7ae9bb969afcd910f8aee020d390ff8997f2b3a99a5fe"
     },
     {
       "path": "docs/V3_OPERATOR_AND_ABUSE_MODEL.md",
@@ -91,7 +91,7 @@
     },
     {
       "path": "docs/adr/0069-model-distributed-zero-sharing-candidate.md",
-      "sha256": "d3f5a89c3b3f83983272e48fb3d7050d0f093c6e37e55c7d437f6774991b1748"
+      "sha256": "560deec9881c16f226939cc9847a58bc8243f922d1e6b9f88a5633ce714de5eb"
     },
     {
       "path": "docs/review/V3_CRYPTO_SELECTION.json",
@@ -107,7 +107,7 @@
     },
     {
       "path": "docs/review/V3_DKG_TOPRF_COMPATIBILITY.json",
-      "sha256": "40bccaa34e3917aabd6a5d192f97054bccd5a25d7bdc51324bc8fa483ed9f88d"
+      "sha256": "0d252858ed23750aa286690ceca23c5a68de014fc781651dee16f0c3e28b7e27"
     },
     {
       "path": "docs/review/V3_PLATFORM_PROBE.json",
@@ -127,7 +127,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/README.md",
-      "sha256": "39061473fe9583bd0b837dc491959e68ec88887df2fd764aa365bced253c30f1"
+      "sha256": "d5d384c082ad73c9ba85287385f21603b33bf73c1a9cf697c6bb9f5fac314e98"
     },
     {
       "path": "spikes/private_rendezvous_v3/fuzz/Cargo.toml",
@@ -351,11 +351,15 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs",
-      "sha256": "810b8340db78de96f3198812e54437133e74b4619ad52aaf015c8a108ed0eb33"
+      "sha256": "6cc806d6de03116d6d8792d1bfdfc057fa4a9e3cbb9dcc1b5fc5df80abb4b967"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/liboprf_probe/rust_vector/tests/zero_sharing_process.rs",
+      "sha256": "611698a92aba76d1ceb1f1ee5ce56f9121d3c03d9cc696744ab3e301e7b62439"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_crypto_selection.ps1",
-      "sha256": "785dca42ce4daf5e157d19713a7e413cbd9a9a3fc78e539c9ff7863b1e61a308"
+      "sha256": "c24bf7faaf9f7d76f94be796b9388861525c62b907b6f82d906a24137310351a"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_dkg_sources.ps1",
@@ -367,7 +371,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_review_snapshot.ps1",
-      "sha256": "cb4ea1d0fdb7a3715b096ffb8728a7fcb2f3b047c947d29938530604aa9bdc0e"
+      "sha256": "67f52b46885239352f48a7e39dda0413e75b8e3f61b3d9cb8ed886e972fff7cc"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_supply_chain.ps1",

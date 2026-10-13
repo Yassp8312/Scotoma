@@ -387,12 +387,15 @@ activación ligado a operadores, umbral, manifiesto y época.
 La fase 1 añade el primer candidato ejecutable de esa pieza: dealers aportan
 polinomios lineales con constante públicamente forzada a cero, los receptores
 verifican cada share contra compromisos Feldman y un quórum Ed25519 liga el
-transcript agregado al certificado de key sharing. Catorce pruebas cubren los
-tres quórums, shares recibidas, exclusión y los negativos de constante, share,
-umbral, contexto, firmante y sustitución.
-Sigue siendo un modelo monoproceso: cifrado entre operadores, broadcast,
-transporte de denuncias, defensa, recuperación, aleatoriedad operacional y revisión de la
-composición continúan pendientes, por lo que no cambia el NO-GO.
+transcript agregado al certificado de key sharing. Diecisiete pruebas —catorce
+unitarias y tres multiproceso— cubren los tres quórums, shares recibidas,
+exclusión y los negativos de constante, share, umbral, contexto, firmante,
+sustitución, identidad/época cruzadas y payload firmado alterado. Tres dealers
+se lanzan como procesos separados con identidades Ed25519 de fixture.
+Las shares aún viajan en texto claro por stdout al arnés y los coeficientes son
+deterministas: cifrado entre operadores, broadcast, transporte de denuncias,
+defensa, recuperación, aleatoriedad operacional y revisión de la composición
+continúan pendientes, por lo que no cambia el NO-GO.
 
 El tramo 3 queda implementado y su gate multiplataforma pasó en CI. Un vector
 determinista 3HashTDH es reproducido por una

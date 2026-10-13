@@ -1,13 +1,14 @@
 //! Independent TEST-ONLY reproduction of the pinned liboprf vector.
 
 use blake2::Blake2b512;
-use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
+use curve25519_dalek::{
+    constants::RISTRETTO_BASEPOINT_POINT, ristretto::RistrettoPoint, scalar::Scalar,
+};
+use ed25519_dalek::{Signer, SigningKey};
 use sha2::{Digest as _, Sha512};
 
 #[cfg(test)]
-use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
-#[cfg(test)]
-use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 
 const CREDENTIAL: &[u8] = b"scotoma-v3-vector-room-password";
 const SSID: &[u8] = b"SCOTOMA-v3|manifest=7f1d|epoch=19|evaluation=0001";
@@ -68,8 +69,8 @@ fn encode_liboprf_share(index: u8, scalar: Scalar) -> [u8; 33] {
     encoded
 }
 
-#[cfg(test)]
 const ZERO_SHARING_DOMAIN: &[u8] = b"SCOTOMA-v3-ZERO-SHARING-v1\0";
+const ZERO_DEALER_DOMAIN: &[u8] = b"SCOTOMA-v3-ZERO-DEALER-v1\0";
 #[cfg(test)]
 const ACTIVATION_DOMAIN: &[u8] = b"SCOTOMA-v3-ACTIVATION-v1\0";
 
@@ -138,7 +139,6 @@ impl ZeroDealerContribution {
     }
 }
 
-#[cfg(test)]
 fn zero_sharing_context(
     deployment_id: &[u8],
     manifest_hash: [u8; 32],
@@ -155,6 +155,75 @@ fn zero_sharing_context(
     digest.update(operator_set_hash);
     digest.update(threshold.to_be_bytes());
     digest.finalize().into()
+}
+
+fn zero_dealer_fixture_signing_key(dealer_id: u16) -> SigningKey {
+    let mut seed = [0x91; 32];
+    seed[..2].copy_from_slice(&dealer_id.to_be_bytes());
+    SigningKey::from_bytes(&seed)
+}
+
+fn zero_dealer_signed_payload(
+    dealer_id: u16,
+    context: [u8; 64],
+    constant_commitment: [u8; 32],
+    linear_commitment: [u8; 32],
+    shares: &[[u8; 32]; 3],
+) -> Vec<u8> {
+    let mut payload = Vec::with_capacity(2 + 64 + 32 * 5);
+    payload.extend_from_slice(ZERO_DEALER_DOMAIN);
+    payload.extend_from_slice(&dealer_id.to_be_bytes());
+    payload.extend_from_slice(&context);
+    payload.extend_from_slice(&constant_commitment);
+    payload.extend_from_slice(&linear_commitment);
+    for share in shares {
+        payload.extend_from_slice(share);
+    }
+    payload
+}
+
+fn run_zero_dealer(args: &[String]) -> Result<(), &'static str> {
+    let [dealer_id, coefficient, epoch] = args else {
+        return Err("usage: zero-dealer <dealer-id> <coefficient> <epoch>");
+    };
+    let dealer_id = dealer_id.parse::<u16>().map_err(|_| "invalid dealer")?;
+    let coefficient = coefficient
+        .parse::<u64>()
+        .map_err(|_| "invalid coefficient")?;
+    let epoch = epoch.parse::<u64>().map_err(|_| "invalid epoch")?;
+    if !(1..=3).contains(&dealer_id) || coefficient == 0 || epoch == 0 {
+        return Err("zero dealer argument");
+    }
+
+    let context =
+        zero_sharing_context(b"scotoma-test-deployment", [0x53; 32], epoch, [0xa7; 32], 2);
+    let coefficient = Scalar::from(coefficient);
+    let constant_commitment = RistrettoPoint::default().compress().to_bytes();
+    let linear_commitment = (RISTRETTO_BASEPOINT_POINT * coefficient)
+        .compress()
+        .to_bytes();
+    let shares =
+        std::array::from_fn(|index| (coefficient * Scalar::from((index + 1) as u64)).to_bytes());
+    let signing_key = zero_dealer_fixture_signing_key(dealer_id);
+    let signature = signing_key.sign(&zero_dealer_signed_payload(
+        dealer_id,
+        context,
+        constant_commitment,
+        linear_commitment,
+        &shares,
+    ));
+    println!(
+        "ZERO_DEALER_V1 {dealer_id} {} {} {} {} {} {} {} {}",
+        encode_hex(&context),
+        encode_hex(&constant_commitment),
+        encode_hex(&linear_commitment),
+        encode_hex(&shares[0]),
+        encode_hex(&shares[1]),
+        encode_hex(&shares[2]),
+        encode_hex(&signing_key.verifying_key().to_bytes()),
+        encode_hex(&signature.to_bytes())
+    );
+    Ok(())
 }
 
 #[cfg(test)]
@@ -344,6 +413,18 @@ fn encode_hex(bytes: &[u8]) -> String {
 }
 
 fn main() {
+    let args = std::env::args().skip(1).collect::<Vec<_>>();
+    if args.first().is_some_and(|command| command == "zero-dealer") {
+        if let Err(error) = run_zero_dealer(&args[1..]) {
+            eprintln!("zero dealer failed: {error}");
+            std::process::exit(2);
+        }
+        return;
+    }
+    if !args.is_empty() {
+        eprintln!("unknown command");
+        std::process::exit(2);
+    }
     let key = Scalar::from(7_u64);
     let blind = Scalar::from(5_u64);
     let alpha = hash_to_group(CREDENTIAL) * blind;

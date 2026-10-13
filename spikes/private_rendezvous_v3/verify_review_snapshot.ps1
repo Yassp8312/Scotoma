@@ -100,6 +100,7 @@ $expectedPaths = @(
     'spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.toml',
     'spikes/private_rendezvous_v3/liboprf_probe/rust_vector/Cargo.lock',
     'spikes/private_rendezvous_v3/liboprf_probe/rust_vector/src/main.rs',
+    'spikes/private_rendezvous_v3/liboprf_probe/rust_vector/tests/zero_sharing_process.rs',
     'spikes/private_rendezvous_v3/verify_crypto_selection.ps1',
     'spikes/private_rendezvous_v3/verify_dkg_sources.ps1',
     'spikes/private_rendezvous_v3/run_cocktail_dkg_probe.sh',

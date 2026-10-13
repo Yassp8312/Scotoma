@@ -64,8 +64,9 @@ constante cero si al menos un dealer honesto elige `a_i` impredecible.
 
 El transcript incluye dominio, deployment, manifiesto, época, conjunto de
 operadores y umbral. Su digest se combina con el certificado de key sharing y
-la activación requiere firmas Ed25519 distintas hasta alcanzar el umbral. Catorce
-pruebas independientes cubren los adaptadores anteriores y, además:
+la activación requiere firmas Ed25519 distintas hasta alcanzar el umbral.
+Diecisiete pruebas independientes (catorce unitarias y tres de integración
+multiproceso) cubren los adaptadores anteriores y, además:
 
 - reconstrucción a cero para los tres quórums 2-de-3;
 - rechazo de una constante no cero;
@@ -76,12 +77,18 @@ pruebas independientes cubren los adaptadores anteriores y, además:
 - exclusión de un dealer cuya share denunciada no verifica, conservando la
   reconstrucción a cero con los dos dealers restantes;
 - aborto si las exclusiones rompen el umbral, o faltan o se duplican shares.
+- tres dealers ejecutados como procesos separados, cada uno con identidad
+  Ed25519 fijada, contexto firmado, shares canónicas y compromisos verificables;
+- rechazo de identidad cruzada, época cruzada o payload firmado alterado antes
+  de agregar contribuciones.
 
 Esto es un **modelo candidato**, no una ceremonia desplegable. Todavía deriva
-las shares dentro de un solo proceso y no implementa aleatoriedad operacional,
-cifrado punto a punto, broadcast consistente, transporte de denuncias, defensa,
-recuperación ni borrado seguro. Tampoco aporta una demostración de composición
-con COCKTAIL/3HashTDH. Esas propiedades permanecen como puertas obligatorias.
+cada contribución en un proceso separado, pero usa coeficientes deterministas
+de fixture y entrega sus shares en texto claro al arnés padre. No implementa
+aleatoriedad operacional, cifrado punto a punto, broadcast consistente,
+transporte de denuncias, defensa, recuperación ni borrado seguro. Tampoco aporta
+una demostración de composición con COCKTAIL/3HashTDH. Esas propiedades
+permanecen como puertas obligatorias.
 
 ## Decisión
 
