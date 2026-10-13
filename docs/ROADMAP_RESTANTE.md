@@ -367,6 +367,14 @@ Para cerrar el tramo 2 todavía hay que seleccionar y revisar una ceremonia que
 satisfaga el requisito malicious-secure, probar exclusión y recuperación entre
 procesos y decidir si el diseño de actualización upstream puede conservarse.
 
+El 13 de octubre de 2026 se congeló COCKTAIL-DKG v0.2.1 como especificación
+candidata para esa evaluación, con la suite Ristretto255/SHA-512 y los vectores
+CCTV fijados por commit y SHA-256. La selección aporta PoP, shares cifrados,
+certificación final y recuperación definida, pero no cierra el tramo: la
+implementación Rust mantenida continúa en desarrollo y todavía debe demostrarse
+que sus shares y transcript son compatibles con 3HashTDH sin reutilizar la
+demostración de seguridad escrita para FROST.
+
 El tramo 3 queda implementado y su gate multiplataforma pasó en CI. Un vector
 determinista 3HashTDH es reproducido por una
 implementación safe Rust independiente y debe coincidir byte a byte con liboprf

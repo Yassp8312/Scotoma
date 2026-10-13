@@ -1,0 +1,82 @@
+{
+  "schema": "scotoma-v3-dkg-selection-v1",
+  "date": "2026-10-13",
+  "status": "frozen-specification-candidate",
+  "production_decision": "NO-GO",
+  "selected": {
+    "protocol": "COCKTAIL-DKG",
+    "version": "0.2.1",
+    "ciphersuite": "COCKTAIL(Ristretto255, SHA-512)",
+    "topology": {
+      "participants": 3,
+      "threshold": 2
+    },
+    "specification": {
+      "repository": "C2SP/C2SP",
+      "commit": "e5746a0bcda86413310119abb2972e6f78c374fa",
+      "path": "cocktail-dkg.md",
+      "sha256": "e7ded83da0b54d9bf0052368ddcd2ca9ad6e257ed7fd17abf14f7e69f44e717d"
+    },
+    "vectors": {
+      "repository": "C2SP/CCTV",
+      "commit": "50a8ecf2a220f4c8bdc4f085789b8e85c26829e7",
+      "path": "cocktail-dkg/cocktail-dkg-ristretto255-sha512.json",
+      "sha256": "04631ddfd2a39005b7709d79aa2c3bb7edb68450589aed651aef38a3cf9c6019"
+    }
+  },
+  "required_properties": [
+    "proof-of-possession bound to the participant and ceremony context",
+    "encrypted and authenticated share delivery over an untrusted transport",
+    "canonical transcript with a final agreement certificate",
+    "strict scalar, point, identity, AEAD and share validation",
+    "byte-exact Ristretto255/SHA-512 interoperability vectors",
+    "recovery evidence without silent threshold reduction"
+  ],
+  "evaluated_implementation": {
+    "repository": "ZcashFoundation/frost",
+    "pull_request": 1032,
+    "commit": "a8ab5f8ba7adcd2ea4a98ceb606ccacfb4525731",
+    "observed_at": "2026-10-13",
+    "upstream_state": {
+      "state": "open",
+      "draft": true,
+      "mergeable": false,
+      "mergeable_state": "dirty",
+      "declared_specification_version": "0.2.0"
+    },
+    "ristretto_vector": {
+      "path": "frost-ristretto255/tests/helpers/cocktail-dkg-ristretto255-sha512.json",
+      "sha256": "04631ddfd2a39005b7709d79aa2c3bb7edb68450589aed651aef38a3cf9c6019",
+      "matches_frozen_0_2_1_vector": true
+    },
+    "local_test_attempt": {
+      "command": "cargo test -p frost-ristretto255 --features cocktail-dkg --test cocktail_dkg_tests",
+      "result": "not-executed-environment-blocked",
+      "blocker": "The installed x86_64-pc-windows-gnu Rust toolchain cannot compile windows-sys because dlltool.exe is absent. This is not evidence that the upstream tests fail."
+    },
+    "upstream_ci_observation": {
+      "workflow_run": "https://github.com/ZcashFoundation/frost/actions/runs/29370744654",
+      "summary": "The available dynamic PR workflow succeeded, but it does not provide sufficient evidence that the Ristretto COCKTAIL test target passed; the aggregate CodeQL check reported failure."
+    },
+    "scotoma_ci_probe": {
+      "path": "spikes/private_rendezvous_v3/run_cocktail_dkg_probe.sh",
+      "status": "configured-pending-first-run",
+      "scope": "Fetch the immutable upstream commit, verify the exact Ristretto vector and execute only its COCKTAIL-DKG tests on Linux."
+    },
+    "disposition": "rejected-for-integration"
+  },
+  "blocking_gates": [
+    "Pin a maintained implementation; the public ZF FROST COCKTAIL work is still WIP.",
+    "Reproduce the pinned CCTV vectors in two independent implementations.",
+    "Prove or review compatibility of COCKTAIL shares and transcript binding with frozen 3HashTDH.",
+    "Add malicious participant, equivocation, complaint, exclusion, recovery and rotation tests.",
+    "Run the ceremony across independent processes and administrative domains.",
+    "Complete license, supply-chain and independent cryptographic review."
+  ],
+  "rejected_shortcuts": [
+    "Do not rename the existing boolean ceremony model or FT-Joint-DL-VSS fixture as PedPoP.",
+    "Do not implement the cryptographic protocol from the paper without a maintained reference and independent review.",
+    "Do not infer TOPRF security from a DKG proof written for FROST.",
+    "Do not add COCKTAIL, FROST or DKG dependencies to production manifests in this tranche."
+  ]
+}

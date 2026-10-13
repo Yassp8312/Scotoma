@@ -5,9 +5,11 @@ $spikeRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repositoryRoot = (Resolve-Path (Join-Path $spikeRoot '../..')).Path
 $selectionPath = Join-Path $repositoryRoot 'docs/review/V3_CRYPTO_SELECTION.json'
 $ceremonyPath = Join-Path $repositoryRoot 'docs/review/V3_CEREMONY_PROBE.json'
+$dkgPath = Join-Path $repositoryRoot 'docs/review/V3_DKG_SELECTION.json'
 $platformPath = Join-Path $repositoryRoot 'docs/review/V3_PLATFORM_PROBE.json'
 $selection = Get-Content -LiteralPath $selectionPath -Raw | ConvertFrom-Json
 $ceremony = Get-Content -LiteralPath $ceremonyPath -Raw | ConvertFrom-Json
+$dkg = Get-Content -LiteralPath $dkgPath -Raw | ConvertFrom-Json
 $platform = Get-Content -LiteralPath $platformPath -Raw | ConvertFrom-Json
 $errors = [Collections.Generic.List[string]]::new()
 
@@ -50,6 +52,47 @@ if ($ceremony.inputs.liboprf_commit -cne $expected.commit -or
 }
 if ($ceremony.executable_checks.Count -lt 7 -or $ceremony.not_verified.Count -lt 5) {
     $errors.Add('ceremony probe evidence or limitations were removed')
+}
+
+if ($dkg.schema -ne 'scotoma-v3-dkg-selection-v1' -or
+    $dkg.status -ne 'frozen-specification-candidate' -or
+    $dkg.production_decision -ne 'NO-GO') {
+    $errors.Add('unexpected DKG selection schema, status or production decision')
+}
+$expectedDkg = [ordered]@{
+    protocol = 'COCKTAIL-DKG'
+    version = '0.2.1'
+    ciphersuite = 'COCKTAIL(Ristretto255, SHA-512)'
+}
+foreach ($entry in $expectedDkg.GetEnumerator()) {
+    if ([string]$dkg.selected.($entry.Key) -cne [string]$entry.Value) {
+        $errors.Add("unexpected $($entry.Key) in frozen DKG selection")
+    }
+}
+if ($dkg.selected.topology.participants -ne 3 -or
+    $dkg.selected.topology.threshold -ne 2 -or
+    $dkg.selected.specification.commit -cne 'e5746a0bcda86413310119abb2972e6f78c374fa' -or
+    $dkg.selected.specification.sha256 -cne 'e7ded83da0b54d9bf0052368ddcd2ca9ad6e257ed7fd17abf14f7e69f44e717d' -or
+    $dkg.selected.vectors.commit -cne '50a8ecf2a220f4c8bdc4f085789b8e85c26829e7' -or
+    $dkg.selected.vectors.sha256 -cne '04631ddfd2a39005b7709d79aa2c3bb7edb68450589aed651aef38a3cf9c6019') {
+    $errors.Add('DKG topology or pinned upstream evidence changed')
+}
+if ($dkg.required_properties.Count -lt 6 -or
+    $dkg.blocking_gates.Count -lt 6 -or
+    $dkg.rejected_shortcuts.Count -lt 4) {
+    $errors.Add('DKG requirements, blocking gates or rejected shortcuts were removed')
+}
+if ($dkg.evaluated_implementation.repository -cne 'ZcashFoundation/frost' -or
+    $dkg.evaluated_implementation.pull_request -ne 1032 -or
+    $dkg.evaluated_implementation.commit -cne 'a8ab5f8ba7adcd2ea4a98ceb606ccacfb4525731' -or
+    $dkg.evaluated_implementation.upstream_state.declared_specification_version -cne '0.2.0' -or
+    $dkg.evaluated_implementation.ristretto_vector.sha256 -cne '04631ddfd2a39005b7709d79aa2c3bb7edb68450589aed651aef38a3cf9c6019' -or
+    $dkg.evaluated_implementation.ristretto_vector.matches_frozen_0_2_1_vector -ne $true -or
+    $dkg.evaluated_implementation.local_test_attempt.result -cne 'not-executed-environment-blocked' -or
+    $dkg.evaluated_implementation.scotoma_ci_probe.path -cne 'spikes/private_rendezvous_v3/run_cocktail_dkg_probe.sh' -or
+    $dkg.evaluated_implementation.scotoma_ci_probe.status -cne 'configured-pending-first-run' -or
+    $dkg.evaluated_implementation.disposition -cne 'rejected-for-integration') {
+    $errors.Add('the evaluated DKG implementation evidence or disposition changed')
 }
 
 if ($platform.schema -ne 'scotoma-v3-platform-probe-v1' -or
@@ -108,7 +151,7 @@ $productionInputs = @(
     'app/scotoma/pubspec.yaml',
     'rust/scotoma-relay/Cargo.toml'
 )
-$forbidden = @('liboprf', '3HashTDH', 'taceo-oprf')
+$forbidden = @('liboprf', '3HashTDH', 'taceo-oprf', 'cocktail-dkg', 'frost-ristretto255')
 foreach ($relativePath in $productionInputs) {
     $content = Get-Content -LiteralPath (Join-Path $repositoryRoot $relativePath) -Raw
     foreach ($marker in $forbidden) {
@@ -128,6 +171,8 @@ if ($errors.Count -ne 0) {
     construction = $selection.selected.construction
     implementation = "$($selection.selected.implementation)@$($selection.selected.commit)"
     ceremony_probe_checks = $ceremony.executable_checks.Count
+    dkg_candidate = "$($dkg.selected.protocol)@$($dkg.selected.specification.commit)"
+    dkg_blocking_gates = $dkg.blocking_gates.Count
     platform_probe_gates = $platform.ci_gates.Count
     production_inputs_verified = $productionInputs.Count
     production_decision = $selection.production_decision

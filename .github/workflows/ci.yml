@@ -121,7 +121,12 @@ jobs:
 
       - name: Verify frozen v3 cryptographic selection remains isolated
         shell: pwsh
-        run: ./spikes/private_rendezvous_v3/verify_crypto_selection.ps1
+        run: |
+          ./spikes/private_rendezvous_v3/verify_crypto_selection.ps1
+          ./spikes/private_rendezvous_v3/verify_dkg_sources.ps1
+
+      - name: Execute pinned COCKTAIL-DKG implementation probe
+        run: bash spikes/private_rendezvous_v3/run_cocktail_dkg_probe.sh
 
       - name: Install isolated liboprf probe build tools
         run: |

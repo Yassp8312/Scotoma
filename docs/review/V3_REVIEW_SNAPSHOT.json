@@ -7,7 +7,7 @@
   "files": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "ecbd71db302742dff8a270376db2bd0374d399ee344286b09a201e58154626b0"
+      "sha256": "7448ad080d82c367119da691f45b82d66e52a2a752def8c7139493c0d2f892b2"
     },
     {
       "path": ".gitignore",
@@ -82,12 +82,20 @@
       "sha256": "6280ec8edba63b436455eb6b21fbd91920b86259f3f26b7cc086654ca1ef6a38"
     },
     {
+      "path": "docs/adr/0068-freeze-cocktail-dkg-specification-candidate.md",
+      "sha256": "992de721afb020a2d1d49d07f50ddc9f35f5bab04a93c76d206009d59174120f"
+    },
+    {
       "path": "docs/review/V3_CRYPTO_SELECTION.json",
       "sha256": "f114266f19a597aa7d8aca6bca79b9b62d5eacd49119b9111ea4e306e7b24c9a"
     },
     {
       "path": "docs/review/V3_CEREMONY_PROBE.json",
       "sha256": "3341edb012fcf23345177e73f184b2ef3c4d1309967a0b1d02b595f8c1ed3629"
+    },
+    {
+      "path": "docs/review/V3_DKG_SELECTION.json",
+      "sha256": "1d2918ceed9570aae74d68ab03a6f3439ea94173bbe398ecfb96044b6cc15a18"
     },
     {
       "path": "docs/review/V3_PLATFORM_PROBE.json",
@@ -335,11 +343,19 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_crypto_selection.ps1",
-      "sha256": "77fc51996ac643b3c9abb1850f1498ed1234217cdd4f2053759b1e58ff3c488b"
+      "sha256": "aab633341a85992cb2275cd4bae228e94321efcd886724e2fbad3efbb47a8e4d"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/verify_dkg_sources.ps1",
+      "sha256": "e88ed847564c1510f3e8f672de734a51a583ff5d55a6229a9cd415b8d3820bf9"
+    },
+    {
+      "path": "spikes/private_rendezvous_v3/run_cocktail_dkg_probe.sh",
+      "sha256": "b0a604cd8e6c8ece2dc2f8d3c0bb2b7f91732fb9ee2ff1d003b20fbb75021f02"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_review_snapshot.ps1",
-      "sha256": "e6757901537a727275fa235697146d1827bd55bca265c8e0e95af18c47b8b6be"
+      "sha256": "33aa0cae9352c3578ec9b1e55e583477a0c8b2a637368de4f24bc82878f76c07"
     },
     {
       "path": "spikes/private_rendezvous_v3/verify_supply_chain.ps1",
