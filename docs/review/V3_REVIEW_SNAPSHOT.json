@@ -255,7 +255,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/README.md",
-      "sha256": "f3e45c4b9f381e4b73aa4bbf9d01722a171ab1a947ea52cb411f19e2f3522ad4"
+      "sha256": "669c0d7d8aaaceba5dd1fc037b550f99989e65930c0fd571f939e76ca14839ff"
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/compose.local-simulation.yml",
@@ -279,7 +279,7 @@
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/render.operator.example.yaml",
-      "sha256": "c889dc39f93c7256d772846db4bd84d3e82a3e31255551550c01857159ed4b2b"
+      "sha256": "dccc788dbbedb877ef3633b08bb7349f428ab47f908fa882d7eb470f055ceab6"
     },
     {
       "path": "spikes/private_rendezvous_v3/infrastructure/run_public_http_probe.ps1",

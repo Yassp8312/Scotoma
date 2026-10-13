@@ -79,7 +79,7 @@ commit exacto y conservar la decisión `NO-GO` hasta la revisión del tramo 5.
 
 `render.operator.example.yaml` describe **un** operador HTTP. Cada administrador
 debe importar su propia copia desde una cuenta/workspace separado, cargar un
-secret file llamado `operator.seed` y rellenar ID, época y clave pública del
+secret file llamado `operator-rotated.seed` y rellenar ID, época y clave pública del
 cliente. Reutilizar nuestra misma cuenta para ambos operadores no satisface el
 requisito de independencia.
 

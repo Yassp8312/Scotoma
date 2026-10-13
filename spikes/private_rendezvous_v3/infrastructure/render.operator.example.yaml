@@ -9,7 +9,7 @@ services:
     healthCheckPath: /healthz
     envVars:
       - key: SCOTOMA_V3_OPERATOR_SEED_FILE
-        value: /etc/secrets/operator.seed
+        value: /etc/secrets/operator-rotated.seed
       - key: SCOTOMA_V3_OPERATOR_ID
         sync: false
       - key: SCOTOMA_V3_EPOCH
