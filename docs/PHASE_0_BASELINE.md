@@ -103,12 +103,19 @@ correctamente el alias oficial mediante `keytool`; la copia temporal se eliminó
 al terminar. La memoria contiene únicamente la JKS protegida por contraseña,
 su checksum y un procedimiento de recuperación sin credenciales.
 
+Ese mismo día se subieron esos tres archivos a una carpeta nueva de Google
+Drive. Drive confirmó tres subidas, muestra la JKS como binario de 4 kB y el
+diálogo de acceso enumera únicamente al propietario, con acceso general
+`Restringido`. El navegador interno no expuso localmente la descarga de control,
+por lo que todavía no se ha comparado el SHA-256 de una copia descargada desde
+Drive ni se ha abierto su alias.
+
 Antes de cerrar la fase faltan acciones humanas:
 
 1. guardar las contraseñas en un gestor de contraseñas y probar su lectura;
-2. crear una segunda copia independiente cifrada en un proveedor de nube, sin
-   guardar junto a ella la contraseña ni `key.properties`;
-3. comprobar la descarga, el descifrado y el SHA-256 de esa segunda copia.
+2. descargar la copia independiente de Google Drive en otra sesión o equipo,
+   comprobar su SHA-256 y abrir el alias con las credenciales recuperadas del
+   gestor.
 
 Una copia en otra carpeta de `D:` no protege contra fallo o pérdida del disco.
 
@@ -148,8 +155,9 @@ una prueba automatizada en esta sesión; no se alteró producción.
   `38659924350`; se conservaron fuera del repositorio bajo el commit completo.
 - [x] Crear y verificar la copia física USB, incluida una restauración por hash
   y alias desde ese medio.
-- [ ] Crear y verificar la segunda copia independiente cifrada en nube y
-  confirmar la recuperación de las contraseñas desde el gestor.
+- [ ] Terminar la verificación de la copia independiente cifrada en Google
+  Drive: la subida privada está completa, pero faltan descarga, SHA-256, apertura
+  del alias y recuperación de las contraseñas desde el gestor.
 - [x] Documentar la excepción formal de reproducibilidad Wasm entre
   checkouts/hosts en ADR 0071, con artefactos firmados, hashes y procedencia
   verificable. Resolver la causa sigue siendo trabajo posterior.
