@@ -65,9 +65,12 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 
 ## Firma y publicación
 
-- [ ] Confirmar el respaldo offline de la keystore oficial en USB y una segunda
-  copia física. La restauración temporal desde la copia de `D:` pasó por hash y
-  alias, pero no protege frente a pérdida del mismo disco.
+- [x] Confirmar el respaldo offline de la keystore oficial en USB. El
+  2026-10-14 una restauración temporal desde ese medio pasó por hash y alias y
+  la copia temporal se eliminó.
+- [ ] Crear y verificar una segunda copia independiente cifrada en nube y
+  confirmar las contraseñas en un gestor separado; la USB no cuenta dos veces
+  como respaldo independiente.
 - [x] Verificar firma, hashes y procedencia local del APK/AAB de fase 0, y
   descargar y verificar los SBOM del CI definitivo `38659924350`.
 - [ ] Probar la descarga e instalación desde la página pública en un dispositivo

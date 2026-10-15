@@ -97,14 +97,18 @@ La keystore y `android/key.properties` no están versionados y sus ACL locales
 permiten únicamente al usuario, administradores y `SYSTEM`. No se debe registrar
 la ruta, alias ni contraseña en documentación pública adicional.
 
+El 2026-10-14 se creó una copia en una memoria USB dedicada. Su SHA-256
+coincidió con el original y una restauración temporal desde esa memoria abrió
+correctamente el alias oficial mediante `keytool`; la copia temporal se eliminó
+al terminar. La memoria contiene únicamente la JKS protegida por contraseña,
+su checksum y un procedimiento de recuperación sin credenciales.
+
 Antes de cerrar la fase faltan acciones humanas:
 
-1. copiar la keystore a una USB dedicada y desconectarla;
-2. crear una segunda copia offline en otro dispositivo físico;
-3. guardar las contraseñas en un gestor de contraseñas y probar su lectura;
-4. comparar el SHA-256 de cada copia con el valor privado conservado fuera de
-   Git;
-5. repetir la restauración desde una de esas copias, no desde el mismo disco.
+1. guardar las contraseñas en un gestor de contraseñas y probar su lectura;
+2. crear una segunda copia independiente cifrada en un proveedor de nube, sin
+   guardar junto a ella la contraseña ni `key.properties`;
+3. comprobar la descarga, el descifrado y el SHA-256 de esa segunda copia.
 
 Una copia en otra carpeta de `D:` no protege contra fallo o pérdida del disco.
 
@@ -142,7 +146,10 @@ una prueba automatizada en esta sesión; no se alteró producción.
   y escaneo del contenedor.
 - [x] Descargar y verificar los SBOM de producción e investigación del workflow
   `38659924350`; se conservaron fuera del repositorio bajo el commit completo.
-- [ ] Completar las dos copias físicas de la keystore y la prueba desde USB.
+- [x] Crear y verificar la copia física USB, incluida una restauración por hash
+  y alias desde ese medio.
+- [ ] Crear y verificar la segunda copia independiente cifrada en nube y
+  confirmar la recuperación de las contraseñas desde el gestor.
 - [x] Documentar la excepción formal de reproducibilidad Wasm entre
   checkouts/hosts en ADR 0071, con artefactos firmados, hashes y procedencia
   verificable. Resolver la causa sigue siendo trabajo posterior.
