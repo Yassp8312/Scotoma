@@ -110,10 +110,14 @@ diálogo de acceso enumera únicamente al propietario, con acceso general
 por lo que todavía no se ha comparado el SHA-256 de una copia descargada desde
 Drive ni se ha abierto su alias.
 
+El usuario confirmó el 2026-10-14 que guardó `storePassword`, `keyPassword` y
+`keyAlias` en una nota segura de Bitwarden, cerró la sesión, volvió a entrar y
+pudo leer los tres campos. Los valores no fueron mostrados al agente ni se
+registraron en el repositorio.
+
 Antes de cerrar la fase faltan acciones humanas:
 
-1. guardar las contraseñas en un gestor de contraseñas y probar su lectura;
-2. descargar la copia independiente de Google Drive en otra sesión o equipo,
+1. descargar la copia independiente de Google Drive en otra sesión o equipo,
    comprobar su SHA-256 y abrir el alias con las credenciales recuperadas del
    gestor.
 
@@ -155,9 +159,11 @@ una prueba automatizada en esta sesión; no se alteró producción.
   `38659924350`; se conservaron fuera del repositorio bajo el commit completo.
 - [x] Crear y verificar la copia física USB, incluida una restauración por hash
   y alias desde ese medio.
+- [x] Confirmar mediante cierre y reapertura del gestor que las contraseñas y el
+  alias pueden recuperarse sin registrarlos en el repositorio.
 - [ ] Terminar la verificación de la copia independiente cifrada en Google
   Drive: la subida privada está completa, pero faltan descarga, SHA-256, apertura
-  del alias y recuperación de las contraseñas desde el gestor.
+  del alias usando las credenciales ya recuperables desde el gestor.
 - [x] Documentar la excepción formal de reproducibilidad Wasm entre
   checkouts/hosts en ADR 0071, con artefactos firmados, hashes y procedencia
   verificable. Resolver la causa sigue siendo trabajo posterior.
