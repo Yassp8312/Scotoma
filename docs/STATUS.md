@@ -2,11 +2,12 @@
 
 Last updated: 2026-10-14
 
-La fase 0 de congelación de v2 está avanzada: CI del commit base, clon limpio,
-release Android multi-ABI, web, firma, restauración local de la keystore y
-escaneo de secretos tienen evidencia. Permanecen abiertas la copia física de la
-keystore, reproducibilidad entre checkouts, escaneo de la imagen final y el
-preview/rollback público. La referencia consolidada es
+La fase 0 de congelación de v2 tiene completa su parte automatizada: CI final,
+clon limpio, release Android multi-ABI, web, firma, restauración local de la
+keystore, SBOM, fuzzing y escaneo de secretos/contenedor tienen evidencia. La
+excepción Wasm entre checkouts está formalizada en ADR 0071. Permanecen abiertas
+la copia física de la keystore y la prueba de preview/rollback público. La
+referencia consolidada es
 `docs/PHASE_0_BASELINE.md`.
 
 Desde 2026-10-02, el desarrollo puede continuar temporalmente sin un teléfono
@@ -384,8 +385,8 @@ Safari remain block-20 gates. See ADR 0030.
 | SCT-052 — Multiprocess operational boundary | Sprint 5.5.4 locally complete; all four cuts pass; local test harness only | Signed multiprocess admission, loopback transport and two-coordinator ceremony pass; a release JSON baseline records latency, throughput, 7.27 MiB peak working set, NAT false challenges, distributed global rejection and exact saturation bounds; R02/R12 remain blocked and R03 partial until real PedPoP/consensus, independent deployments and Android/Web/public-network measurements exist |
 | SCT-053 — Authenticated epoch transition | Sprint 5.5.5 tranche 1 locally complete; platform durability pending | Exact successor chain, 300-second maximum overlap, single-epoch selection, terminal provisional cutover, confirmed-session expiry, no fallback and checkpoint mismatch tests pass; R05/R08 are partial and R04 remains partial until Android/Web protected storage and multiprocess validation |
 | SCT-054 — Adversarial relay collision schedules | Sprint 5.5.5 tranche 2 complete as a negative boundary result | A separate process covers all six three-client orders under visible, hidden, delayed, duplicated and reordered signals; visible faults fail closed, while hidden/delayed collision reproducibly permits two confirmations, proving that guaranteed third-party detection is impossible without an additional consistency or identity assumption; R07 is a documented risk and v3 remains NO-GO |
-| SCT-055 — Expanded v3 fuzz/sanitizer gate | Sprint 5.5.5 tranche 3 implemented; first Linux execution pending publish | Four bounded libFuzzer targets now cover state/relay, credential/Noise, manifest/epoch and adversarial schedules, followed by ASan/LSan over all model targets; fuzz-guided boundary review corrected saturating `u64::MAX` succession; 86 deterministic tests and Clippy pass locally, while WSL lacks Rust and CI evidence awaits the next pushed commit |
-| SCT-056 — Isolated v3 supply-chain gate | Sprint 5.5.5 tranche 4 implemented; CI artifacts pending publish | All three v3 lockfiles are mandatory RustSec/cargo-deny/CycloneDX inputs; production and research SBOMs are separated and checksummed, and a versioned verifier rejects silent gate removal, ignored failures, unknown sources or advisory exceptions; inherited unmaintained TACEO crates remain explicit and v3 stays NO-GO |
+| SCT-055 — Expanded v3 fuzz/sanitizer gate | Sprint 5.5.5 tranche 3 complete as an automated Linux baseline | Four bounded libFuzzer targets cover state/relay, credential/Noise, manifest/epoch and adversarial schedules, followed by ASan/LSan; local deterministic tests and CI `38659924350` pass, while this bounded run is not an independent audit |
+| SCT-056 — Isolated v3 supply-chain gate | Sprint 5.5.5 tranche 4 complete as an automated baseline | Six lockfiles pass RustSec/cargo-deny in CI `38659924350`; production and research SBOMs were retained, downloaded and checksum-verified; inherited unmaintained TACEO crates remain explicit and v3 stays NO-GO |
 | SCT-057 — Frozen definitive-construction candidate | Sprint 5.5.6 tranche 1 complete as a research selection; production remains NO-GO | 3HashTDH from Gu et al. is frozen through `stef/liboprf v0.9.4` at commit `ba452048...d641`, Ristretto255/SHA-512 and 2-of-3; TACEO remains comparison-only, a machine-readable contract and CI verifier keep both out of production, and C/libsodium, LGPL, Android/Wasm, real ceremony and independent vectors remain blocking gates |
 | SCT-058 — Real liboprf ceremony probe | Sprint 5.5.6 tranche 2 implemented; authoritative Linux execution pending push | A research-only C/Linux probe pins liboprf and libsodium, checks every 2-of-3 3HashTDH quorum plus session/threshold negatives, and runs upstream honest/corrupt FT-Joint-DL-VSS DKG and update fixtures; this is real upstream code but not PedPoP, the update spec is draft, no product dependency changed and R02/R12 remain blocked |
 | SCT-059 — Cross-platform 3HashTDH vector | Sprint 5.5.6 tranche 3 CI-complete; physical runtimes deferred | Independent safe Rust byte-matches native C and Emscripten; pinned CI links Android ARM64/ARMv7/x86_64 probes with exact liboprf/libsodium/NDK/emsdk inputs; physical Android and Chrome/Edge/Firefox execution remain deferred and no artifact enters the app |

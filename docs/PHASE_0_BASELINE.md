@@ -30,6 +30,9 @@ evidencia no cambia los artefactos descritos.
 - Rust CI `38445538307` y Flutter CI `38445538573` terminaron verdes para
   `11961ce`; también pasaron `quality`, `v3-research`, `fuzz-smoke`,
   `supply-chain`, `deployment-boundary` y `client-quality`.
+- Rust CI `38659924350` y Flutter CI `38659924491` terminaron verdes para
+  `c83e5f0`; el primero incluyó auditoría de seis lockfiles, cargo-deny, SBOM,
+  fuzz/sanitizers, v3 aislado, build del contenedor y escaneo de su imagen.
 - Un clon superficial nuevo de GitHub ejecutó formato, análisis, 23 pruebas
   Flutter, supervisor web y baseline de fuente sensible.
 - Ese clon produjo APK firmados para ARMv7, ARM64 y x86_64, un AAB multi-ABI y
@@ -135,14 +138,16 @@ una prueba automatizada en esta sesión; no se alteró producción.
 ## Puertas pendientes para cerrar la fase 0
 
 - [x] Confirmar y versionar la implementación definitiva de la fase.
-- [ ] Obtener CI verde para ese commit, incluido el build del contenedor.
-- [ ] Descargar y conservar los SBOM generados por ese workflow.
+- [x] Obtener CI verde para el commit de evidencia `c83e5f0`, incluido el build
+  y escaneo del contenedor.
+- [x] Descargar y verificar los SBOM de producción e investigación del workflow
+  `38659924350`; se conservaron fuera del repositorio bajo el commit completo.
 - [ ] Completar las dos copias físicas de la keystore y la prueba desde USB.
 - [x] Documentar la excepción formal de reproducibilidad Wasm entre
   checkouts/hosts en ADR 0071, con artefactos firmados, hashes y procedencia
   verificable. Resolver la causa sigue siendo trabajo posterior.
-- [ ] Escanear la imagen final del relay; Docker local no estaba arrancado. El
-  contexto, nombres sensibles y build del contenedor sí pasaron en CI.
+- [x] Escanear la imagen final del relay con Gitleaks dentro de
+  `deployment-boundary`; el trabajo terminó verde en `38659924350`.
 - [ ] Desplegar el build web actual como preview, repetir Chrome/Edge/Firefox y
   ejecutar una prueba real de promoción y rollback.
 - [ ] Confirmar que la producción vuelve al artefacto conocido como bueno y que

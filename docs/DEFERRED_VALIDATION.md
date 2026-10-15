@@ -68,8 +68,8 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 - [ ] Confirmar el respaldo offline de la keystore oficial en USB y una segunda
   copia física. La restauración temporal desde la copia de `D:` pasó por hash y
   alias, pero no protege frente a pérdida del mismo disco.
-- [x] Verificar firma, hashes y procedencia local del APK/AAB de fase 0. Falta
-  descargar los SBOM del CI del commit definitivo.
+- [x] Verificar firma, hashes y procedencia local del APK/AAB de fase 0, y
+  descargar y verificar los SBOM del CI definitivo `38659924350`.
 - [ ] Probar la descarga e instalación desde la página pública en un dispositivo
   que no tenga una compilación de desarrollo instalada.
 
@@ -101,19 +101,19 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
   credencial/Noise, manifiesto/época y schedules adversarios.
 - [x] Versionar un runner Linux acotado con nightly y cargo-fuzz fijados, timeout
   por input, límite de 1 GiB y ASan/LSan sobre todos los targets del modelo.
-- [ ] Confirmar la primera ejecución Linux del runner después de publicar el
-  commit. Ubuntu WSL existe, pero no tiene Rust instalado; Windows GNU no aporta
-  evidencia sanitizer equivalente y no se instaló otro toolchain silenciosamente.
+- [x] Confirmar la ejecución Linux del runner publicado: `fuzz-smoke` terminó
+  verde en Rust CI `38659924350`, incluidos ASan/LSan sobre los targets v3.
 - [x] Ejecutar RustSec local sobre los tres lockfiles v3: sin vulnerabilidades;
   aparecen dos avisos permitidos por crates no mantenidos (`derivative` y
   `paste`) heredados por el grafo TACEO.
-- [ ] Confirmar en CI los nuevos gates RustSec/cargo-deny sobre los tres
-  lockfiles v3 aislados y decidir el tratamiento de esos dos avisos antes de
-  seleccionar la biblioteca.
+- [x] Confirmar en CI los gates RustSec/cargo-deny: los seis lockfiles pasaron
+  en `38659924350`. Los avisos permitidos sobre `derivative` y `paste` siguen
+  documentados y bloquean seleccionar TACEO sin una decisión posterior.
 - [x] Separar los SBOM CycloneDX de producción e investigación v3, añadir
   checksums y verificar que CI no pueda omitir silenciosamente audit/policy/SBOM.
-- [ ] Descargar y conservar los dos artefactos SBOM del primer workflow verde
-  posterior al push; asociarlos al commit exacto y revisar sus `SHA256SUMS`.
+- [x] Descargar y conservar los dos artefactos SBOM del workflow verde
+  `38659924350`, asociados a `c83e5f0`; sus `SHA256SUMS` se verificaron fuera
+  del repositorio.
 - [x] Verificar aislamiento final del spike: 8 entradas de build/manifiestos,
   3 paquetes del grafo Cargo y 23 artefactos Android/Web sin marcadores v3.
 - [ ] Resolver los bloqueos restantes del probe TACEO: revisión independiente
