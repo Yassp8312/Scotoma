@@ -72,7 +72,8 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
   Google Drive. La carpeta restringida contiene los tres archivos esperados y
   solo al propietario, pero falta descargar la JKS, comparar su SHA-256 y abrir
   el alias. La recuperación de contraseñas desde Bitwarden ya fue confirmada por
-  el usuario tras cerrar y volver a iniciar sesión el 2026-10-14.
+  el usuario tras cerrar y volver a iniciar sesión el 2026-10-14; también
+  confirmó 2FA activo y un código de recuperación conservado en papel.
 - [x] Verificar firma, hashes y procedencia local del APK/AAB de fase 0, y
   descargar y verificar los SBOM del CI definitivo `38659924350`.
 - [ ] Probar la descarga e instalación desde la página pública en un dispositivo

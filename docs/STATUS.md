@@ -9,8 +9,9 @@ excepción Wasm entre checkouts está formalizada en ADR 0071. La copia física
 USB de la keystore y su restauración ya están verificadas; una segunda copia
 está subida a Google Drive con acceso restringido, pendiente de descarga y
 verificación criptográfica. La recuperación desde el gestor de contraseñas fue
-confirmada por el usuario. Permanecen abiertas la validación de Drive y la prueba
-de preview/rollback público. La referencia consolidada es
+confirmada por el usuario, junto con 2FA y código de recuperación fuera de
+línea. Permanecen abiertas la validación de Drive y la prueba de preview/rollback
+público. La referencia consolidada es
 `docs/PHASE_0_BASELINE.md`.
 
 Desde 2026-10-02, el desarrollo puede continuar temporalmente sin un teléfono
@@ -370,7 +371,7 @@ Safari remain block-20 gates. See ADR 0030.
 | SCT-034 — Rust SBOM | Complete as an automated baseline | Pinned `cargo-cyclonedx` emits retained CycloneDX JSON for both independent Rust graphs |
 | SCT-035 — Production relay baseline | Public alpha activation complete | Digest-pinned images, TLS/WSS boundary, container limits, concurrent load profile, graceful shutdown, public verifier, immutable rollback runbook and live Render WSS validation |
 | SCT-036 — Branded application artifacts | Complete for Android/web baseline | Supplied eye concept adapted into master artwork; legacy/round/adaptive Android and PWA icon sets; branded APK installed on TECNO |
-| SCT-037 — Zero-cost alpha release path | Public Android/web path active; cloud-backup verification pending | Official non-debug Android identity, signed and verified ARM64 APK/AAB, physical release install; live free Render relay and Cloudflare Pages client; public Android↔web ACK/BURN validation. USB backup/restoration and password-manager recovery are verified; the restricted Google Drive copy awaits download/hash/alias verification |
+| SCT-037 — Zero-cost alpha release path | Public Android/web path active; cloud-backup verification pending | Official non-debug Android identity, signed and verified ARM64 APK/AAB, physical release install; live free Render relay and Cloudflare Pages client; public Android↔web ACK/BURN validation. USB backup/restoration and password-manager recovery with 2FA are verified; the restricted Google Drive copy awaits download/hash/alias verification |
 | SCT-038 — Android multi-ABI release | Packaging complete; additional runtime validation pending | All three signed splits and AAB verify; ARM64 completed integration and ARMv7 physically selected its 32-bit ABI, initialized Rust and rendered the form; ARMv7 chat and x86_64 runtime remain pending |
 | SCT-039 — Android MASVS storage/platform baseline | Automated and initial physical baseline complete; broader matrix pending | Backup/transfer exclusion, secure recents and obscured touches; exact source/APK checks; Android 12 background/force-stop/logcat/capture evidence |
 | SCT-040 — Relay concurrent churn baseline | Complete as a bounded regression baseline | 40 normal simultaneous rooms plus 6×24 pending-frame disconnect rooms; room, connection, frame and encoded-byte gauges return to zero after every round and created/closed totals match |

@@ -113,7 +113,8 @@ Drive ni se ha abierto su alias.
 El usuario confirmó el 2026-10-14 que guardó `storePassword`, `keyPassword` y
 `keyAlias` en una nota segura de Bitwarden, cerró la sesión, volvió a entrar y
 pudo leer los tres campos. Los valores no fueron mostrados al agente ni se
-registraron en el repositorio.
+registraron en el repositorio. También confirmó que activó 2FA y conservó su
+código de recuperación en papel; el código tampoco fue mostrado ni registrado.
 
 Antes de cerrar la fase faltan acciones humanas:
 
@@ -160,7 +161,8 @@ una prueba automatizada en esta sesión; no se alteró producción.
 - [x] Crear y verificar la copia física USB, incluida una restauración por hash
   y alias desde ese medio.
 - [x] Confirmar mediante cierre y reapertura del gestor que las contraseñas y el
-  alias pueden recuperarse sin registrarlos en el repositorio.
+  alias pueden recuperarse sin registrarlos en el repositorio, con 2FA activo y
+  el código de recuperación conservado fuera de línea.
 - [ ] Terminar la verificación de la copia independiente cifrada en Google
   Drive: la subida privada está completa, pero faltan descarga, SHA-256, apertura
   del alias usando las credenciales ya recuperables desde el gestor.
