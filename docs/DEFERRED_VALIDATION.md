@@ -190,8 +190,10 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 
 ## Toolchain local y actualización TLS
 
-- [x] `cargo check --workspace --all-targets` recompiló el producto con
-  `rustls 0.23.45` después de corregir `RUSTSEC-2026-0285`.
+- [x] `cargo test --workspace --all-targets --locked` recompiló el producto con
+  `rustls 0.23.46` el 2026-10-14. La actualización corrige
+  `RUSTSEC-2026-0346` a `RUSTSEC-2026-0349`, publicados durante el cierre de la
+  fase; los seis lockfiles pasan RustSec y cargo-deny.
 - [x] Repetir `cargo test --workspace --all-targets` tras actualizar TLS: 92
   pruebas pasan y el soak prolongado permanece correctamente ignorado. El host
   Windows enlaza con LLVM-MinGW al exponer las `libgcc`/`libgcc_eh`
