@@ -1,18 +1,15 @@
 # Development status
 
-Last updated: 2026-10-14
+Last updated: 2026-10-15
 
-La fase 0 de congelación de v2 tiene completa su parte automatizada: CI final,
-clon limpio, release Android multi-ABI, web, firma, restauración local de la
-keystore, SBOM, fuzzing y escaneo de secretos/contenedor tienen evidencia. La
-excepción Wasm entre checkouts está formalizada en ADR 0071. La copia física
-USB de la keystore y su restauración ya están verificadas; una segunda copia
-está subida a Google Drive con acceso restringido, pendiente de descarga y
-verificación criptográfica. La recuperación desde el gestor de contraseñas fue
-confirmada por el usuario, junto con 2FA y código de recuperación fuera de
-línea. Permanecen abiertas la validación de Drive y la prueba de preview/rollback
-público. La referencia consolidada es
-`docs/PHASE_0_BASELINE.md`.
+La fase 0 de congelación de v2 está completa: CI final, clon limpio, release
+Android multi-ABI, web, firma, SBOM, fuzzing y escaneo de secretos/contenedor
+tienen evidencia. La USB y la copia restringida de Google Drive fueron
+restauradas y verificadas por hash y alias; Bitwarden, 2FA y recuperación en
+papel fueron comprobados sin exponer credenciales. El árbol web pasó preview,
+Chrome/Edge/Firefox, promoción, rollback real y restauración final en Cloudflare
+Pages. La excepción Wasm entre checkouts permanece formalizada en ADR 0071 como
+trabajo posterior. La referencia consolidada es `docs/PHASE_0_BASELINE.md`.
 
 Desde 2026-10-02, el desarrollo puede continuar temporalmente sin un teléfono
 ADB. Las verificaciones locales y automatizadas se separan de la evidencia en
@@ -371,7 +368,7 @@ Safari remain block-20 gates. See ADR 0030.
 | SCT-034 — Rust SBOM | Complete as an automated baseline | Pinned `cargo-cyclonedx` emits retained CycloneDX JSON for both independent Rust graphs |
 | SCT-035 — Production relay baseline | Public alpha activation complete | Digest-pinned images, TLS/WSS boundary, container limits, concurrent load profile, graceful shutdown, public verifier, immutable rollback runbook and live Render WSS validation |
 | SCT-036 — Branded application artifacts | Complete for Android/web baseline | Supplied eye concept adapted into master artwork; legacy/round/adaptive Android and PWA icon sets; branded APK installed on TECNO |
-| SCT-037 — Zero-cost alpha release path | Public Android/web path active; cloud-backup verification pending | Official non-debug Android identity, signed and verified ARM64 APK/AAB, physical release install; live free Render relay and Cloudflare Pages client; public Android↔web ACK/BURN validation. USB backup/restoration and password-manager recovery with 2FA are verified; the restricted Google Drive copy awaits download/hash/alias verification |
+| SCT-037 — Zero-cost alpha release path | Public Android/web baseline and recovery complete | Official non-debug Android identity, signed and verified APK/AAB, live Render relay and Cloudflare Pages client. USB and restricted Drive copies pass restoration by hash and alias; password-manager recovery with 2FA is verified; Pages passed preview, three-browser WSS matrix, promotion, rollback and final restoration |
 | SCT-038 — Android multi-ABI release | Packaging complete; additional runtime validation pending | All three signed splits and AAB verify; ARM64 completed integration and ARMv7 physically selected its 32-bit ABI, initialized Rust and rendered the form; ARMv7 chat and x86_64 runtime remain pending |
 | SCT-039 — Android MASVS storage/platform baseline | Automated and initial physical baseline complete; broader matrix pending | Backup/transfer exclusion, secure recents and obscured touches; exact source/APK checks; Android 12 background/force-stop/logcat/capture evidence |
 | SCT-040 — Relay concurrent churn baseline | Complete as a bounded regression baseline | 40 normal simultaneous rooms plus 6×24 pending-frame disconnect rooms; room, connection, frame and encoded-byte gauges return to zero after every round and created/closed totals match |
@@ -450,4 +447,4 @@ scan or a bounded soak is not production approval.
 - Physical LTE loss: with Wi-Fi already disabled, the signed release reached waiting through public WSS over LTE. Disabling mobile data made the session terminal and cleared both synthetic credentials. Mobile data was restored in a guaranteed cleanup path; LTE returned, the client stayed terminal without reconnecting, and the empty entry form was restored manually.
 - Caddy 2.11.4: official Windows release checksum verified; the production Caddyfile validates successfully. Docker/Compose remains a CI gate because this host has no Docker daemon.
 - Zero-cost release baseline: Android releases cannot use the debug identity; Render free relay and Cloudflare Pages direct-upload paths are versioned, with cold-start, metadata and availability limits explicitly excluded from production claims.
-- Android release identity: the RSA-4096 certificate fingerprint is `9D6FE2B177F72A89F734B430152077CAB93CEC3CA8943F402487757B042C2B70`; the signed `0.1.0-alpha.1+2` ARM64 APK and AAB pass the release verifier, and the APK is installed and running on the TECNO BF7. The keystore has an ACL-restricted dated copy under `D:\Backups`, but an off-device copy and password-manager entry remain mandatory before broader distribution.
+- Android release identity: the RSA-4096 certificate fingerprint is `9D6FE2B177F72A89F734B430152077CAB93CEC3CA8943F402487757B042C2B70`; the signed `0.1.0-alpha.1+2` ARM64 APK and AAB pass the release verifier, and the APK is installed and running on the TECNO BF7. La keystore tiene copias verificadas en USB y Google Drive restringido; las credenciales se recuperan desde Bitwarden con 2FA y recuperación fuera de línea.

@@ -53,14 +53,16 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 
 ## Web y navegadores
 
-- [ ] Repetir Chrome, Edge y Firefox con el artefacto exacto que se vaya a
-  distribuir.
+- [x] Repetir Chrome, Edge y Firefox con el artefacto exacto de fase 0 en
+  preview y de nuevo tras la restauración final de producción el 2026-10-15;
+  ambos ciclos pasaron 3/3 con chat, ACK y BURN.
 - [x] Confirmar Android↔Web contra WSS público en la ejecución del 2026-10-13,
   con mensaje Android, ACK y BURN autenticado observado en Chrome. Debe repetirse
   después de cada despliegue futuro.
-- [ ] Desplegar y verificar que Cloudflare Pages sirve el build actual. La
-  comprobación del 2026-10-14 encontró todavía la CSP histórica con
-  `'unsafe-eval'`; producción no se modificó durante la fase de congelación.
+- [x] Desplegar y verificar que Cloudflare Pages sirve el build actual. El
+  preview, la promoción, el rollback al artefacto anterior y la restauración
+  final quedaron comprobados el 2026-10-15; producción sirve CSP sin
+  `'unsafe-eval'`, COOP/COEP y `no-store`.
 - [ ] Mantener Safari e iOS aplazados hasta disponer de Mac/iPhone adecuados.
 
 ## Firma y publicación
@@ -68,12 +70,11 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 - [x] Confirmar el respaldo offline de la keystore oficial en USB. El
   2026-10-14 una restauración temporal desde ese medio pasó por hash y alias y
   la copia temporal se eliminó.
-- [ ] Terminar la verificación de la segunda copia independiente cifrada en
-  Google Drive. La carpeta restringida contiene los tres archivos esperados y
-  solo al propietario, pero falta descargar la JKS, comparar su SHA-256 y abrir
-  el alias. La recuperación de contraseñas desde Bitwarden ya fue confirmada por
-  el usuario tras cerrar y volver a iniciar sesión el 2026-10-14; también
-  confirmó 2FA activo y un código de recuperación conservado en papel.
+- [x] Verificar la segunda copia independiente cifrada en Google Drive. La JKS
+  descargada el 2026-10-15 coincidió por tamaño y SHA-256, abrió el alias oficial
+  con `keytool` y la copia temporal fue eliminada. La carpeta permanece
+  restringida al propietario; Bitwarden, 2FA y recuperación en papel ya habían
+  sido confirmados sin exponer sus valores.
 - [x] Verificar firma, hashes y procedencia local del APK/AAB de fase 0, y
   descargar y verificar los SBOM del CI definitivo `38659924350`.
 - [ ] Probar la descarga e instalación desde la página pública en un dispositivo

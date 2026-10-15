@@ -1,6 +1,6 @@
 # Fase 0: congelación y recuperación de la base v2
 
-Fecha de corte: 2026-10-14.
+Fecha de corte: 2026-10-14. Cierre operativo: 2026-10-15.
 
 Esta es la referencia operativa para conservar la última base v2 antes de
 integrar TOPRF en los clientes. No convierte v2 en un protocolo aprobado para
@@ -47,6 +47,10 @@ evidencia no cambia los artefactos descritos.
   exclusión de archivos.
 - La copia de restauración temporal de la keystore conservó su SHA-256, abrió el
   alias oficial y se eliminó al terminar.
+- Una descarga nueva de la copia privada de Google Drive midió 4.346 bytes,
+  coincidió con SHA-256
+  `6D89C712DBF72CD49ADB080A02F1D6868174E797BF565111D443C9E67833FAE8`,
+  abrió el alias oficial mediante `keytool` y se eliminó al terminar.
 - La web pública respondió HTTP 200 y el relay `/health` respondió HTTP 204.
 
 ## Hashes de los artefactos finales locales
@@ -106,21 +110,16 @@ su checksum y un procedimiento de recuperación sin credenciales.
 Ese mismo día se subieron esos tres archivos a una carpeta nueva de Google
 Drive. Drive confirmó tres subidas, muestra la JKS como binario de 4 kB y el
 diálogo de acceso enumera únicamente al propietario, con acceso general
-`Restringido`. El navegador interno no expuso localmente la descarga de control,
-por lo que todavía no se ha comparado el SHA-256 de una copia descargada desde
-Drive ni se ha abierto su alias.
+`Restringido`. El 2026-10-15 se descargó una copia nueva desde esa carpeta: sus
+4.346 bytes y SHA-256 coincidieron exactamente con el original, `keytool` abrió
+el alias oficial usando las credenciales locales sin mostrarlas y la descarga
+temporal se eliminó inmediatamente.
 
 El usuario confirmó el 2026-10-14 que guardó `storePassword`, `keyPassword` y
 `keyAlias` en una nota segura de Bitwarden, cerró la sesión, volvió a entrar y
 pudo leer los tres campos. Los valores no fueron mostrados al agente ni se
 registraron en el repositorio. También confirmó que activó 2FA y conservó su
 código de recuperación en papel; el código tampoco fue mostrado ni registrado.
-
-Antes de cerrar la fase faltan acciones humanas:
-
-1. descargar la copia independiente de Google Drive en otra sesión o equipo,
-   comprobar su SHA-256 y abrir el alias con las credenciales recuperadas del
-   gestor.
 
 Una copia en otra carpeta de `D:` no protege contra fallo o pérdida del disco.
 
@@ -144,12 +143,23 @@ gratuita deben conservarse además el directorio web conocido como bueno, su
 manifiesto de hashes, el commit, los identificadores de despliegue de Cloudflare
 y el identificador de despliegue de Render.
 
-La comprobación pública detectó que Cloudflare todavía sirve una política CSP
-histórica con `'unsafe-eval'`, mientras el build local actual ya la elimina.
-Por ello la web publicada no puede declararse sincronizada con esta base. Debe
-subirse primero como preview, validarse y después promoverse con una ventana de
-rollback. El CLI de Wrangler inició autenticación pero no quedó disponible para
-una prueba automatizada en esta sesión; no se alteró producción.
+El 2026-10-15 se desplegó el árbol congelado como preview de Cloudflare Pages
+`2845c58c-46cd-4ecc-bdab-344e79ab8d9c`. El preview respondió HTTP 200 con
+COOP `same-origin`, COEP `require-corp`, `Cache-Control: no-store`, CSP sin
+`'unsafe-eval'` y el enlace público de atribución esperado. Chrome, Edge y
+Firefox completaron contra ese preview un chat WSS de dos clientes con códigos
+de verificación iguales, mensajes en ambos sentidos, ACK y BURN: 3/3 pruebas.
+
+El mismo conjunto de 44 archivos desplegables se promovió primero como
+`cc8442e1-739e-4bd1-88f6-58df050452d3`. Se ejecutó después un rollback real a
+`6538b674-2f54-48e7-a175-c57b25aa5b46`: el dominio principal volvió al HTML
+SHA-256 `769B0BE65D41DDFD8B93F7290CB7440DDCA5041E98A801E4E51229D43B5E25C8`,
+a la CSP histórica con `'unsafe-eval'` y al contenido anterior. Finalmente se
+restauró el artefacto revisado como producción
+`613050ef-6f1d-41e0-89ba-52385e25f429`; el dominio principal convergió al HTML
+SHA-256 `0A9369B04BA0C86127AA22E2EF033D2BA796B7230A7D025CC6000542BD4ECFD8`,
+con las cabeceras esperadas. La matriz pública final volvió a pasar 3/3 y el
+relay respondió HTTP 204.
 
 ## Puertas pendientes para cerrar la fase 0
 
@@ -163,17 +173,19 @@ una prueba automatizada en esta sesión; no se alteró producción.
 - [x] Confirmar mediante cierre y reapertura del gestor que las contraseñas y el
   alias pueden recuperarse sin registrarlos en el repositorio, con 2FA activo y
   el código de recuperación conservado fuera de línea.
-- [ ] Terminar la verificación de la copia independiente cifrada en Google
-  Drive: la subida privada está completa, pero faltan descarga, SHA-256, apertura
-  del alias usando las credenciales ya recuperables desde el gestor.
+- [x] Descargar y verificar la copia independiente cifrada en Google Drive por
+  tamaño, SHA-256 y apertura del alias; eliminar la descarga temporal.
 - [x] Documentar la excepción formal de reproducibilidad Wasm entre
   checkouts/hosts en ADR 0071, con artefactos firmados, hashes y procedencia
   verificable. Resolver la causa sigue siendo trabajo posterior.
 - [x] Escanear la imagen final del relay con Gitleaks dentro de
   `deployment-boundary`; el trabajo terminó verde en `38659924350`.
-- [ ] Desplegar el build web actual como preview, repetir Chrome/Edge/Firefox y
+- [x] Desplegar el build web actual como preview, repetir Chrome/Edge/Firefox y
   ejecutar una prueba real de promoción y rollback.
-- [ ] Confirmar que la producción vuelve al artefacto conocido como bueno y que
-  sus cabeceras coinciden con el manifiesto esperado.
+- [x] Confirmar que la producción final vuelve al artefacto revisado y que sus
+  cabeceras y contenido coinciden con la evidencia esperada.
 
-Hasta cerrar estas puertas, la fase 0 está **avanzada pero no completa**.
+La fase 0 queda **completa** el 2026-10-15. La excepción de reproducibilidad
+Wasm entre checkouts y los riesgos del protocolo siguen abiertos como trabajo
+posterior; no invalidan la recuperación de esta base ni autorizan afirmaciones
+de seguridad para usuarios de alto riesgo.
