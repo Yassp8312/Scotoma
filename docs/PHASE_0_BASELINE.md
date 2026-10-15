@@ -12,6 +12,7 @@ usuarios de alto riesgo ni autoriza una publicación de producción.
 |---|---|
 | Base anterior verificada | `11961ce38ff61f26c38475b1878289337ebdd1f6` |
 | Implementación de la congelación | `4d04d4a472b1d16be5ed7e0f422a4dbf928e5d56` |
+| Cierre de dependencias auditadas | `bb14997e33d073f5e11eeeb948ecffdac709686c` |
 | Cliente | `0.1.0-alpha.1+2` |
 | Protocolo público | v2 experimental |
 | Relay | `wss://scotoma-relay-alpha.onrender.com/v2/connect` |
@@ -137,8 +138,9 @@ una prueba automatizada en esta sesión; no se alteró producción.
 - [ ] Obtener CI verde para ese commit, incluido el build del contenedor.
 - [ ] Descargar y conservar los SBOM generados por ese workflow.
 - [ ] Completar las dos copias físicas de la keystore y la prueba desde USB.
-- [ ] Resolver la reproducibilidad entre checkouts/hosts o documentar una
-  excepción formal con artefactos firmados y procedencia verificable.
+- [x] Documentar la excepción formal de reproducibilidad Wasm entre
+  checkouts/hosts en ADR 0071, con artefactos firmados, hashes y procedencia
+  verificable. Resolver la causa sigue siendo trabajo posterior.
 - [ ] Escanear la imagen final del relay; Docker local no estaba arrancado. El
   contexto, nombres sensibles y build del contenedor sí pasaron en CI.
 - [ ] Desplegar el build web actual como preview, repetir Chrome/Edge/Firefox y

@@ -1,6 +1,6 @@
 # Riesgos de seguridad actuales
 
-Última actualización: 2026-10-07
+Última actualización: 2026-10-14
 
 Este registro describe limitaciones conocidas de la alpha. No es una auditoría
 ni una lista exhaustiva. La ausencia de un riesgo en esta tabla no demuestra
@@ -23,6 +23,7 @@ que el sistema sea seguro.
 | Código corto confundido con identidad | Medio de uso | Un código igual confirma el mismo transcript, no quién es civilmente el interlocutor | Etiqueta y comparación fuera de banda | Prueba de comprensión con personas reales y texto de interfaz inequívoco |
 | Honeypot interpretado como alarma | Alto si se comunica mal | Una persona puede esperar una notificación que nunca llegará o interpretar el señuelo como prueba de coacción | La credencial señuelo no tiene marca técnica y el alcance excluye cuentas, persistencia, notificaciones y entrega offline | Explicar que ambos peers deben usarla durante una ventana online coincidente y validar comprensión en la alpha |
 | Dependencias y proceso de build | Medio | Una dependencia o herramienta comprometida podría alterar el cliente | Lockfiles, RustSec, `cargo-deny`, SBOM, hashes y builds verificadas | Reproducibilidad completa, revisión de fuentes críticas y respuesta continua a avisos |
+| Wasm no reproducible entre checkouts | Medio | Dos entornos podrían producir bytes distintos desde la misma fuente y dificultar la verificación independiente | Builds consecutivos deterministas, rutas remapeadas, manifiesto SHA-256, commit, CI y rollback inmutable | Resolver la diferencia interna; ADR 0071 prohíbe afirmar reproducibilidad byte a byte mientras exista la excepción |
 | iOS y Safari sin validar | Compatibilidad aplazada | No se puede afirmar que la aplicación o la web funcionen o limpien estado correctamente allí | Scaffold solamente | Bloques 2 y 3 de la hoja de ruta cuando existan las condiciones |
 
 ## Consecuencia para el producto
