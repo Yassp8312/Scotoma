@@ -38,3 +38,32 @@ conversation; clients fail closed and never reconnect automatically.
 
 Rollback restores code and configuration only. It cannot restore interrupted
 sessions or messages, which is intentional for an ephemeral service.
+
+## Zero-cost alpha: Cloudflare Pages
+
+The direct-upload alpha must retain each known-good `build/web` directory, its
+ordered SHA-256 manifest, source commit and Cloudflare deployment identifier.
+Do not use an uncommitted directory as a rollback target.
+
+1. Upload a candidate to a non-production preview branch first.
+2. Verify HTTP 200, CSP, COOP/COEP, no-store, Wasm startup and the complete
+   Chrome/Edge/Firefox two-client matrix against the public relay.
+3. Record the current production deployment identifier before promotion.
+4. Promote only the reviewed preview or upload the exact reviewed directory.
+5. If validation fails, use the Pages deployment history to roll back to the
+   recorded known-good deployment. If provider rollback is unavailable,
+   re-upload the retained known-good directory.
+6. Re-run the header and browser checks. Record only deployment identifiers,
+   hashes and UTC timestamps.
+
+Wrangler authentication and provider UI state are operator credentials and are
+never committed. A rollback drill is incomplete until the previous static
+artifact is served again and its manifest and headers are verified.
+
+## Zero-cost alpha: Render
+
+Before changing the Render Blueprint, record the active source commit and
+deployment identifier. Validate the candidate on a separate service when the
+free account permits it. Roll back from Render's deployment history to the
+recorded commit, then require `/health` to return 204 and repeat the public WSS
+flow. A relay rollback terminates live sessions and never restores their state.

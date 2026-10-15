@@ -1,0 +1,4 @@
+title = "SCOTOMA secret scanning"
+
+[extend]
+useDefault = true

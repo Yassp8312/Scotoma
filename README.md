@@ -139,6 +139,7 @@ production boundary for high-risk communications.
 - [Development status](docs/STATUS.md)
 - [Development history](docs/HISTORIAL_DESARROLLO.md)
 - [Remaining roadmap](docs/ROADMAP_RESTANTE.md)
+- [Phase 0 v2 freeze and recovery baseline](docs/PHASE_0_BASELINE.md)
 - [Why SCOTOMA exists](docs/POR_QUE_SCOTOMA.md)
 - [Zero-cost alpha](docs/FREE_ALPHA.md)
 - [Alpha 0.1.0-alpha.1 release notes](docs/releases/0.1.0-alpha.1.md)

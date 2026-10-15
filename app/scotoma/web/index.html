@@ -31,6 +31,25 @@
 
   <title>SCOTOMA</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    .jorge-link {
+      position: fixed;
+      right: 12px;
+      bottom: 8px;
+      z-index: 2147483647;
+      color: #b9adc9;
+      font: 11px/1.4 system-ui, sans-serif;
+      opacity: 0.72;
+      text-decoration: none;
+    }
+
+    .jorge-link:hover,
+    .jorge-link:focus-visible {
+      color: #d8c8ef;
+      opacity: 1;
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
   <!--
@@ -41,6 +60,8 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <a class="jorge-link" href="https://jorge-coffee.onrender.com/"
+     target="_blank" rel="noopener noreferrer">Jorge</a>
   <script src="runtime_supervisor.js"></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>

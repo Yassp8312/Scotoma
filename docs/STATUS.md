@@ -1,6 +1,13 @@
 # Development status
 
-Last updated: 2026-10-07
+Last updated: 2026-10-14
+
+La fase 0 de congelación de v2 está avanzada: CI del commit base, clon limpio,
+release Android multi-ABI, web, firma, restauración local de la keystore y
+escaneo de secretos tienen evidencia. Permanecen abiertas la copia física de la
+keystore, reproducibilidad entre checkouts, escaneo de la imagen final y el
+preview/rollback público. La referencia consolidada es
+`docs/PHASE_0_BASELINE.md`.
 
 Desde 2026-10-02, el desarrollo puede continuar temporalmente sin un teléfono
 ADB. Las verificaciones locales y automatizadas se separan de la evidencia en
@@ -430,9 +437,10 @@ scan or a bounded soak is not production approval.
   gauges to zero; the Windows debug test process peaked at 21.32 MiB against a
   384 MiB guardrail. This is a dated baseline, not proof that leaks are absent.
 - Secret boundary: repository/Docker inputs and Rust logging policy pass the
-  new verifier; Flutter source verification, 23 client tests, 12 bridge tests,
-  panic containment and the native credential-boundary smoke pass. A freshly
-  signed APK and container image were not produced in this environment.
+  verifier; Flutter source verification, 23 client tests, 12 bridge tests,
+  panic containment and the native credential-boundary smoke pass. Fresh
+  signed multi-ABI APK/AAB and web outputs passed artifact secret scans; the
+  final relay image scan remains a CI gate because Docker is unavailable here.
 - Physical Android network loss: the TECNO BF7 reached the waiting state through an ADB-reversed real relay; terminating that relay displayed `Conexión interrumpida`, removed both synthetic credentials and remained terminal after a fresh relay reported zero accepted upgrades. The signed ARM64 release was then restored and verified as `arm64-v8a` with `FLAG_SECURE`.
 - Physical LTE loss: with Wi-Fi already disabled, the signed release reached waiting through public WSS over LTE. Disabling mobile data made the session terminal and cleared both synthetic credentials. Mobile data was restored in a guaranteed cleanup path; LTE returned, the client stayed terminal without reconnecting, and the empty entry form was restored manually.
 - Caddy 2.11.4: official Windows release checksum verified; the production Caddyfile validates successfully. Docker/Compose remains a CI gate because this host has no Docker daemon.

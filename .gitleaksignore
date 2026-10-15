@@ -1,0 +1,5 @@
+# Historical false positives reviewed during the v2 phase-0 freeze. Each entry
+# binds one rule to one line of one commit; it does not suppress the file or
+# future changes.
+2146ae420fcc1c63fa097fd07663f38608afc4d1:spikes/private_rendezvous_v3/infrastructure/render.operator.example.yaml:generic-api-key:13
+30981180ea25e8fb71f7c7b5be6cc19c52b9a3d4:docs/adr/0041-secret-bearing-logs-and-build-context.md:generic-api-key:28

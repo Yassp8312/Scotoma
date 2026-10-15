@@ -34,6 +34,11 @@ function Invoke-Checked([string]$Executable, [string[]]$Arguments) {
 
 Push-Location $PSScriptRoot
 try {
+    $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+    # Rust records source locations in panic/debug metadata even for release
+    # artifacts.  Map the checkout-specific prefix to a stable virtual path so
+    # Android and Wasm artifacts can be compared across independent clones.
+    $sourcePathRemap = "--remap-path-prefix=$repositoryRoot=/src/scotoma"
     $dart = Join-Path $ToolsRoot 'flutter\bin\cache\dart-sdk\bin\dart.exe'
     $mingw = Join-Path $ToolsRoot 'llvm-mingw-20260826-ucrt-x86_64\bin'
     $ndk = Join-Path $ToolsRoot 'android-sdk\ndk\28.2.13676358\toolchains\llvm\prebuilt\windows-x86_64\bin'
@@ -65,7 +70,7 @@ try {
         $env:AR_x86_64_pc_windows_gnu = 'llvm-ar.exe'
         # Use LLVM's linker with Rust's matching bundled GNU CRT libraries.
         # Keep the repository's Windows CSPRNG backend, not a weaker fallback.
-        $env:RUSTFLAGS = '--cfg getrandom_backend="windows_legacy" -C linker=x86_64-w64-mingw32-clang.exe -C link-self-contained=yes -C dlltool=llvm-dlltool.exe'
+        $env:RUSTFLAGS = "$sourcePathRemap --cfg getrandom_backend=`"windows_legacy`" -C linker=x86_64-w64-mingw32-clang.exe -C link-self-contained=yes -C dlltool=llvm-dlltool.exe"
         Invoke-Checked 'dart' @('pub', 'get', '--enforce-lockfile')
     }
 
@@ -107,6 +112,7 @@ try {
             $env:CARGO_BUILD_JOBS = '4'
             $env:CARGO_TARGET_DIR = Join-Path $PSScriptRoot 'build\web-rust'
             $webFlags = @(
+                $sourcePathRemap,
                 '-C target-feature=+atomics,+bulk-memory,+mutable-globals',
                 '-C link-args=--shared-memory', '-C link-args=--max-memory=1073741824',
                 '-C link-args=--import-memory', '-C link-args=--export=__heap_base',
@@ -138,6 +144,7 @@ try {
         }
         'Android' {
             $env:RUSTC_WRAPPER = Join-Path $PSScriptRoot 'host_rustc.cmd'
+            $env:RUSTFLAGS = $sourcePathRemap
             $androidTargetConfig = @{
                 'aarch64-linux-android' = @{
                     Cc = 'aarch64-linux-android24-clang.cmd'

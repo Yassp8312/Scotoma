@@ -1,6 +1,6 @@
 # Registro consolidado de validaciones pendientes
 
-Fecha de corte: 2026-10-13.
+Fecha de corte: 2026-10-14.
 
 Este documento reúne comprobaciones que no deben perderse cuando el desarrollo
 continúe sin el dispositivo, plataforma o ejecutor necesario. Una tarea anotada
@@ -16,7 +16,8 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
   - `cargo test --all-targets`.
 - [x] Confirmar 38/38 pruebas del modelo v3, incluida la codificación exacta,
   ceremonia y relay opaco en memoria; Clippy y formato pasan.
-- [ ] Ejecutar `git diff --check` sobre todos los cambios no confirmados.
+- [x] Ejecutar `git diff --check` sobre todos los cambios no confirmados; pasó
+  para la congelación de fase 0 el 2026-10-14.
 - [x] Ejecutar `git diff --check` sobre el spike y los documentos activos de
   5.3/5.4 el 2026-10-08.
 - [x] Confirmar mediante el grafo de dependencias que el spike v3 no entra en
@@ -26,7 +27,13 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 - [x] Repetir el conjunto completo de pruebas locales después de integrar los
   cambios acumulados: Clippy limpio, 92 pruebas Rust, 23 pruebas Flutter, análisis
   Flutter, supervisor de runtime y baseline de seguridad aprobados el 2026-10-08.
-- [ ] Construir los artefactos Android y Web reproducibles desde un árbol limpio.
+- [x] Construir Android y Web desde un clon limpio de `11961ce`; formato,
+  análisis, 23 pruebas Flutter, supervisor, Android multi-ABI firmado y web
+  release pasaron el 2026-10-14.
+- [ ] Conseguir reproducibilidad byte a byte entre checkouts o hosts. Android y
+  web se repitieron dentro del mismo checkout, pero dos checkouts produjeron
+  Wasm diferente incluso después de remapear rutas; la versión determinista del
+  service worker refleja esa diferencia. Véase `docs/PHASE_0_BASELINE.md`.
 
 ## Android y ADB
 
@@ -51,15 +58,18 @@ aquí no se considera aprobada por haber sido revisada visualmente o razonada.
 - [x] Confirmar Android↔Web contra WSS público en la ejecución del 2026-10-13,
   con mensaje Android, ACK y BURN autenticado observado en Chrome. Debe repetirse
   después de cada despliegue futuro.
-- [ ] Verificar que Cloudflare Pages sirve el build actual y no el artefacto
-  histórico anterior.
+- [ ] Desplegar y verificar que Cloudflare Pages sirve el build actual. La
+  comprobación del 2026-10-14 encontró todavía la CSP histórica con
+  `'unsafe-eval'`; producción no se modificó durante la fase de congelación.
 - [ ] Mantener Safari e iOS aplazados hasta disponer de Mac/iPhone adecuados.
 
 ## Firma y publicación
 
-- [ ] Confirmar el respaldo offline de la keystore oficial y sus instrucciones de
-  recuperación sin registrar secretos en Git.
-- [ ] Verificar firma, hashes, SBOM y procedencia del APK/AAB definitivo.
+- [ ] Confirmar el respaldo offline de la keystore oficial en USB y una segunda
+  copia física. La restauración temporal desde la copia de `D:` pasó por hash y
+  alias, pero no protege frente a pérdida del mismo disco.
+- [x] Verificar firma, hashes y procedencia local del APK/AAB de fase 0. Falta
+  descargar los SBOM del CI del commit definitivo.
 - [ ] Probar la descarga e instalación desde la página pública en un dispositivo
   que no tenga una compilación de desarrollo instalada.
 

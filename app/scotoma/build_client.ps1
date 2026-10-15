@@ -21,6 +21,46 @@ function Invoke-Checked([string]$Executable, [string[]]$Arguments) {
     if ($LASTEXITCODE -ne 0) { throw "$Executable failed ($LASTEXITCODE)" }
 }
 
+function Finalize-WebBuildOutput([string]$WebOutput) {
+    # Flutter's local incremental marker and generated service-worker version
+    # vary between otherwise identical builds. Remove the local-only marker and
+    # derive the public cache-busting version from the deployable content.
+    $localBuildMarker = Join-Path $WebOutput '.last_build_id'
+    if ([IO.File]::Exists($localBuildMarker)) {
+        [IO.File]::Delete($localBuildMarker)
+    }
+
+    $bootstrapPath = Join-Path $WebOutput 'flutter_bootstrap.js'
+    if (-not [IO.File]::Exists($bootstrapPath)) {
+        throw "Missing Flutter bootstrap: $bootstrapPath"
+    }
+    $manifestLines = @(
+        Get-ChildItem -LiteralPath $WebOutput -Recurse -File |
+            Where-Object { $_.FullName -ne $bootstrapPath } |
+            ForEach-Object {
+                $relative = $_.FullName.Substring($WebOutput.Length + 1).Replace('\', '/')
+                $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant()
+                "$hash  $relative"
+            } |
+            Sort-Object
+    )
+    $manifest = [string]::Join("`n", $manifestLines) + "`n"
+    $digest = [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($manifest))
+    $contentVersion = [Convert]::ToHexString($digest).ToLowerInvariant().Substring(0, 16)
+
+    $bootstrap = [IO.File]::ReadAllText($bootstrapPath)
+    $versionPattern = 'serviceWorkerVersion:\s*"[^"]+"'
+    if ([regex]::Matches($bootstrap, $versionPattern).Count -ne 1) {
+        throw 'Unexpected Flutter serviceWorkerVersion representation.'
+    }
+    $bootstrap = [regex]::Replace(
+        $bootstrap,
+        $versionPattern,
+        "serviceWorkerVersion: `"$contentVersion`""
+    )
+    [IO.File]::WriteAllText($bootstrapPath, $bootstrap, [Text.UTF8Encoding]::new($false))
+}
+
 Push-Location $PSScriptRoot
 try {
     $bridgeRoot = Join-Path $PSScriptRoot '..\..\packages\scotoma_bridge'
@@ -76,6 +116,19 @@ try {
     if ($Mode -in @('Web', 'WebRuntime')) {
         & (Join-Path $bridgeRoot 'verify.ps1') -Mode Web -ToolsRoot $ToolsRoot
         if ($LASTEXITCODE -ne 0) { throw 'Rust web build failed.' }
+
+        # A previous web build may contain copied Wasm assets. Flutter inspects
+        # that directory while generating flutter_bootstrap.js, which otherwise
+        # makes clean and incremental release outputs differ. Delete only the
+        # verified web-output child, never the application build root.
+        $buildRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'build'))
+        $webOutput = [IO.Path]::GetFullPath((Join-Path $buildRoot 'web'))
+        if ([IO.Directory]::GetParent($webOutput).FullName -ne $buildRoot) {
+            throw "Unexpected web output path: $webOutput"
+        }
+        if ([IO.Directory]::Exists($webOutput)) {
+            [IO.Directory]::Delete($webOutput, $true)
+        }
     }
     if ($Mode -eq 'AndroidRelease' -and $RelayUrl -notmatch '^wss://') {
         throw 'Android release builds require an explicit public wss:// relay URL.'
@@ -126,6 +179,7 @@ try {
                 "--dart-define=SCOTOMA_RELAY_URL=$RelayUrl"
             )
             Copy-Item -LiteralPath (Join-Path $bridgeRoot 'build\frb-web\pkg') -Destination 'build\web' -Recurse -Force
+            Finalize-WebBuildOutput ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'build\web')))
             $dynamicCodePatterns = @(
                 @{ Name = 'eval'; Pattern = '(?<![A-Za-z0-9_$])eval\s*\(' },
                 @{ Name = 'Function constructor'; Pattern = '\bnew\s+Function\s*\(' }
@@ -164,6 +218,7 @@ try {
         'WebRuntime' {
             Invoke-Checked $flutter @('build', 'web', '--release', '--no-web-resources-cdn', '--no-pub', '-t', 'lib/web_runtime_smoke.dart')
             Copy-Item -LiteralPath (Join-Path $bridgeRoot 'build\frb-web\pkg') -Destination 'build\web' -Recurse -Force
+            Finalize-WebBuildOutput ([IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'build\web')))
         }
     }
 } finally {
