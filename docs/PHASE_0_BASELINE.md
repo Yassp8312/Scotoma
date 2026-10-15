@@ -10,7 +10,8 @@ usuarios de alto riesgo ni autoriza una publicación de producción.
 
 | Campo | Valor |
 |---|---|
-| Fuente verificada | `11961ce38ff61f26c38475b1878289337ebdd1f6` |
+| Base anterior verificada | `11961ce38ff61f26c38475b1878289337ebdd1f6` |
+| Implementación de la congelación | `4d04d4a472b1d16be5ed7e0f422a4dbf928e5d56` |
 | Cliente | `0.1.0-alpha.1+2` |
 | Protocolo público | v2 experimental |
 | Relay | `wss://scotoma-relay-alpha.onrender.com/v2/connect` |
@@ -18,8 +19,9 @@ usuarios de alto riesgo ni autoriza una publicación de producción.
 | Certificado Android SHA-256 | `9D6FE2B177F72A89F734B430152077CAB93CEC3CA8943F402487757B042C2B70` |
 
 Los cambios de esta fase normalizan rutas de compilación, regeneran el árbol web
-desde cero y añaden controles de secretos. El commit definitivo de la fase debe
-reemplazar la fuente verificada de la tabla cuando estos cambios se confirmen.
+desde cero y añaden controles de secretos. El segundo identificador de la tabla
+congela la implementación; cualquier commit posterior que solo actualice esta
+evidencia no cambia los artefactos descritos.
 
 ## Evidencia aprobada
 
@@ -131,7 +133,7 @@ una prueba automatizada en esta sesión; no se alteró producción.
 
 ## Puertas pendientes para cerrar la fase 0
 
-- [ ] Confirmar y versionar el commit definitivo de la fase.
+- [x] Confirmar y versionar la implementación definitiva de la fase.
 - [ ] Obtener CI verde para ese commit, incluido el build del contenedor.
 - [ ] Descargar y conservar los SBOM generados por ese workflow.
 - [ ] Completar las dos copias físicas de la keystore y la prueba desde USB.
